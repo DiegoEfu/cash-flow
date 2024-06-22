@@ -14,6 +14,9 @@ class Currency(models.Model):
 
     name = models.CharField(max_length=50, unique=True)
 
+class User(AbstractUser):
+    main_currency = models.ForeignKey(Currency, on_delete=models.CASCADE, default=1)
+
 class ExchangeRate(StrAsNameMixin, models.Model):
     id = models.UUIDField(default=uuid.uuid4, primary_key=True)
     exchange_rate = models.DecimalField(max_digits=15, decimal_places=2)
@@ -24,7 +27,7 @@ class ExchangeRate(StrAsNameMixin, models.Model):
 class Account(StrAsNameMixin, models.Model):
     id = models.UUIDField(default=uuid.uuid4, primary_key=True)
     currency = models.ForeignKey(Currency, on_delete=models.PROTECT)
-    owner = models.ForeignObject(User, on_delete=models.PROTECT)
+    owner = models.ForeignKey(User, on_delete=models.PROTECT)
     name = models.CharField(max_length=50)
     description = models.CharField(max_length = 100)
     opening_time = models.DateTimeField(auto_now=True)
@@ -33,7 +36,7 @@ class Account(StrAsNameMixin, models.Model):
 class Tag(StrAsNameMixin, models.Model):
     id = models.UUIDField(default=uuid.uuid4, primary_key=True)
     name = models.CharField(max_length=50, unique=True)
-    user = models.ForeignObject(User, on_delete=models.PROTECT)
+    user = models.ForeignKey(User, on_delete=models.PROTECT)
 
     class Meta:
         verbose_name_plural = "Tags"
@@ -62,7 +65,7 @@ class Transaction(models.Model):
     hold = models.BooleanField(default=False)
     date = models.DateTimeField(default=datetime.datetime.now())
     from_account = models.ForeignKey(Account, on_delete=models.PROTECT, related_name="transaction_from_account", null=True)
-    to_account = models.ForeignKey(Account, on_delete=models.PROTECT, related_name="transaction_from_account")
+    to_account = models.ForeignKey(Account, on_delete=models.PROTECT, related_name="transaction_to_account")
 
     def __str__(self) -> str:
         return f"Transaction ({self.transaction_type}) of {self.amount} on {self.date} on account {self.account} owned by {self.account.user}."
@@ -94,6 +97,3 @@ class HistoricBalance(StrAsNameMixin, models.Model):
     balance = models.DecimalField(max_digits=15, decimal_places=2)
     date = models.DateField(auto_now=True)
     account = models.ForeignKey(Account, on_delete=models.PROTECT)
-
-class User(AbstractUser):
-    main_currency = models.ForeignKey(Currency, on_delete=models.CASCADE, default=1)
