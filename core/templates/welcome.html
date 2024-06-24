@@ -10,10 +10,26 @@
     <h1 class="text-center text-4xl xl:text-8xl">CashFlow</h1>
     <h2 class="text-center">Personal Finance Web Application</h2>
 
+    {% if request.user.is_authenticated %}
+    <div class="divider"></div>
+    <h1 class="text-2xl text-center">Welcome, {{request.user.get_full_name}}!</h1>
+
+    <div class="flex justify-center items-center mt-8 mb-8">
+        <a class="btn btn-outline btn-success">Check my Accounts</a>
+        <a href="" class="btn btn-outline btn-primary mx-2">Check My Transactions</a>
+        <a class="btn btn-outline btn-warning">Check My Tags</a>
+       <form method="post" action="{% url 'logout_view' %}">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-outline btn-danger mx-2">Log Out</button>
+       </form>
+    </div> 
+    
+    {% else %}
     <div class="flex justify-center items-center mt-8 mb-8">
         <a class="btn btn-outline btn-success">Sign Up Now!</a>
-        <a class="btn btn-outline btn-primary mx-2">Log In Now!</a>
+        <a href="{% url 'login_view' %}" class="btn btn-outline btn-primary mx-2">Log In Now!</a>
     </div>
+    {% endif %}
 
     <div class="divider"></div>
 
@@ -38,7 +54,7 @@
         </p>
 
         <div class="xl:columns-2 my-2 md:columns-1 sm:columns-1 xs:columns-1">
-            <div class="card p-5 bg-base-100 shadow-xl image-full">
+            <div class="card p-5 bg-base-100 shadow-xl image-full  hover:scale-110 transform transition duration-100">
                 <figure><img src="{% static 'img/cards/multicurrency.jpg' %}" alt="Many currencies" /></figure>
                 <div class="card-body flex justify-center align-center">
                   <div class="text-center text-white shadow-xl">
@@ -48,7 +64,7 @@
                 </div>
             </div>
 
-            <div class="card p-5 bg-base-100 shadow-xl image-full my-2">
+            <div class="card p-5 bg-base-100 shadow-xl image-full  hover:scale-110 transform transition duration-100 my-2">
                 <figure><img src="{% static 'img/cards/graphs.jpg' %}" alt="Graphs" /></figure>
                 <div class="card-body flex justify-center align-center">
                   <div class="text-center text-white shadow-xl">
@@ -58,7 +74,7 @@
                 </div>
             </div>
 
-            <div class="card p-5 bg-base-100 shadow-xl image-full">
+            <div class="card p-5 bg-base-100 shadow-xl image-full  hover:scale-110 transform transition duration-100">
                 <figure><img src="{% static 'img/cards/tags.jpg' %}" alt="Money Bands" /></figure>
                 <div class="card-body flex justify-center align-center">
                   <div class="text-center text-white shadow-xl">
@@ -68,7 +84,7 @@
                 </div>
             </div>
 
-            <div class="card p-5 bg-base-100 shadow-xl image-full my-2">
+            <div class="card p-5 bg-base-100 shadow-xl image-full  hover:scale-110 transform transition duration-100 my-2">
                 <figure><img src="{% static 'img/cards/reports.jpg' %}" alt="Report Signing" /></figure>
                 <div class="card-body flex justify-center align-center">
                   <div class="text-center text-white shadow-xl">
