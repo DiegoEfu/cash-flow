@@ -12,10 +12,21 @@ class Currency(models.Model):
     """
     """
 
+    code = models.CharField(max_length=10, unique=True)
     name = models.CharField(max_length=50, unique=True)
+
+    def __str__(self) -> str:
+        return f"{self.code} - {self.name}"
+    
+    class Meta:
+        ordering = ("code",)
 
 class User(AbstractUser):
     main_currency = models.ForeignKey(Currency, on_delete=models.CASCADE, default=1)
+    username = None
+    USERNAME_FIELD = 'email'
+    email = models.EmailField(unique=True)
+    REQUIRED_FIELDS = []
 
 class ExchangeRate(StrAsNameMixin, models.Model):
     id = models.UUIDField(default=uuid.uuid4, primary_key=True)

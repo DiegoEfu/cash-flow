@@ -5,19 +5,19 @@
 <div class="max-w-2xl m-auto p-5 flex" style="min-height: 85vh;">
 	<div class="shadow-xl p-5 border border-gray-200 rounded-lg max-w-sm p-4 m-auto sm:p-6 lg:p-8 dark:bg-gray-800 dark:border-gray-700">
 		<form class="space-y-6" method="post">
-            {% csrf_token %}
-			<h3 class="text-xl font-medium text-gray-900 dark:text-white">Sign in to CashFlow</h3>
+      {% csrf_token %}
+			<h3 class="text-xl font-medium text-gray-900 dark:text-white">Sign In to CashFlow</h3>
 
-            {% if messages %}
-            <div role="alert" class="alert alert-warning">
-                <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
-                <span>
-                    {% for message in messages %}
-                    {{message}}
-                    {% endfor %}
-                </span>
-            </div>
-            {% endif %}
+      {% if messages %}
+      <div role="alert" class="alert alert-warning">
+        <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
+          <span>
+            {% for message in messages %}
+            {{message}}
+            {% endfor %}
+          </span>
+      </div>
+      {% endif %}
 
 			<div>
 				<label class="input input-bordered flex items-center gap-2">
@@ -32,9 +32,10 @@
                         d="M15 6.954 8.978 9.86a2.25 2.25 0 0 1-1.956 0L1 6.954V11.5A1.5 1.5 0 0 0 2.5 13h11a1.5 1.5 0 0 0 1.5-1.5V6.954Z" />
                     </svg>
                     <input type="text" class="grow" placeholder="Email" name="username" required />
-                  </label>
-            </div>
-				<div>
+        </label>
+      </div>
+
+			<div>
 					<label class="input input-bordered flex items-center gap-2">
                         <svg
                           xmlns="http://www.w3.org/2000/svg"
@@ -47,16 +48,15 @@
                             clip-rule="evenodd" />
                         </svg>
                         <input type="password" placeholder="Password" class="grow" name="password" required />
-                      </label>
-                </div>
-                <div class="text-sm font-medium text-gray-500 dark:text-gray-300">
-                    <a href="#" class="text-blue-700 hover:underline dark:text-blue-500">Forgot your password?</a>
-                </div>
-				<button type="submit" class="w-full text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800">Login to your account</button>
-				<div class="text-sm font-medium text-gray-500 dark:text-gray-300 mb-0">
-    				Not registered? <a href="#" class="text-blue-700 hover:underline dark:text-blue-500">Create
-					account</a>
-				</div>
+          </label>
+      </div>
+      <div class="text-sm font-medium text-gray-500 dark:text-gray-300">
+        <a href="#" class="text-blue-700 hover:underline dark:text-blue-500">Forgot your password?</a>
+      </div>
+			<button type="submit" class="w-full text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800">Login to your account</button>
+			<div class="text-sm font-medium text-gray-500 dark:text-gray-300 mb-0">
+  				Not registered? <a href="{% url 'sign_up_view' %}" class="text-blue-700 hover:underline dark:text-blue-500">Create account</a>
+			</div>
 		</form>
 	</div>
 </div>
