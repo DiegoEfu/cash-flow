@@ -30,3 +30,8 @@ class UserForm(forms.ModelForm):
     class Meta:
         model = User
         exclude = ('id', 'username', 'date_joined')
+
+class AccountForm(forms.ModelForm):
+    class Meta:
+        model = Account
+        exclude = ('id',)

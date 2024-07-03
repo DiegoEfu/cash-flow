@@ -1,0 +1,51 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="p-8">
+    <div class="grid grid-cols-3">
+        <div class="flex justify-center">
+            <a href="{% url 'welcome_view' %}" class="btn">Go back</a>
+        </div>        
+        <div>
+            <h1 class="text-center text-4xl xl:text-4xl">Your Accounts</h1>
+        </div>
+        <div class="flex justify-center">
+            <a href="" class="btn btn-success">+ New Account</a>
+        </div>
+    </div>
+
+    <div class="divider"></div>
+
+    <div tabindex="0" class="collapse border-base-300 bg-base-200 border">
+        <div class="collapse-title text-xl font-medium">Filters</div>
+        <div class="collapse-content">
+          <p></p>
+        </div>
+    </div>
+
+    <div id="items" class="grid grid-cols-1 m-2">
+        <div class="stats shadow">
+            <div class="stat place-items-center">
+              <div class="stat-title">Account ID: {{account.id}}</div>
+              <div class="stat-value">{{account.name}}</div>
+              <div class="stat-desc">{{account.description}}</div>
+            </div>
+          
+            <div class="stat place-items-center">
+              <div class="stat-title">Current Balance</div>
+              <div class="stat-value">{{account.balance}}</div>
+              <div class="stat-desc">Secondary Currency ():</div>
+            </div>
+        </div>
+    </div>
+
+    <div tabindex="0" class="collapse border-base-300 bg-base-200 border">
+        <div class="collapse-title text-xl font-medium">Reports</div>
+        <div class="collapse-content">
+          <a href="#" class="btn btn-primary">Generate Cash Flow by Month (PDF)</a>
+          <a href="#" class="btn btn-warning">Generate Cash Flow by Year (PDF)</a>
+          <a href="#" class="btn btn-secondary">Generic Account List with Current Totals (PDF)</a>
+        </div>
+    </div>
+</div>
+{% endblock %}

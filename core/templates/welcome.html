@@ -14,6 +14,30 @@
     <div class="divider"></div>
     <h1 class="text-2xl text-center">Welcome, {{request.user.get_full_name}}!</h1>
 
+    <div class="flex justify-center">
+      <div class="stats shadow m-auto">
+        {% with currency=request.user.main_currency.code %}
+        <div class="stat place-items-center">
+          <div class="stat-title">Current Balance</div>
+          <div class="stat-value">{{currency}} __</div>
+          <div class="stat-desc">Increased by __%.</div>
+        </div>
+      
+        <div class="stat place-items-center">
+          <div class="stat-title">Income of this Month</div>
+          <div class="stat-value text-success">{{currency}} __</div>
+          <div class="stat-desc text-success">More than last month by __%</div>
+        </div>
+      
+        <div class="stat place-items-center">
+          <div class="stat-title">Expenses of this Month</div>
+          <div class="stat-value text-warning">{{currency}} __</div>
+          <div class="stat-desc text-warning">Less than last month by __%</div>
+        </div>
+        {% endwith %}
+      </div>
+    </div>
+
     <div class="flex justify-center items-center mt-8 mb-8">
         <a class="btn btn-outline btn-success">Check my Accounts</a>
         <a href="" class="btn btn-outline btn-primary mx-2">Check My Transactions</a>
