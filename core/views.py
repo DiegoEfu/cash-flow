@@ -3,6 +3,7 @@ from django.db.models.query import QuerySet
 from django.http import HttpRequest, HttpResponse
 from django.shortcuts import render, redirect
 from django.contrib.auth import logout
+from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.views import LoginView
 from django.views.generic import FormView, ListView
 from django.contrib import messages
@@ -55,14 +56,14 @@ class SignUpView(FormView):
         return super().form_invalid(form)
 
 ## ACCOUNT VIEWS
-class AccountListView(ListView):
+class AccountListView(LoginRequiredMixin, ListView):
     model = Account
     template_name = 'partials/accounts/accounts.html'
 
     def get_queryset(self) -> QuerySet[Any]:
         return self.model.objects.filter(owner = self.request.user).select_related("currency")
 
-class AccountCreation(FormView):
+class AccountCreation(LoginRequiredMixin, FormView):
     form_class = AccountForm
     template_name = 'partials/accounts/form.html'
     success_url = "/accounts"
@@ -76,6 +77,25 @@ class AccountCreation(FormView):
         messages.success(self.request, "The account has been created successfully.")
 
         return res
+    
+    def form_invalid(self, form: Any) -> HttpResponse:
+        return render(self.request, '/accounts/form.html', {'form': form})
+    
+class AccountUpdate(AccountCreation):
+
+    def form_valid(self, form: Any):
+        form = self.form_class(form.data, instance=Account.objects.get(pk=self.kwargs['pk']))
+        form.save()
+
+        return redirect("/accounts")
+    
+    def form_invalid(self, form: Any) -> HttpResponse:
+        return render(self.request, '/accounts/form.html', {'form': form, 'edit': True})
+    
+    def get_context_data(self, **kwargs: Any) -> dict[str, Any]:
+        instance = Account.objects.get(pk=self.kwargs['pk'])
+        return {**super().get_context_data(**kwargs), 'form': self.form_class(instance=instance), 'edit': True}
+
 
 def logout_view(request):
     logout(request)

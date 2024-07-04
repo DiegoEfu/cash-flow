@@ -1,4 +1,5 @@
 from django.db import models
+from django.core.validators import MinValueValidator
 from django.contrib.auth.models import AbstractUser
 from .mixins import StrAsNameMixin
 import datetime
@@ -42,7 +43,10 @@ class Account(StrAsNameMixin, models.Model):
     name = models.CharField(max_length=50)
     description = models.CharField(max_length = 100)
     opening_time = models.DateTimeField(auto_now=True)
-    current_balance = models.DecimalField(max_digits=15, decimal_places=2, default=0.00)
+    current_balance = models.DecimalField(max_digits=15, decimal_places=2, default=0.00, blank=True, validators=[MinValueValidator(0.0)])
+
+    class Meta:
+        ordering = ("name",)
 
 class Tag(StrAsNameMixin, models.Model):
     id = models.UUIDField(default=uuid.uuid4, primary_key=True)

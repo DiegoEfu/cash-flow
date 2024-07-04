@@ -11,4 +11,5 @@ urlpatterns = [
     # ACCOUNT VIEWS
     path('accounts/', AccountListView.as_view(), name="account_list"),
     path('accounts/create/', AccountCreation.as_view(), name="account_creation"),
+    path('accounts/update/<str:pk>/', AccountUpdate.as_view(), name="account_update"),
 ]

@@ -5,13 +5,17 @@
         <a href="{% url 'account_list' %}" class="btn">Go back</a>
     </div>        
     <div>
-        <h1 class="text-center text-4xl xl:text-4xl">Your Accounts</h1>
+       {% if edit %}
+       <h1 class="text-center text-4xl xl:text-4xl">Update the Account {{form.instance.name}}</h1>
+       {% else %}
+       <h1 class="text-center text-4xl xl:text-4xl">Make a New Account</h1>       
+       {% endif %}
     </div>
     <div class="flex justify-center">
     </div>
 </div>
 
-<form hx-post="{% url 'account_creation' %}" hx-target="main" hx-select="main" class="grid grid-cols-1">
+<form {% if not edit %} hx-post="{% url 'account_creation' %}" {% else %} hx-post="{% url 'account_update' pk=form.instance.pk %}" {% endif %} hx-target="main" hx-select="main" class="grid grid-cols-1">
     {% csrf_token %}
     <div class="mb-3">
         {{form.currency.label}} <br>
@@ -58,9 +62,10 @@
         {% endif %}
     </div>
 
+    {% if not update %}
     <div class="mb-3">
         <label for="">Start Balance:</label> <br>
-        {% render_field form.current_balance class="input input-bordered w-full" placeholder="Your account will have this initial balance." %}  
+        {% render_field form.current_balance class="input input-bordered w-full" minimum="0" placeholder="Your account will have this initial balance. If empty, 0 will be assumed." %}  
 
         {% if form.current_balance.errors %}
         <div role="alert" class="alert alert-warning">
@@ -72,6 +77,14 @@
         </div>
         {% endif %}
     </div>
-
-    <button class="btn btn-primary">Create Account</button>
+    {% endif %}
+    
+    <button class="btn btn-primary">
+        {% if update %}
+        Update
+        {% else %}
+        Create
+        {% endif %}
+        Account
+    </button>
 </form>

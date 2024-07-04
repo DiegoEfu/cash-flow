@@ -41,6 +41,12 @@
                 -->
               </div>
             </div>
+
+            <div class="stat place-items-center">
+              <a href="#" class="btn btn-success w-full mb-3">VISUALIZE TRANSACTIONS</a>
+              <a hx-target="main" hx-get="{% url 'account_update' pk=account.pk %}" class="btn btn-primary w-full mb-3">EDIT ACCOUNT DETAILS</a>
+              <a href="#" class="btn btn-secondary w-full mb-3">DELETE ACCOUNT</a>
+            </div>
         </div>
         {% endfor %}
     </div>
