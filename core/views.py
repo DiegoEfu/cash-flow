@@ -1,4 +1,5 @@
 from typing import Any
+from django.db.models.query import QuerySet
 from django.http import HttpRequest, HttpResponse
 from django.shortcuts import render, redirect
 from django.contrib.auth import logout
@@ -57,6 +58,24 @@ class SignUpView(FormView):
 class AccountListView(ListView):
     model = Account
     template_name = 'partials/accounts/accounts.html'
+
+    def get_queryset(self) -> QuerySet[Any]:
+        return self.model.objects.filter(owner = self.request.user).select_related("currency")
+
+class AccountCreation(FormView):
+    form_class = AccountForm
+    template_name = 'partials/accounts/form.html'
+    success_url = "/accounts"
+
+    def form_valid(self, form: Any):
+        res = super().form_valid(form)
+
+        form.instance.owner = self.request.user
+        form.save()
+
+        messages.success(self.request, "The account has been created successfully.")
+
+        return res
 
 def logout_view(request):
     logout(request)

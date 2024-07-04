@@ -19,8 +19,10 @@
 <body>
     {% include 'navbar.html' %}
 
-    {% block content %}
-    {% endblock %}
+    <main class="p-5">
+        {% block content %}
+        {% endblock %}
+    </main>
     
     {% include 'footer.html' %}
 </body>

@@ -10,7 +10,7 @@
             <h1 class="text-center text-4xl xl:text-4xl">Your Accounts</h1>
         </div>
         <div class="flex justify-center">
-            <a href="" class="btn btn-success">+ New Account</a>
+            <a hx-get="{% url 'account_creation' %}" hx-target="main" class="btn btn-success">+ New Account</a>
         </div>
     </div>
 
@@ -24,19 +24,25 @@
     </div>
 
     <div id="items" class="grid grid-cols-1 m-2">
-        <div class="stats shadow">
+        {% for account in object_list %}
+        <div class="stats shadow mb-3">
             <div class="stat place-items-center">
               <div class="stat-title">Account ID: {{account.id}}</div>
-              <div class="stat-value">{{account.name}}</div>
+              <div class="stat-value">{{account.name.upper}}</div>
               <div class="stat-desc">{{account.description}}</div>
             </div>
           
             <div class="stat place-items-center">
               <div class="stat-title">Current Balance</div>
-              <div class="stat-value">{{account.balance}}</div>
-              <div class="stat-desc">Secondary Currency ():</div>
+              <div class="stat-value">{{account.currency.code}} {{account.current_balance}}</div>
+              <div class="stat-desc">
+                <!--
+                TODO: MAKE THIS TO SHOW THE CURRENCY IF THE CURRENCY IS DIFFERENT FROM THE MAIN ONE
+                -->
+              </div>
             </div>
         </div>
+        {% endfor %}
     </div>
 
     <div tabindex="0" class="collapse border-base-300 bg-base-200 border">

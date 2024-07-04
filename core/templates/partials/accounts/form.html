@@ -1,0 +1,77 @@
+{% load widget_tweaks %}
+ 
+<div class="grid grid-cols-3">
+    <div class="flex justify-center">
+        <a href="{% url 'account_list' %}" class="btn">Go back</a>
+    </div>        
+    <div>
+        <h1 class="text-center text-4xl xl:text-4xl">Your Accounts</h1>
+    </div>
+    <div class="flex justify-center">
+    </div>
+</div>
+
+<form hx-post="{% url 'account_creation' %}" hx-target="main" hx-select="main" class="grid grid-cols-1">
+    {% csrf_token %}
+    <div class="mb-3">
+        {{form.currency.label}} <br>
+        {% render_field form.currency class="select select-bordered w-full" %}
+
+        {% if form.currency.errors %}
+        <div role="alert" class="alert alert-warning">
+            <span>
+                {% for error in form.currency.errors %}
+                {{error}}
+                {% endfor %}
+            </span>
+        </div>
+        {% endif %}
+    </div>
+
+    <div class="mb-3">
+        {{form.name.label}} <br>
+        {% render_field form.name class="input input-bordered w-full" placeholder="Name of the Account" %}
+
+        {% if form.name.errors %}
+        <div role="alert" class="alert alert-warning">
+            <span>
+                {% for error in form.name.errors %}
+                {{error}}
+                {% endfor %}
+            </span>
+        </div>
+        {% endif %}
+    </div>
+
+    <div class="mb-3">
+        {{form.description.label}} <br>
+        {% render_field form.description class="input input-bordered w-full" placeholder="Description of the Account" %}
+
+        {% if form.description.errors %}
+        <div role="alert" class="alert alert-warning">
+            <span>
+                {% for error in form.description.errors %}
+                {{error}}
+                {% endfor %}
+            </span>
+        </div>
+        {% endif %}
+    </div>
+
+    <div class="mb-3">
+        <label for="">Start Balance:</label> <br>
+        {% render_field form.current_balance class="input input-bordered w-full" placeholder="Your account will have this initial balance." %}  
+
+        {% if form.current_balance.errors %}
+        <div role="alert" class="alert alert-warning">
+            <span>
+                {% for error in form.current_balance.errors %}
+                {{error}}
+                {% endfor %}
+            </span>
+        </div>
+        {% endif %}
+    </div>
+
+    <button class="btn btn-primary">Create Account</button>
+</form>
