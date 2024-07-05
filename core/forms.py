@@ -34,4 +34,4 @@ class UserForm(forms.ModelForm):
 class AccountForm(forms.ModelForm):
     class Meta:
         model = Account
-        exclude = ('id', 'opening_time', 'owner')
+        exclude = ('id', 'opening_time', 'owner', 'visible')

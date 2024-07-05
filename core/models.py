@@ -39,11 +39,12 @@ class ExchangeRate(StrAsNameMixin, models.Model):
 class Account(StrAsNameMixin, models.Model):
     id = models.UUIDField(default=uuid.uuid4, primary_key=True)
     currency = models.ForeignKey(Currency, on_delete=models.PROTECT)
-    owner = models.ForeignKey(User, on_delete=models.PROTECT)
+    owner = models.ForeignKey(User, on_delete=models.PROTECT, null=True)
     name = models.CharField(max_length=50)
     description = models.CharField(max_length = 100)
     opening_time = models.DateTimeField(auto_now=True)
     current_balance = models.DecimalField(max_digits=15, decimal_places=2, default=0.00, blank=True, validators=[MinValueValidator(0.0)])
+    visible = models.BooleanField(default=True, blank=True)
 
     class Meta:
         ordering = ("name",)
@@ -80,7 +81,7 @@ class Transaction(models.Model):
     hold = models.BooleanField(default=False)
     date = models.DateTimeField(default=datetime.datetime.now())
     from_account = models.ForeignKey(Account, on_delete=models.PROTECT, related_name="transaction_from_account", null=True)
-    to_account = models.ForeignKey(Account, on_delete=models.PROTECT, related_name="transaction_to_account")
+    to_account = models.ForeignKey(Account, on_delete=models.PROTECT, related_name="transaction_to_account", null=True)
 
     def __str__(self) -> str:
         return f"Transaction ({self.transaction_type}) of {self.amount} on {self.date} on account {self.account} owned by {self.account.user}."

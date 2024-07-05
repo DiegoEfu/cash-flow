@@ -1,5 +1,6 @@
 from typing import Any
 from django.db.models.query import QuerySet
+from django.db import transaction
 from django.http import HttpRequest, HttpResponse
 from django.shortcuts import render, redirect
 from django.contrib.auth import logout
@@ -10,6 +11,7 @@ from django.contrib import messages
 
 from .forms import *
 from .models import *
+from .filters import *
 
 # Create your views here.
 
@@ -42,12 +44,13 @@ class SignUpView(FormView):
     success_url = "/login"
 
     def form_valid(self, form: Any) -> HttpResponse:
-        res = super().form_valid(form)
+        with transaction.atomic():
+            res = super().form_valid(form)
 
-        form.instance.is_active = True
-        form.save()
+            form.instance.is_active = True
+            form.save()
 
-        messages.success(self.request, "Your account has been created successfully. Now log in.")
+            messages.success(self.request, "Your account has been created successfully. Now log in.")
 
         return res
     
@@ -61,7 +64,17 @@ class AccountListView(LoginRequiredMixin, ListView):
     template_name = 'partials/accounts/accounts.html'
 
     def get_queryset(self) -> QuerySet[Any]:
-        return self.model.objects.filter(owner = self.request.user).select_related("currency")
+        return self.model.objects.filter(owner = self.request.user, visible=True).select_related("currency")
+    
+    def post(self, request):
+        if(request.POST.get('pk')):
+            with transaction.atomic():
+                account = Account.objects.get(pk=request.POST['pk'])
+                account.visible = False
+                account.save()
+
+            messages.warning(request, "The account has been deleted successfully.")
+            return redirect("/accounts")
 
 class AccountCreation(LoginRequiredMixin, FormView):
     form_class = AccountForm
@@ -71,8 +84,9 @@ class AccountCreation(LoginRequiredMixin, FormView):
     def form_valid(self, form: Any):
         res = super().form_valid(form)
 
-        form.instance.owner = self.request.user
-        form.save()
+        with transaction.atomic():
+            form.instance.owner = self.request.user
+            form.save()
 
         messages.success(self.request, "The account has been created successfully.")
 
@@ -84,8 +98,11 @@ class AccountCreation(LoginRequiredMixin, FormView):
 class AccountUpdate(AccountCreation):
 
     def form_valid(self, form: Any):
-        form = self.form_class(form.data, instance=Account.objects.get(pk=self.kwargs['pk']))
-        form.save()
+        with transaction.atomic():
+            form = self.form_class(form.data, instance=Account.objects.get(pk=self.kwargs['pk']))
+            form.save()
+
+            messages.success(self.request, "The Account has been updated successfully.")
 
         return redirect("/accounts")
     
@@ -95,7 +112,6 @@ class AccountUpdate(AccountCreation):
     def get_context_data(self, **kwargs: Any) -> dict[str, Any]:
         instance = Account.objects.get(pk=self.kwargs['pk'])
         return {**super().get_context_data(**kwargs), 'form': self.form_class(instance=instance), 'edit': True}
-
 
 def logout_view(request):
     logout(request)
