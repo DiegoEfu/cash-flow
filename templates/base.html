@@ -17,15 +17,15 @@
 
 </head>
 <body>
-    {% include 'navbar.html' %}
+    <div class="flex flex-col min-h-screen">
+        {% include 'navbar.html' %}
 
-    <main class="p-5">
-        {% block content %}
-        {% endblock %}
-    </main>
+        <main class="flex-grow p-5">
+            {% block content %}
+            {% endblock %}
+        </main>
+    </div>
     
-    {% include 'footer.html' %}
-
-    
+    {% include 'footer.html' %}   
 </body>
 </html>

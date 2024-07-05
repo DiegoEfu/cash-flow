@@ -46,34 +46,39 @@
 
     <div id="items" class="grid grid-cols-1 m-2">
         {% for account in object_list %}
-        <div class="stats shadow mb-3 grid xl:grid-cols-3 lg:grid-cols-1 md:grid-cols-1 sm:grid-cols-1 xs:grid-cols-1">
-            <div class="stat place-items-center">
-              <div class="stat-title overflow-x-auto">Account ID: {{account.id}}</div>
+        <div class="stats shadow mb-3 border">
+          <div class="grid gap-4 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 border">
+            <div class="stat place-items-center p-2 border-r border-b">
               <div class="text-center text-2xl font-bold">{{account.name.upper}}</div>
-              <div class="stat-desc overflow-x-auto">{{account.description}}</div>
+              <div class="text-center text-sm overflow-x-auto">{{account.description}}</div>
+              <div class="text-center text-sm"><b>Account ID</b>: {{account.id}}</div>
             </div>
           
-            <div class="stat place-items-center">
-              <div class="stat-title overflow-x-auto">Current Balance</div>
-              <div class="stat-value">{{account.currency.code}} {{account.current_balance}}</div>
-              <div class="stat-desc overflow-x-auto">
+            <div class="stat place-items-center p-2 border-r border-b">
+              <div class="text-center">Current Balance</div>
+              <div class="text-center text-2xl font-bold">{{account.currency.code}} {{account.current_balance}}</div>
+              <div class="text-center text-sm overflow-x-auto"> 
                 <!--
                 TODO: MAKE THIS TO SHOW THE CURRENCY IF THE CURRENCY IS DIFFERENT FROM THE MAIN ONE
                 -->
               </div>
             </div>
 
-            <div class="stat place-items-center">
-              <a href="#" class="btn btn-success w-full mb-3">VISUALIZE TRANSACTIONS</a>
-              <a hx-target="main" hx-get="{% url 'account_update' pk=account.pk %}" class="btn btn-primary w-full mb-3">EDIT ACCOUNT DETAILS</a>
+            <div class="stat place-items-center p-2 border-b">
+              <a href="#" class="btn btn-success w-full">VISUALIZE TRANSACTIONS</a>
+              <a hx-target="main" hx-get="{% url 'account_update' pk=account.pk %}" class="btn btn-primary w-full mt-2">EDIT ACCOUNT DETAILS</a>
               <form hx-post="{% url 'account_list' %}" hx-confirm="Are you sure? You won't be able to recover the account you deleted." hx-target="body" method="post" class="w-full">
                 {% csrf_token %}
-                <button name="pk" value="{{account.pk}}" type="submit" class="btn btn-secondary w-full mb-3">DELETE ACCOUNT</button>
+                <button name="pk" value="{{account.pk}}" type="submit" class="btn btn-secondary w-full mt-2">DELETE ACCOUNT</button>
               </form>
             </div>
+          </div>
         </div>
         {% empty %}
-        <h2 class="text-center text-2xl xl:text-2xl">No Accounts Found.</h2>
+        <div role="alert" class="alert alert-warning">
+          <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
+          <span><b>No accounts were found. </b> Create a new one by clicking the button above or change your filtering criteria.</span>
+      </div>
         {% endfor %}
 
         {% if page_obj.has_next %}

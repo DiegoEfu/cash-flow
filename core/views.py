@@ -58,38 +58,46 @@ class SignUpView(FormView):
         messages.error(self.request, "An error has ocurred while creating your user.")
         return super().form_invalid(form)
 
-## ACCOUNT VIEWS
-class AccountListView(LoginRequiredMixin, ListView):
-    model = Account
-    template_name = 'partials/accounts/accounts.html'
-    filter_class = AccountFilter
-    paginate_by = 5
+
+class GeneralListView(LoginRequiredMixin, ListView):
+    model = None  # This attribute must be overridden in the subclass
+    template_name = '' # must be overridden by a partial
+    paginate_by = 5 # pagination used by default
 
     def get_queryset(self) -> QuerySet[Any]:
         return self.filter_class(
             self.request.GET,
-            queryset=self.model.objects.filter(owner = self.request.user, visible=True).select_related("currency")
+            queryset=self.model.objects.filter(owner=self.request.user)
         )
-    
-    def get_context_data(self, **kwargs: Any) -> dict[str, Any]:
+
+    def get_context_data(self, **kwargs: Any):
         context = super().get_context_data(**kwargs)
         context['filter'] = self.filter_class()
         return context
-    
+
     def paginate_queryset(self, queryset, page_size):
-        print(queryset.qs)
-        print(page_size)
         return super().paginate_queryset(queryset.qs, page_size)
+
+## ACCOUNT VIEWS
+class AccountListView(GeneralListView):
+    model = Account
+    template_name = 'partials/accounts/accounts.html'
+    filter_class = AccountFilter
     
     def post(self, request):
         if(request.POST.get('pk')):
-            with transaction.atomic():
-                account = Account.objects.get(pk=request.POST['pk'])
-                account.visible = False
-                account.save()
+            try:
+                with transaction.atomic():
+                    account = Account.objects.get(pk=request.POST['pk'])
+                    account.visible = False
+                    account.save()
+
+            except Account.DoesNotExist:
+                messages.error(request, "The account you are trying to delete does not exist.")
+                return redirect("/accounts")
 
             messages.warning(request, "The account has been deleted successfully.")
-            return redirect("/accounts")        
+            return redirect("/accounts")
 
 class AccountCreation(LoginRequiredMixin, FormView):
     form_class = AccountForm
