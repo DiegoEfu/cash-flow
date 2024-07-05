@@ -17,6 +17,15 @@
 
     <div class="divider"></div>
 
+    {% if messages %}
+    {% for message in messages %}
+    <div class="alert {% if 'success' in message.tags %}alert-success{% else %}alert-warning{%endif%}">
+        {{message}}
+    </div>
+    {% endfor %}    
+    <div class="divider"></div>
+    {% endif %}
+
     <div class="collapse bg-base-200">
       <input type="checkbox" />
       <div class="collapse-title text-xl font-medium">Filters</div>
@@ -65,7 +74,7 @@
             </div>
 
             <div class="stat place-items-center p-2 border-b">
-              <a href="#" class="btn btn-success w-full">VISUALIZE TRANSACTIONS</a>
+              <a href="{% url 'transactions_list' pk=account.pk %}" class="btn btn-success w-full">VISUALIZE TRANSACTIONS</a>
               <a hx-target="main" hx-get="{% url 'account_update' pk=account.pk %}" class="btn btn-primary w-full mt-2">EDIT ACCOUNT DETAILS</a>
               <form hx-post="{% url 'account_list' %}" hx-confirm="Are you sure? You won't be able to recover the account you deleted." hx-target="body" method="post" class="w-full">
                 {% csrf_token %}

@@ -12,4 +12,7 @@ urlpatterns = [
     path('accounts/', AccountListView.as_view(), name="account_list"),
     path('accounts/create/', AccountCreation.as_view(), name="account_creation"),
     path('accounts/update/<str:pk>/', AccountUpdate.as_view(), name="account_update"),
+
+    # TRANSACTIONS VIEWS
+    path('transactions/<str:pk>/', TransactionListView.as_view(), name="transactions_list"),
 ]

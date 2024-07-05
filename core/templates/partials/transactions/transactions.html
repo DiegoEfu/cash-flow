@@ -1,0 +1,109 @@
+{% extends 'base.html' %}
+{% load widget_tweaks %}
+
+{% block content %}
+<div class="p-8">
+    <div class="grid xl:grid-cols-3 xs:grid-cols-1">
+        <div class="flex justify-center -2">
+            <a href="{% url 'account_list' %}" class="btn">Go back</a>
+        </div>        
+        <div class="p-2">
+            <h1 class="text-center text-4xl xl:text-4xl">{{account.name}}</h1>
+            <h3 class="text-center text-success text-2xl xl:text-2xl">{{account.currency.code}} {{account.current_balance}}</h3>
+        </div>
+        <div class="flex justify-center p-2">
+            <a hx-get="{% url 'account_creation' %}" hx-target="main" class="btn btn-success">+ New Transaction</a>
+        </div>
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="collapse bg-base-200 mb-3">
+      <input type="checkbox" />
+      <div class="collapse-title text-xl font-medium">Filters</div>
+        <div class="collapse-content">
+          <form hx-get="{% url 'account_list' %}" hx-select="#items" hx-target="#items" hx-swap="outerHTML" hx-indicator="#loading-bars" hx-trigger="submit, change, keyup delay:1s">
+            <div class="grid lg:grid-cols-3 md:grid-cols-1 sm:grid-cols-1 xs:grid-cols-1">
+              <div class="me-4">
+                <label for="id_name__icontains">Name:</label> <br>
+                {% render_field filter.form.name__icontains class="input input-bordered w-full" %}
+              </div>
+
+              <div class="me-4">
+                <label for="id_description__icontains">Description:</label> <br>
+                {% render_field filter.form.description__icontains class="input input-bordered w-full" %}
+              </div>
+
+              <div class="me-4">
+                {{filter.form.currency.label}} <br>
+                {% render_field filter.form.currency class="select select-bordered w-full" %}
+              </div>
+
+              <input type="submit" hidden>
+            </div>
+          </form>       
+        </div>
+    </div>
+    <div class="collapse bg-base-200 mb-3">
+        <div class="collapse-title text-xl font-medium">Reports</div>
+        <div class="collapse-content">
+          <a href="#" class="btn btn-primary">Generate Cash Flow by Month (PDF)</a>
+          <a href="#" class="btn btn-warning">Generate Cash Flow by Year (PDF)</a>
+          <a href="#" class="btn btn-secondary">Generic Account List with Current Totals (PDF)</a>
+        </div>
+    </div>
+
+    <div id="items" class="table-wrapper">
+        <table class="table table-xs w-full text-center">
+            <thead>
+                <tr class="bg-base-200">
+                    <th>Date</th>
+                    <th>Description</th>
+                    <th>Type</th>
+                    <th>Amount ({{account.currency.code}})</th>
+                    <th>Reference</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for transaction in object_list %}
+                <tr>
+                    <td>{{transaction.date}} {% if transaction.hold %} <span class="badge badge-warning">(On Hold)</span> {%endif%}</td>
+                    <td>{{transaction.description}}</td>
+                    <td><span class="badge badge-{% if transaction.transaction_type == 'I' %}success{% else %}error{% endif %}">{{transaction.transaction_type}}</span></td>
+                    <td>{% if transaction.transaction_type == 'E' %}-{%endif%}{{transaction.amount}}</td>
+                    <td>{{transaction.reference|default:'-'}}</td>
+                    <td>
+                        <a href="#" class="text-primary hover:underline">Edit</a>
+                        <a href="#" class="text-secondary hover:underline">Delete</a>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr class="table-primary">
+                    <td colspan="7" class="text-center">No transactions found.</td>
+                </tr>
+                {% endfor %}
+                {% if page_obj.has_next %}
+                <tr hx-trigger="revealed" hx-target="this" hx-swap="outerHTML" hx-select="#items" hx-get="{% url 'transaction_list' %}?page={{page_obj.next_page_number }}" hx-include=".input, .select"></tr>
+                {% endif %}
+            </tbody>
+        </table>        
+    </div>
+
+    <div id="loading-bars" class="htmx-indicator indicator-style">
+      <span class="loading loading-bars loading-lg htmx-indicator"></span>
+    </div>
+
+    
+</div>
+
+<script>
+  document.body.addEventListener('htmx:beforeRequest', function(evt) {
+    document.body.style.opacity = 0.5;
+  });
+
+  document.body.addEventListener('htmx:afterRequest', function(evt) {
+    document.body.style.opacity = 1.0;
+  });
+</script>
+{% endblock %}

@@ -9,3 +9,13 @@ class AccountFilter(django_filters.FilterSet):
     class Meta:
         model = Account
         fields = ('currency',)
+
+
+
+class TransactionFilter(django_filters.FilterSet):
+    date_from = django_filters.DateFilter(field_name='date', lookup_expr='gte')
+    date_to = django_filters.DateFilter(field_name='date', lookup_expr='lte')
+
+    class Meta:
+        model = Transaction
+        fields = ('transaction_type',)

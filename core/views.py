@@ -58,17 +58,10 @@ class SignUpView(FormView):
         messages.error(self.request, "An error has ocurred while creating your user.")
         return super().form_invalid(form)
 
-
 class GeneralListView(LoginRequiredMixin, ListView):
     model = None  # This attribute must be overridden in the subclass
     template_name = '' # must be overridden by a partial
     paginate_by = 5 # pagination used by default
-
-    def get_queryset(self) -> QuerySet[Any]:
-        return self.filter_class(
-            self.request.GET,
-            queryset=self.model.objects.filter(owner=self.request.user)
-        )
 
     def get_context_data(self, **kwargs: Any):
         context = super().get_context_data(**kwargs)
@@ -83,6 +76,12 @@ class AccountListView(GeneralListView):
     model = Account
     template_name = 'partials/accounts/accounts.html'
     filter_class = AccountFilter
+
+    def get_queryset(self) -> QuerySet[Any]:
+        return self.filter_class(
+            self.request.GET,
+            queryset=self.model.objects.filter(owner=self.request.user)
+        )
     
     def post(self, request):
         if(request.POST.get('pk')):
@@ -135,6 +134,23 @@ class AccountUpdate(AccountCreation):
     def get_context_data(self, **kwargs: Any) -> dict[str, Any]:
         instance = Account.objects.get(pk=self.kwargs['pk'])
         return {**super().get_context_data(**kwargs), 'form': self.form_class(instance=instance), 'edit': True}
+
+# TRANSACTIONS VIEWS
+class TransactionListView(GeneralListView):
+    model = Transaction
+    template_name = 'partials/transactions/transactions.html'
+    filter_class = TransactionFilter
+    
+    def get_queryset(self) -> QuerySet[Any]:
+        return self.filter_class(
+            self.request.GET,
+            queryset=self.model.objects.filter(from_account__owner=self.request.user)
+        )
+    
+    def get_context_data(self, **kwargs: Any) -> dict[str, Any]:
+        context = super().get_context_data(**kwargs)
+        context['account'] = Account.objects.get(pk=self.kwargs['pk'])
+        return context
 
 def logout_view(request):
     logout(request)
