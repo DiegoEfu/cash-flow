@@ -3,14 +3,14 @@
 
 {% block content %}
 <div class="p-8">
-    <div class="grid grid-cols-3">
-        <div class="flex justify-center">
+    <div class="grid xl:grid-cols-3 xs:grid-cols-1">
+        <div class="flex justify-center -2">
             <a href="{% url 'welcome_view' %}" class="btn">Go back</a>
         </div>        
-        <div>
+        <div class="p-2">
             <h1 class="text-center text-4xl xl:text-4xl">Your Accounts</h1>
         </div>
-        <div class="flex justify-center">
+        <div class="flex justify-center p-2">
             <a hx-get="{% url 'account_creation' %}" hx-target="main" class="btn btn-success">+ New Account</a>
         </div>
     </div>
@@ -22,7 +22,7 @@
       <div class="collapse-title text-xl font-medium">Filters</div>
         <div class="collapse-content">
           <form hx-get="{% url 'account_list' %}" hx-select="#items" hx-target="#items" hx-swap="outerHTML" hx-indicator="#loading-bars" hx-trigger="submit, change, keyup delay:1s">
-            <div class="grid grid-cols-3">
+            <div class="grid lg:grid-cols-3 md:grid-cols-1 sm:grid-cols-1 xs:grid-cols-1">
               <div class="me-4">
                 <label for="id_name__icontains">Name:</label> <br>
                 {% render_field filter.form.name__icontains class="input input-bordered w-full" %}
@@ -46,17 +46,17 @@
 
     <div id="items" class="grid grid-cols-1 m-2">
         {% for account in object_list %}
-        <div class="stats shadow mb-3 grid grid-cols-3">
+        <div class="stats shadow mb-3 grid xl:grid-cols-3 lg:grid-cols-1 md:grid-cols-1 sm:grid-cols-1 xs:grid-cols-1">
             <div class="stat place-items-center">
-              <div class="stat-title">Account ID: {{account.id}}</div>
-              <div class="stat-value">{{account.name.upper}}</div>
-              <div class="stat-desc">{{account.description}}</div>
+              <div class="stat-title overflow-x-auto">Account ID: {{account.id}}</div>
+              <div class="text-center text-2xl font-bold">{{account.name.upper}}</div>
+              <div class="stat-desc overflow-x-auto">{{account.description}}</div>
             </div>
           
             <div class="stat place-items-center">
-              <div class="stat-title">Current Balance</div>
+              <div class="stat-title overflow-x-auto">Current Balance</div>
               <div class="stat-value">{{account.currency.code}} {{account.current_balance}}</div>
-              <div class="stat-desc">
+              <div class="stat-desc overflow-x-auto">
                 <!--
                 TODO: MAKE THIS TO SHOW THE CURRENCY IF THE CURRENCY IS DIFFERENT FROM THE MAIN ONE
                 -->
