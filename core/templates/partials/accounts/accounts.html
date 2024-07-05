@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load widget_tweaks %}
 
 {% block content %}
 <div class="p-8">
@@ -16,16 +17,36 @@
 
     <div class="divider"></div>
 
-    <div tabindex="0" class="collapse border-base-300 bg-base-200 border">
-        <div class="collapse-title text-xl font-medium">Filters</div>
+    <div class="collapse bg-base-200">
+      <input type="checkbox" />
+      <div class="collapse-title text-xl font-medium">Filters</div>
         <div class="collapse-content">
-          <p></p>
+          <form hx-get="{% url 'account_list' %}" hx-select="#items" hx-target="#items" hx-swap="outerHTML" hx-indicator="#loading-bars" hx-trigger="submit, change, keyup delay:1s">
+            <div class="grid grid-cols-3">
+              <div class="me-4">
+                <label for="id_name__icontains">Name:</label> <br>
+                {% render_field filter.form.name__icontains class="input input-bordered w-full" %}
+              </div>
+
+              <div class="me-4">
+                <label for="id_description__icontains">Description:</label> <br>
+                {% render_field filter.form.description__icontains class="input input-bordered w-full" %}
+              </div>
+
+              <div class="me-4">
+                {{filter.form.currency.label}} <br>
+                {% render_field filter.form.currency class="select select-bordered w-full" %}
+              </div>
+
+              <input type="submit" hidden>
+            </div>
+          </form>       
         </div>
     </div>
 
     <div id="items" class="grid grid-cols-1 m-2">
         {% for account in object_list %}
-        <div class="stats shadow mb-3">
+        <div class="stats shadow mb-3 grid grid-cols-3">
             <div class="stat place-items-center">
               <div class="stat-title">Account ID: {{account.id}}</div>
               <div class="stat-value">{{account.name.upper}}</div>
@@ -51,7 +72,17 @@
               </form>
             </div>
         </div>
+        {% empty %}
+        <h2 class="text-center text-2xl xl:text-2xl">No Accounts Found.</h2>
         {% endfor %}
+
+        {% if page_obj.has_next %}
+        <div hx-trigger="revealed" hx-target="this" hx-swap="outerHTML" hx-select="#items" hx-get="{% url 'account_list' %}?page={{page_obj.next_page_number }}" hx-include=".input, .select"></div>
+        {% endif %}
+    </div>
+
+    <div id="loading-bars" class="htmx-indicator indicator-style">
+      <span class="loading loading-bars loading-lg htmx-indicator"></span>
     </div>
 
     <div tabindex="0" class="collapse border-base-300 bg-base-200 border">
@@ -63,4 +94,14 @@
         </div>
     </div>
 </div>
+
+<script>
+  document.body.addEventListener('htmx:beforeRequest', function(evt) {
+    document.body.style.opacity = 0.5;
+  });
+
+  document.body.addEventListener('htmx:afterRequest', function(evt) {
+    document.body.style.opacity = 1.0;
+  });
+</script>
 {% endblock %}

@@ -62,9 +62,24 @@ class SignUpView(FormView):
 class AccountListView(LoginRequiredMixin, ListView):
     model = Account
     template_name = 'partials/accounts/accounts.html'
+    filter_class = AccountFilter
+    paginate_by = 5
 
     def get_queryset(self) -> QuerySet[Any]:
-        return self.model.objects.filter(owner = self.request.user, visible=True).select_related("currency")
+        return self.filter_class(
+            self.request.GET,
+            queryset=self.model.objects.filter(owner = self.request.user, visible=True).select_related("currency")
+        )
+    
+    def get_context_data(self, **kwargs: Any) -> dict[str, Any]:
+        context = super().get_context_data(**kwargs)
+        context['filter'] = self.filter_class()
+        return context
+    
+    def paginate_queryset(self, queryset, page_size):
+        print(queryset.qs)
+        print(page_size)
+        return super().paginate_queryset(queryset.qs, page_size)
     
     def post(self, request):
         if(request.POST.get('pk')):
@@ -74,7 +89,7 @@ class AccountListView(LoginRequiredMixin, ListView):
                 account.save()
 
             messages.warning(request, "The account has been deleted successfully.")
-            return redirect("/accounts")
+            return redirect("/accounts")        
 
 class AccountCreation(LoginRequiredMixin, FormView):
     form_class = AccountForm
