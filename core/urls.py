@@ -15,4 +15,5 @@ urlpatterns = [
 
     # TRANSACTIONS VIEWS
     path('transactions/<str:pk>/', TransactionListView.as_view(), name="transactions_list"),
+    path('transactions/create/<str:pk>/', TransactionCreation.as_view(), name="transaction_creation"),
 ]

@@ -76,7 +76,7 @@ class Transaction(models.Model):
     id = models.UUIDField(default=uuid.uuid4, primary_key=True)
     reference = models.CharField(max_length=15, null=True, blank=True)
     transaction_type = models.CharField(max_length=1, choices=TRANSACTION_TYPES)
-    amount = models.DecimalField(max_digits=15, decimal_places=2)
+    amount = models.DecimalField(max_digits=15, decimal_places=2, validators=[MinValueValidator(0.01)])
     description = models.CharField(max_length=100, null=True, blank=True)
     hold = models.BooleanField(default=False)
     date = models.DateTimeField(default=datetime.datetime.now())
@@ -85,6 +85,9 @@ class Transaction(models.Model):
 
     def __str__(self) -> str:
         return f"Transaction ({self.transaction_type}) of {self.amount} on {self.date} on account {self.account} owned by {self.account.user}."
+    
+    class Meta:
+        ordering = ("-date",)
     
 class Fee(StrAsNameMixin, models.Model):
     FEE_TYPES = (

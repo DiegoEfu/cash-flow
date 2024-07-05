@@ -13,8 +13,8 @@ class AccountFilter(django_filters.FilterSet):
 
 
 class TransactionFilter(django_filters.FilterSet):
-    date_from = django_filters.DateFilter(field_name='date', lookup_expr='gte')
-    date_to = django_filters.DateFilter(field_name='date', lookup_expr='lte')
+    date_from = django_filters.DateTimeFilter(field_name='date', lookup_expr='gte')
+    date_until = django_filters.DateTimeFilter(field_name='date', lookup_expr='lte')
 
     class Meta:
         model = Transaction

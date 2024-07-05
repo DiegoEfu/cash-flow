@@ -35,3 +35,8 @@ class AccountForm(forms.ModelForm):
     class Meta:
         model = Account
         exclude = ('id', 'opening_time', 'owner', 'visible')
+
+class TransactionForm(forms.ModelForm):
+    class Meta:
+        model = Transaction
+        exclude = ('id', 'from_account', 'to_account')

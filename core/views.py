@@ -115,7 +115,7 @@ class AccountCreation(LoginRequiredMixin, FormView):
         return res
     
     def form_invalid(self, form: Any) -> HttpResponse:
-        return render(self.request, '/accounts/form.html', {'form': form})
+        return render(self.request, 'partials/accounts/form.html', {'form': form})
     
 class AccountUpdate(AccountCreation):
 
@@ -140,16 +140,48 @@ class TransactionListView(GeneralListView):
     model = Transaction
     template_name = 'partials/transactions/transactions.html'
     filter_class = TransactionFilter
+    paginate_by = 15
     
     def get_queryset(self) -> QuerySet[Any]:
         return self.filter_class(
             self.request.GET,
-            queryset=self.model.objects.filter(from_account__owner=self.request.user)
+            queryset=self.model.objects.filter(from_account=Account.objects.get(pk=self.kwargs['pk']))
         )
     
     def get_context_data(self, **kwargs: Any) -> dict[str, Any]:
         context = super().get_context_data(**kwargs)
-        context['account'] = Account.objects.get(pk=self.kwargs['pk'])
+        context['account'] = Account.objects.filter(pk=self.kwargs['pk']).select_related('currency').first()
+        return context
+
+class TransactionCreation(FormView):
+    form_class = TransactionForm
+    template_name = 'partials/transactions/form.html'
+
+    def form_valid(self, form: TransactionForm) -> HttpResponse:
+        with transaction.atomic():
+            account = Account.objects.get(pk=self.kwargs['pk'])
+
+            form.instance.from_account = account
+            form.save()
+
+            if not form.instance.hold:
+                amount = form.instance.amount if form.instance.transaction_type == '+' else -form.instance.amount
+
+                account.current_balance += amount
+                account.save()
+
+            messages.success(self.request, "The Transaction has been made successfully.")
+
+        return redirect(f"/transactions/{account.pk}")
+    
+    def form_invalid(self, form: Any) -> HttpResponse:
+        messages.error(self.request, "An error has ocurred while creating your Transaction.")
+        print(form.errors)
+        return render(self.request, 'partials/transactions/form.html', {'form': form, 'account': Account.objects.get(pk=self.kwargs['pk'])})
+
+    def get_context_data(self, **kwargs: Any) -> dict[str, Any]:
+        context = super().get_context_data(**kwargs)
+        context['account'] = Account.objects.filter(pk=self.kwargs['pk']).select_related('currency').first()
         return context
 
 def logout_view(request):

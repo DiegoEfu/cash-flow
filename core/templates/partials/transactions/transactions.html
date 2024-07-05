@@ -12,7 +12,7 @@
             <h3 class="text-center text-success text-2xl xl:text-2xl">{{account.currency.code}} {{account.current_balance}}</h3>
         </div>
         <div class="flex justify-center p-2">
-            <a hx-get="{% url 'account_creation' %}" hx-target="main" class="btn btn-success">+ New Transaction</a>
+            <a hx-get="{% url 'transaction_creation' pk=account.pk %}" hx-target="main" class="btn btn-success">+ New Transaction</a>
         </div>
     </div>
 
@@ -22,21 +22,21 @@
       <input type="checkbox" />
       <div class="collapse-title text-xl font-medium">Filters</div>
         <div class="collapse-content">
-          <form hx-get="{% url 'account_list' %}" hx-select="#items" hx-target="#items" hx-swap="outerHTML" hx-indicator="#loading-bars" hx-trigger="submit, change, keyup delay:1s">
+          <form hx-get="{% url 'transactions_list' pk=account.pk %}" hx-select="#items" hx-target="#items" hx-swap="outerHTML" hx-indicator="#loading-bars" hx-trigger="submit, change, keyup delay:1s">
             <div class="grid lg:grid-cols-3 md:grid-cols-1 sm:grid-cols-1 xs:grid-cols-1">
               <div class="me-4">
-                <label for="id_name__icontains">Name:</label> <br>
-                {% render_field filter.form.name__icontains class="input input-bordered w-full" %}
+                <label for="id_date_from">From Date:</label> <br>
+                {% render_field filter.form.date_from class="input input-bordered w-full" type="datetime-local" %}
               </div>
 
               <div class="me-4">
-                <label for="id_description__icontains">Description:</label> <br>
-                {% render_field filter.form.description__icontains class="input input-bordered w-full" %}
+                <label for="id_date_until">Until Date:</label> <br>
+                {% render_field filter.form.date_until class="input input-bordered w-full" type="datetime-local" %}
               </div>
 
               <div class="me-4">
-                {{filter.form.currency.label}} <br>
-                {% render_field filter.form.currency class="select select-bordered w-full" %}
+                <label for="id_transaction_type">Transaction Type:</label> <br>
+                {% render_field filter.form.transaction_type class="select select-bordered w-full" %}
               </div>
 
               <input type="submit" hidden>
@@ -70,8 +70,8 @@
                 <tr>
                     <td>{{transaction.date}} {% if transaction.hold %} <span class="badge badge-warning">(On Hold)</span> {%endif%}</td>
                     <td>{{transaction.description}}</td>
-                    <td><span class="badge badge-{% if transaction.transaction_type == 'I' %}success{% else %}error{% endif %}">{{transaction.transaction_type}}</span></td>
-                    <td>{% if transaction.transaction_type == 'E' %}-{%endif%}{{transaction.amount}}</td>
+                    <td><span class="badge badge-{% if transaction.transaction_type == '+' %}success{% else %}error{% endif %}">{% if transaction.transaction_type == '+' %}INCOME{% else %}EXPENSE{% endif %}</span> </td>
+                    <td>{% if transaction.transaction_type == '-' %}-{%endif%}{{transaction.amount}}</td>
                     <td>{{transaction.reference|default:'-'}}</td>
                     <td>
                         <a href="#" class="text-primary hover:underline">Edit</a>
