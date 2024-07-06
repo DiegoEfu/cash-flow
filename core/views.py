@@ -1,13 +1,16 @@
 from typing import Any
 from django.db.models.query import QuerySet
 from django.db import transaction
-from django.http import HttpRequest, HttpResponse
+from django.http import HttpRequest, HttpResponse, HttpResponseForbidden, HttpResponseRedirect
 from django.shortcuts import render, redirect
 from django.contrib.auth import logout
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.views import LoginView
 from django.views.generic import FormView, ListView
 from django.contrib import messages
+from django.views.generic import View
+
+from decimal import Decimal
 
 from .forms import *
 from .models import *
@@ -183,6 +186,57 @@ class TransactionCreation(FormView):
         context = super().get_context_data(**kwargs)
         context['account'] = Account.objects.filter(pk=self.kwargs['pk']).select_related('currency').first()
         return context
+
+class TransactionUpdate(TransactionCreation):
+    def form_valid(self, form: Any):
+        with transaction.atomic():
+            transaction_instance = Transaction.objects.get(pk=self.kwargs['pk'])
+            form = self.form_class(form.data, instance=transaction_instance)
+            account = transaction_instance.from_account
+
+            if not transaction_instance.hold:
+                amount = transaction_instance.amount if transaction_instance.transaction_type == '+' else -transaction_instance.amount
+                account.current_balance -= amount
+                account.save()
+
+            if not form.instance.hold:
+                amount = Decimal(form.data['amount'])
+                amount = amount if form.data['transaction_type'] == '+' else -amount
+                account.current_balance += amount
+                account.save()
+
+            form.save()
+
+            messages.success(self.request, "The Transaction has been updated successfully.")
+
+        return redirect(f"/transactions/{account.pk}")
+    
+    def form_invalid(self, form: Any) -> HttpResponse:
+        return render(self.request, '/transactions/form.html', {'form': form, 'edit': True})
+
+    def get_context_data(self, **kwargs: Any) -> dict[str, Any]:
+        instance = Transaction.objects.get(pk=self.kwargs['pk'])
+        return {**super().get_context_data(**kwargs), 'account': instance.from_account, 'form': self.form_class(instance=instance), 'edit': True}
+
+class TransactionDelete(LoginRequiredMixin, View):
+    model = Transaction
+
+    def delete(self, request, *args, **kwargs):
+        transaction_instance = Transaction.objects.get(pk=self.kwargs['pk'])
+        account = transaction_instance.from_account
+
+        if(account.owner != request.user):
+            return HttpResponseForbidden()
+        
+        with transaction.atomic():
+            if not transaction_instance.hold:
+                amount = transaction_instance.amount if transaction_instance.transaction_type == '+' else -transaction_instance.amount
+                account.current_balance -= amount
+                account.save()
+
+            transaction_instance.delete()
+
+        return render(request, 'partials/transactions/updated-balance.html', {'account': account})
 
 def logout_view(request):
     logout(request)

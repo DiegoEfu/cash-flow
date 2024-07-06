@@ -1,7 +1,10 @@
 from django.db import models
 from django.core.validators import MinValueValidator
 from django.contrib.auth.models import AbstractUser
+
 from .mixins import StrAsNameMixin
+from .managers import *
+
 import datetime
 import uuid
 
@@ -82,6 +85,8 @@ class Transaction(models.Model):
     date = models.DateTimeField(default=datetime.datetime.now())
     from_account = models.ForeignKey(Account, on_delete=models.PROTECT, related_name="transaction_from_account", null=True)
     to_account = models.ForeignKey(Account, on_delete=models.PROTECT, related_name="transaction_to_account", null=True)
+
+    objects = TransactionQuerySet.as_manager()
 
     def __str__(self) -> str:
         return f"Transaction ({self.transaction_type}) of {self.amount} on {self.date} on account {self.account} owned by {self.account.user}."

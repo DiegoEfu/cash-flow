@@ -15,7 +15,7 @@
     </div>
 </div>
 
-<form {% if not edit %} hx-post="{% url 'transaction_creation' pk=account.pk %}" {% else %} hx-post="{% url 'transaction_updation' pk=form.instance.pk %}" {% endif %} hx-target="main" hx-select="main" class="grid grid-cols-1">
+<form {% if not edit %} hx-post="{% url 'transaction_creation' pk=account.pk %}" {% else %} hx-post="{% url 'transaction_update' pk=form.instance.pk %}" {% endif %} hx-target="main" hx-select="main" class="grid grid-cols-1">
     {% csrf_token %}
     
     <div class="mb-3">
