@@ -94,27 +94,12 @@ class Transaction(models.Model):
     class Meta:
         ordering = ("-date",)
     
-class Fee(StrAsNameMixin, models.Model):
-    FEE_TYPES = (
-        ('P','Income'),
-        ('A','Absolute')
-    )
-
-    id = models.UUIDField(default=uuid.uuid4, primary_key=True)
-    transaction_type = models.CharField(max_length=1, choices=FEE_TYPES)
-    fee_percent = models.DecimalField(max_digits=5, decimal_places=2) 
-    fee_maximum = models.DecimalField(max_digits=15, decimal_places=2)
-    account = models.ForeignKey(Account, on_delete=models.PROTECT)
-    transaction = models.ForeignKey(Transaction, on_delete=models.PROTECT)
-    currency = models.ForeignKey(Currency, on_delete=models.PROTECT)
-    exchange_rate_used = models.ForeignKey(ExchangeRate, on_delete=models.PROTECT)
-
 class MoneyTag(StrAsNameMixin, models.Model):
     id = models.UUIDField(default=uuid.uuid4, primary_key=True)
     amount = models.DecimalField(max_digits=15, decimal_places=2)
     active = models.BooleanField(default=True)
     account = models.ForeignKey(Account, on_delete=models.PROTECT)
-    tag = models.ForeignKey(Tag, on_delete=models.PROTECT)
+    tag = models.ForeignKey(Tag, on_delete=models.PROTECT, related_name="money_tags")
 
 class HistoricBalance(StrAsNameMixin, models.Model):
     id = models.UUIDField(default=uuid.uuid4, primary_key=True)

@@ -1,0 +1,104 @@
+{% extends 'base.html' %}
+{% load widget_tweaks %}
+
+{% block content %}
+<div class="p-8">
+    <div class="grid xl:grid-cols-3 xs:grid-cols-1">
+        <div class="flex justify-center items-center p-2">
+            <a href="{% url 'welcome_view' %}" class="btn">Go back</a>
+        </div>        
+        <div class="p-2">
+            <h1 class="text-center text-4xl xl:text-4xl">Your Tags</h1>
+            <h3 class="text-center text-primary text-xl xl:text-xl">Assign Money to Tags for better analysis</h3>
+        </div>
+        <div class="flex justify-center items-center p-2">
+            <a hx-get="{% url 'tag_creation' %}" hx-target="main" class="btn btn-success">+ New Tag</a>
+        </div>
+    </div>
+
+    <div class="divider"></div>
+
+    {% if messages %}
+    {% for message in messages %}
+    <div class="alert {% if 'success' in message.tags %}alert-success{% else %}alert-warning{%endif%}">
+        {{message}}
+    </div>
+    {% endfor %}    
+    <div class="divider"></div>
+    {% endif %}
+
+    <div class="collapse bg-base-200 mb-3">
+      <input type="checkbox" />
+      <div class="collapse-title text-xl font-medium">Filters</div>
+        <div class="collapse-content">
+          <form hx-get="{% url 'tag_list' %}" hx-select="#items" hx-target="#items" hx-swap="outerHTML" hx-indicator="#loading-bars" hx-trigger="submit, change, keyup delay:1s">
+            <div class="grid grid-cols-1">
+              <div class="me-4">
+                <label for="id_name__icontains">Name contains:</label> <br>
+                {% render_field filter.form.name__icontains class="input input-bordered w-full" %}
+              </div>
+
+              <input type="submit" hidden>
+            </div>
+          </form>       
+        </div>
+    </div>
+    <div class="collapse bg-base-200 mb-3">
+        <div class="collapse-title text-xl font-medium">Reports</div>
+        <div class="collapse-content">
+          <a href="#" class="btn btn-primary">Generate Money Distribution by Tag (PDF)</a>
+        </div>
+    </div>
+
+    <div id="items" class="table-wrapper">
+        <table class="table table-xs w-full text-center">
+            <thead>
+                <tr class="bg-base-200">
+                    <th>Tag</th>
+                    <th>Total Money Assigned</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for tag in object_list %}
+                <tr>
+                    <td>{{tag.name}}</td>
+                    <td>{{tag.assigned|default:'0.00'}}</td>
+                    <td>
+                      <a hx-target="main" hx-get="{% url 'tag_update' pk=tag.pk %}" class="text-primary hover:underline">Edit</a>
+                      
+                      {% if not tag.assigned %}
+                      <a hx-target="closest tr" hx-confirm="Are you sure you want to delete this tag?" hx-delete="{% url 'tag_delete' pk=tag.pk %}" class="text-secondary hover:underline">Delete</a>
+                      {% endif %}
+                    </td>
+                </tr>
+                {% empty %}                     
+                <tr class="table-primary">
+                    <td colspan="3" class="text-center">No tags found.</td>
+                </tr>
+                {% endfor %}
+                {% if page_obj.has_next %}
+                <tr hx-trigger="revealed" hx-target="this" hx-swap="outerHTML" hx-select="#items" hx-get="{% url 'transaction_list' %}?page={{page_obj.next_page_number }}" hx-include=".input, .select"></tr>
+                {% endif %}
+            </tbody>
+        </table>        
+    </div>
+
+    <div id="loading-bars" class="htmx-indicator indicator-style">
+      <span class="loading loading-bars loading-lg htmx-indicator"></span>
+    </div>
+
+    
+</div>
+
+<script>
+  document.body.addEventListener('htmx:beforeRequest', function(evt) {
+    document.body.style.opacity = 0.5;
+  });
+
+  document.body.addEventListener('htmx:afterRequest', function(evt) {
+    document.body.style.opacity = 1.0;
+    console.log(evt.detail.xhr);
+  });
+</script>
+{% endblock %}

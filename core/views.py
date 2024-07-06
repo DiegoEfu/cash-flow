@@ -1,5 +1,6 @@
 from typing import Any
 from django.db.models.query import QuerySet
+from django.db.models import Sum
 from django.db import transaction
 from django.http import HttpRequest, HttpResponse, HttpResponseForbidden, HttpResponseRedirect
 from django.shortcuts import render, redirect
@@ -222,7 +223,7 @@ class TransactionDelete(LoginRequiredMixin, View):
     model = Transaction
 
     def delete(self, request, *args, **kwargs):
-        transaction_instance = Transaction.objects.get(pk=self.kwargs['pk'])
+        transaction_instance = self.model.objects.get(pk=self.kwargs['pk'])
         account = transaction_instance.from_account
 
         if(account.owner != request.user):
@@ -237,6 +238,71 @@ class TransactionDelete(LoginRequiredMixin, View):
             transaction_instance.delete()
 
         return render(request, 'partials/transactions/updated-balance.html', {'account': account})
+
+# TAGS VIEWS
+class TagCreation(LoginRequiredMixin, FormView):
+    form_class = TagForm
+    template_name = 'partials/tags/form.html'
+
+    def form_valid(self, form: Any) -> HttpResponse:
+        with transaction.atomic():
+            form.instance.user = self.request.user
+            form.save()
+
+        messages.success(self.request, "The tag has been created successfully.")
+
+        return redirect("/tags")
+
+class TagListView(GeneralListView):
+    model = Tag
+    template_name = 'partials/tags/list.html'
+    filter_class = TagFilter
+
+    def get_queryset(self):
+        return self.filter_class(
+            self.request.GET,
+            queryset=self.model.objects.filter(user=self.request.user)
+                .prefetch_related('money_tags')
+                .annotate(assigned=Sum('money_tags__amount'))
+        )
+
+class TagUpdate(LoginRequiredMixin, FormView):
+    form_class = TagForm
+    template_name = 'partials/tags/form.html'
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['instance'] = Tag.objects.get(pk=self.kwargs['pk'])
+        return kwargs
+
+    def form_valid(self, form: Any):
+        form.save()
+        messages.success(self.request, "The tag has been updated successfully.")
+
+        return redirect("/tags")
+
+    def form_invalid(self, form: Any) -> HttpResponse:
+        return render(self.request, 'partials/tags/form.html', {'form': form, 'edit': True})
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['edit'] = True
+        self.tag = Tag.objects.get(pk=self.kwargs['pk'], user=self.request.user)
+        return context
+
+class TagDelete(LoginRequiredMixin, View):
+    model = Tag
+
+    def delete(self, request, *args, **kwargs):
+        instance = self.model.objects.get(pk=self.kwargs['pk'])
+
+        if(instance.user != request.user):
+            return HttpResponseForbidden()
+        
+        with transaction.atomic():
+            instance.delete()
+
+        return render(request, 'partials/transactions/updated-balance.html')
 
 def logout_view(request):
     logout(request)

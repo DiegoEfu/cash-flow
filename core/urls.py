@@ -18,4 +18,10 @@ urlpatterns = [
     path('transactions/create/<str:pk>/', TransactionCreation.as_view(), name="transaction_creation"),
     path('transactions/update/<str:pk>/', TransactionUpdate.as_view(), name="transaction_update"),
     path('transactions/delete/<str:pk>/', TransactionDelete.as_view(), name="transaction_delete"),
+
+    # TAGS VIEWS
+    path('tags/', TagListView.as_view(), name="tag_list"),
+    path('tags/create/', TagCreation.as_view(), name="tag_creation"),
+    path('tags/update/<str:pk>/', TagUpdate.as_view(), name="tag_update"),
+    path('tags/delete/<str:pk>/', TagDelete.as_view(), name="tag_delete"),
 ]

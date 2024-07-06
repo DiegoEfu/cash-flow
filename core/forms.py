@@ -40,3 +40,8 @@ class TransactionForm(forms.ModelForm):
     class Meta:
         model = Transaction
         exclude = ('id', 'from_account', 'to_account')
+
+class TagForm(forms.ModelForm):
+    class Meta:
+        model = Tag
+        exclude = ('id', 'user')
