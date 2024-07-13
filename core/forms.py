@@ -45,3 +45,10 @@ class TagForm(forms.ModelForm):
     class Meta:
         model = Tag
         exclude = ('id', 'user')
+
+class MoneyTagForm(forms.ModelForm):
+    class Meta:
+        model = MoneyTag
+        exclude = ('account','tag')
+
+money_tag_formset = forms.modelformset_factory(MoneyTag, form=MoneyTagForm)

@@ -2,6 +2,7 @@ from typing import Any
 from django.db.models.query import QuerySet
 from django.db.models import Sum
 from django.db import transaction
+from django.forms.forms import BaseForm
 from django.http import HttpRequest, HttpResponse, HttpResponseForbidden, HttpResponseRedirect
 from django.shortcuts import render, redirect
 from django.contrib.auth import logout
@@ -303,6 +304,35 @@ class TagDelete(LoginRequiredMixin, View):
             instance.delete()
 
         return render(request, 'partials/transactions/updated-balance.html')
+
+class TagAssignment(LoginRequiredMixin, View):
+    template_name = 'partials/tags/assignment_form.html'
+
+    def get_forms(self, account):
+        tags = Tag.objects.filter(user=self.request.user)
+        forms = []
+
+        # TODO CONTINUE BY ADDING THE SUM OF THE MONEY TAGS
+        for tag in tags:
+            instance = MoneyTag.objects.get_or_create(
+                tag=tag, account=account
+            )[0] # GETS MONEY TAG
+
+            forms.append(MoneyTagForm(instance=instance))
+
+        return forms
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['account'] = Account.objects.select_related('currency').get(pk=self.kwargs['pk'])
+        context['forms'] = self.get_forms(context['account'])
+        return context
+
+    def get(self, request, *args, **kwargs):
+        return render(request, self.template_name, self.get_context_data())
+
+    def post(self, request, *args, **kwargs):
+        pass
 
 def logout_view(request):
     logout(request)

@@ -1,0 +1,60 @@
+{% load widget_tweaks %}
+ 
+<div class="grid grid-cols-3">
+    <div class="flex justify-center">
+        <a href="{% url 'tag_list' %}" class="btn">Go back</a>
+    </div>
+    <div>
+        <h1 class="text-center text-4xl xl:text-4xl">Assign Money to the Account {{account}}</h1>
+        <h3 id="balance" class="text-center text-success text-2xl xl:text-2xl">{{account.currency.code}} {{account.current_balance}}</h3>
+    </div>
+    <div class="flex justify-center">
+    </div>
+</div>
+
+<form {% if not edit %} hx-post="{% url 'tag_creation' %}" {% else %} hx-post="{% url 'tag_update' pk=form.instance.pk %}" {% endif %} hx-target="main" hx-select="main" class="grid grid-cols-1">
+    {% csrf_token %}
+    
+    <div class="mb-3">
+        <div class="overflow-x-auto">
+            <table class="table">
+              <!-- head -->
+              <thead>
+                <tr>
+                  <th></th>
+                  <th>Tag Name</th>
+                  <th>Money to Assign</th>
+                  <th>Money Assigned in Account</th>
+                  <th>Total Money Assigned</th>
+                </tr>
+              </thead>
+              <tbody>
+                <!-- row 1 -->
+                <tr class="bg-base-200">
+                  <th>1</th>
+                  <td>Cy Ganderton</td>
+                  <td>Quality Control Specialist</td>
+                  <td>Blue</td>
+                </tr>
+                <!-- row 2 -->
+                <tr>
+                  <th>2</th>
+                  <td>Hart Hagerty</td>
+                  <td>Desktop Support Technician</td>
+                  <td>Purple</td>
+                </tr>
+                <!-- row 3 -->
+                <tr>
+                  <th>3</th>
+                  <td>Brice Swyre</td>
+                  <td>Tax Accountant</td>
+                  <td>Red</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+    </div>
+    <div class="flex justify-center">
+        <button type="submit" class="btn btn-primary">Register Assignment</button>
+    </div>
+</form>
