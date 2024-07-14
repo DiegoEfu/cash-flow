@@ -1,0 +1,121 @@
+{% extends 'base.html' %}
+{% load widget_tweaks %}
+
+{% block content %}
+<div class="p-8">
+    <div class="grid xl:grid-cols-3 xs:grid-cols-1">
+        <div class="flex justify-center -2">
+            <a href="{% url 'welcome_view' %}" class="btn">Go back</a>
+        </div>        
+        <div class="p-2">
+            <h1 class="text-center text-4xl xl:text-4xl">Your Accounts</h1>
+        </div>
+        <div class="flex justify-center p-2">
+            <a hx-get="{% url 'account_creation' %}" hx-target="main" class="btn btn-success">+ New Account</a>
+        </div>
+    </div>
+
+    <div class="divider"></div>
+
+    {% if messages %}
+    {% for message in messages %}
+    <div class="alert {% if 'success' in message.tags %}alert-success{% else %}alert-warning{%endif%}">
+        {{message}}
+    </div>
+    {% endfor %}    
+    <div class="divider"></div>
+    {% endif %}
+
+    <div class="collapse bg-base-200">
+      <input type="checkbox" />
+      <div class="collapse-title text-xl font-medium">Filters</div>
+        <div class="collapse-content">
+          <form hx-get="{% url 'account_list' %}" hx-select="#items" hx-target="#items" hx-swap="outerHTML" hx-indicator="#loading-bars" hx-trigger="submit, change, keyup delay:1s">
+            <div class="grid lg:grid-cols-3 md:grid-cols-1 sm:grid-cols-1 xs:grid-cols-1">
+              <div class="me-4">
+                <label for="id_name__icontains">Name:</label> <br>
+                {% render_field filter.form.name__icontains class="input input-bordered w-full" %}
+              </div>
+
+              <div class="me-4">
+                <label for="id_description__icontains">Description:</label> <br>
+                {% render_field filter.form.description__icontains class="input input-bordered w-full" %}
+              </div>
+
+              <div class="me-4">
+                {{filter.form.currency.label}} <br>
+                {% render_field filter.form.currency class="select select-bordered w-full" %}
+              </div>
+
+              <input type="submit" hidden>
+            </div>
+          </form>       
+        </div>
+    </div>
+
+    <div id="items" class="grid grid-cols-1 m-2">
+        {% for account in object_list %}
+        <div class="stats shadow mb-3 border">
+          <div class="grid gap-4 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 border">
+            <div class="stat place-items-center p-2 border-r border-b">
+              <div class="text-center text-2xl font-bold">{{account.name.upper}}</div>
+              <div class="text-center text-sm overflow-x-auto">{{account.description}}</div>
+              <div class="text-center text-sm"><b>Account ID</b>: {{account.id}}</div>
+            </div>
+          
+            <div class="stat place-items-center p-2 border-r border-b">
+              <div class="text-center">Current Balance</div>
+              <div class="text-center text-2xl font-bold">{{account.currency.code}} {{account.current_balance}}</div>
+              <div class="text-center text-sm overflow-x-auto"> 
+                <!--
+                TODO: MAKE THIS TO SHOW THE CURRENCY IF THE CURRENCY IS DIFFERENT FROM THE MAIN ONE
+                -->
+              </div>
+            </div>
+
+            <div class="stat place-items-center p-2 border-b">
+              <a href="{% url 'transactions_list' pk=account.pk %}" class="btn btn-success w-full">VISUALIZE TRANSACTIONS</a>
+              <a hx-target="main" hx-get="{% url 'account_update' pk=account.pk %}" class="btn btn-primary w-full mt-2">EDIT ACCOUNT DETAILS</a>
+              <form hx-post="{% url 'account_list' %}" hx-confirm="Are you sure? You won't be able to recover the account you deleted." hx-target="body" method="post" class="w-full">
+                {% csrf_token %}
+                <button name="pk" value="{{account.pk}}" type="submit" class="btn btn-secondary w-full mt-2">DELETE ACCOUNT</button>
+              </form>
+            </div>
+          </div>
+        </div>
+        {% empty %}
+        <div role="alert" class="alert alert-warning">
+          <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
+          <span><b>No accounts were found. </b> Create a new one by clicking the button above or change your filtering criteria.</span>
+      </div>
+        {% endfor %}
+
+        {% if page_obj.has_next %}
+        <div hx-trigger="revealed" hx-target="this" hx-swap="outerHTML" hx-select="#items" hx-get="{% url 'account_list' %}?page={{page_obj.next_page_number }}" hx-include=".input, .select"></div>
+        {% endif %}
+    </div>
+
+    <div id="loading-bars" class="htmx-indicator indicator-style">
+      <span class="loading loading-bars loading-lg htmx-indicator"></span>
+    </div>
+
+    <div tabindex="0" class="collapse border-base-300 bg-base-200 border">
+        <div class="collapse-title text-xl font-medium">Reports</div>
+        <div class="collapse-content">
+          <a href="#" class="btn btn-primary">Generate Cash Flow by Month (PDF)</a>
+          <a href="#" class="btn btn-warning">Generate Cash Flow by Year (PDF)</a>
+          <a href="#" class="btn btn-secondary">Generic Account List with Current Totals (PDF)</a>
+        </div>
+    </div>
+</div>
+
+<script>
+  document.body.addEventListener('htmx:beforeRequest', function(evt) {
+    document.body.style.opacity = 0.5;
+  });
+
+  document.body.addEventListener('htmx:afterRequest', function(evt) {
+    document.body.style.opacity = 1.0;
+  });
+</script>
+{% endblock %}

@@ -1,0 +1,54 @@
+{% load widget_tweaks %}
+ 
+<div class="grid grid-cols-3">
+    <div class="flex justify-center">
+        <a href="{% url 'transactions_list' pk=account.pk %}" class="btn">Go back</a>
+    </div>
+    <div>
+        {% if edit %}
+        <h1 class="text-center text-4xl xl:text-4xl">Update the Transaction {{form.instance.name}}</h1>
+        {% else %}
+        <h1 class="text-center text-4xl xl:text-4xl">Make a New Transaction</h1>
+        {% endif %}
+    </div>
+    <div class="flex justify-center">
+    </div>
+</div>
+
+<form {% if not edit %} hx-post="{% url 'transaction_creation' pk=account.pk %}" {% else %} hx-post="{% url 'transaction_update' pk=form.instance.pk %}" {% endif %} hx-target="main" hx-select="main" class="grid grid-cols-1">
+    {% csrf_token %}
+    
+    <div class="mb-3">
+        <label for="id_description" class="form-label">Description:</label>
+        {% render_field form.description class="input input-bordered w-full" %}
+    </div>
+    <div class="mb-3 grid grid-cols-2">
+        <div class="me-3">
+            <label for="id_date" class="form-label">Date:</label>
+            {% render_field form.date class="input input-bordered w-full" type="datetime-local" %}
+        </div>
+        <div class="mb-3">
+            <label for="id_reference" class="form-label">Reference (if traceable):</label>
+            {% render_field form.reference class="input input-bordered w-full" %}
+        </div>       
+    </div>
+
+    <div class="mb-3 grid grid-cols-2">
+        <div class="me-3">
+            <label for="id_transaction_type" class="form-label">Transaction Type:</label>
+            {% render_field form.transaction_type class="select select-bordered w-full" %}
+        </div>
+
+        <div>
+            <label for="id_amount" class="form-label">Amount ({{account.currency.code}}):</label>
+            {% render_field form.amount class="input input-bordered w-full" min="0.01" step="0.01" placeholder="Must be greater than or equal to 0.01" %}
+        </div>
+    </div>
+    <div class="mb-3 flex justify-center flex-col items-center">
+        <label for="id_hold" class="form-label">On Hold:</label>
+        {% render_field form.hold type="checkbox" class="checkbox" %}
+    </div>
+    <div class="flex justify-center">
+        <button type="submit" class="btn btn-primary">Register Transaction</button>
+    </div>
+</form>

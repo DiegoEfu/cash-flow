@@ -1,0 +1,38 @@
+{% load widget_tweaks %}
+ 
+<div class="grid grid-cols-3">
+    <div class="flex justify-center">
+        <a href="{% url 'tag_list' %}" class="btn">Go back</a>
+    </div>
+    <div>
+        {% if edit %}
+        <h1 class="text-center text-4xl xl:text-4xl">Update the Tag {{form.instance.name}}</h1>
+        {% else %}
+        <h1 class="text-center text-4xl xl:text-4xl">Make a New Tag</h1>
+        {% endif %}
+    </div>
+    <div class="flex justify-center">
+    </div>
+</div>
+
+<form {% if not edit %} hx-post="{% url 'tag_creation' %}" {% else %} hx-post="{% url 'tag_update' pk=form.instance.pk %}" {% endif %} hx-target="main" hx-select="main" class="grid grid-cols-1">
+    {% csrf_token %}
+    
+    <div class="mb-3">
+        <label for="id_name" class="form-label">Name:</label>
+        {% render_field form.name class="input input-bordered w-full" %}
+
+        {% if form.name.errors %}
+        <div role="alert" class="alert alert-warning">
+            <span>
+                {% for error in form.name.errors %}
+                {{error}}
+                {% endfor %}
+            </span>
+        </div>
+        {% endif %}
+    </div>
+    <div class="flex justify-center">
+        <button type="submit" class="btn btn-primary">Register Tag</button>
+    </div>
+</form>

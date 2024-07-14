@@ -1,0 +1,131 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="container mx-auto my-8">
+    <div class="flex justify-center items-center">
+        <img src="{% static 'img/logo.png' %}" alt="Logo">
+    </div>
+
+    <h1 class="text-center text-4xl xl:text-8xl">CashFlow</h1>
+    <h2 class="text-center">Personal Finance Web Application</h2>
+
+    {% if request.user.is_authenticated %}
+    <div class="divider"></div>
+    <h1 class="text-2xl text-center">Welcome, {{request.user.get_full_name}}!</h1>
+
+    <div class="flex justify-center">
+      <div class="stats shadow m-auto">
+        {% with currency=request.user.main_currency.code %}
+        <div class="stat place-items-center">
+          <div class="stat-title">Current Balance</div>
+          <div class="stat-value">{{currency}} __</div>
+          <div class="stat-desc">Increased by __%.</div>
+        </div>
+      
+        <div class="stat place-items-center">
+          <div class="stat-title">Income of this Month</div>
+          <div class="stat-value text-success">{{currency}} __</div>
+          <div class="stat-desc text-success">More than last month by __%</div>
+        </div>
+      
+        <div class="stat place-items-center">
+          <div class="stat-title">Expenses of this Month</div>
+          <div class="stat-value text-warning">{{currency}} __</div>
+          <div class="stat-desc text-warning">Less than last month by __%</div>
+        </div>
+        {% endwith %}
+      </div>
+    </div>
+
+    <div class="flex justify-center items-center mt-8 mb-8">
+        <a class="btn btn-outline btn-success">Check my Accounts</a>
+        <a href="" class="btn btn-outline btn-primary mx-2">Check My Transactions</a>
+        <a class="btn btn-outline btn-warning">Check My Tags</a>
+       <form method="post" action="{% url 'logout_view' %}">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-outline btn-danger mx-2">Log Out</button>
+       </form>
+    </div> 
+    
+    {% else %}
+    <div class="flex justify-center items-center mt-8 mb-8">
+        <a class="btn btn-outline btn-success">Sign Up Now!</a>
+        <a href="{% url 'login_view' %}" class="btn btn-outline btn-primary mx-2">Log In Now!</a>
+    </div>
+    {% endif %}
+
+    <div class="divider"></div>
+
+    <h1 class="text-center text-5xl text-success">About CashFlow</h1> <br>
+
+    <div class="mx-auto">
+        <p class="text-center">
+            CashFlow is a web application that you can use to keep track of your finances by registering transactions in accounts and what you spend money by using tags, it was thought as a solution for the common problem that people have of registering their own expenses. 
+
+            <br><br>
+        </p>
+    </div>
+
+    <div class="divider"></div>
+
+    <h1 class="text-center text-5xl text-info">What CashFlow Can Do</h1> <br>
+
+    <div class="mx-auto">
+        <p class="text-center">
+            This is a web application that you can use to keep track of your finances by registering transactions in accounts and what you spend money by using tags. This is also a multi-currency application, which means
+            you can keep track of your expenses in many currencies.
+        </p>
+
+        <div class="xl:columns-2 my-2 md:columns-1 sm:columns-1 xs:columns-1">
+            <div class="card p-5 bg-base-100 shadow-xl image-full  hover:scale-110 transform transition duration-100">
+                <figure><img src="{% static 'img/cards/multicurrency.jpg' %}" alt="Many currencies" /></figure>
+                <div class="card-body flex justify-center align-center">
+                  <div class="text-center text-white shadow-xl">
+                    <h2 class="text-center text-xl font-bold">Multi-currency!</h2>
+                    <p>Use a main currency but use your money in other currencies!</p>
+                  </div>
+                </div>
+            </div>
+
+            <div class="card p-5 bg-base-100 shadow-xl image-full  hover:scale-110 transform transition duration-100 my-2">
+                <figure><img src="{% static 'img/cards/graphs.jpg' %}" alt="Graphs" /></figure>
+                <div class="card-body flex justify-center align-center">
+                  <div class="text-center text-white shadow-xl">
+                    <h2 class="text-center text-xl font-bold">Make Graphs!</h2>
+                    <p>Are you a visual person? Understand how you are spending money with graphs!</p>
+                  </div>
+                </div>
+            </div>
+
+            <div class="card p-5 bg-base-100 shadow-xl image-full  hover:scale-110 transform transition duration-100">
+                <figure><img src="{% static 'img/cards/tags.jpg' %}" alt="Money Bands" /></figure>
+                <div class="card-body flex justify-center align-center">
+                  <div class="text-center text-white shadow-xl">
+                    <h2 class="text-center text-xl font-bold">Make your own Tags!</h2>
+                    <p>Have money for a project scattered across many accounts? No worries! CashFlow's tag system will help you keep track of them!</p>
+                  </div>
+                </div>
+            </div>
+
+            <div class="card p-5 bg-base-100 shadow-xl image-full  hover:scale-110 transform transition duration-100 my-2">
+                <figure><img src="{% static 'img/cards/reports.jpg' %}" alt="Report Signing" /></figure>
+                <div class="card-body flex justify-center align-center">
+                  <div class="text-center text-white shadow-xl">
+                    <h2 class="text-center text-xl font-bold">Generate Reports!</h2>
+                    <p>Need to get your balance on paper? Or need to export it to another platform? We have you covered!</p>
+                  </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="divider"></div>
+
+        <div role="alert" class="alert alert-warning">
+            <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
+            <span><b>Warning</b>: It is important to notice that CashFlow is not meant for massive use. It was made for demonstration purposes only as part of its developer's portfolio, showcasing web developing skills and database management skills. Therefore, a free hosting service is being used. <br> <br><u>Using actual information is not advised and no responsibility will be taken if any information is lost or stolen</u>.</b></span>
+        </div>
+    </div>
+    </div>
+</div>
+{% endblock %}
