@@ -17,38 +17,38 @@
     
     <div class="mb-3">
         <div class="overflow-x-auto">
-            <table class="table">
-              <!-- head -->
+            <table class="table text-center">
               <thead>
                 <tr>
                   <th></th>
                   <th>Tag Name</th>
+                  <th>Previous Assigned in the Account</th>
                   <th>Money to Assign</th>
-                  <th>Money Assigned in Account</th>
                   <th>Total Money Assigned</th>
                 </tr>
               </thead>
               <tbody>
-                <!-- row 1 -->
-                <tr class="bg-base-200">
-                  <th>1</th>
-                  <td>Cy Ganderton</td>
-                  <td>Quality Control Specialist</td>
-                  <td>Blue</td>
-                </tr>
-                <!-- row 2 -->
+                {% for form in forms %}
                 <tr>
-                  <th>2</th>
-                  <td>Hart Hagerty</td>
-                  <td>Desktop Support Technician</td>
-                  <td>Purple</td>
+                  <td>{{forloop.counter}}</td>
+                  <td>
+                    {{form.form.instance.tag}}
+                    <input type="hidden" name="{{form.form.instance.pk}}-tag" value="{{form.form.instance.tag.pk}}">               
+                  </td>
+                  <td class="previous-assigned">{{form.form.instance.amount}}</td>
+                  <td class="money-to-assign">{% render_field form.form.amount class="input input-bordered w-full" %}</td>
+                  <td class="total">{{form.total}}</td>
                 </tr>
-                <!-- row 3 -->
+                {% endfor %}
                 <tr>
-                  <th>3</th>
-                  <td>Brice Swyre</td>
-                  <td>Tax Accountant</td>
-                  <td>Red</td>
+                  <th colspan="2">Totals</th>
+                  <td id="total-assigned-previous">{{totals.total_account}}</td>
+                  <td id="total-assigned-now">{{totals.total_account}}</td>
+                  <td>{{totals.total_tags}}</td>
+                </tr>
+                <tr>
+                  <th colspan="3">Not Assigned</th>
+                  <td>{{totals.not_assigned}}</td>
                 </tr>
               </tbody>
             </table>
@@ -58,3 +58,5 @@
         <button type="submit" class="btn btn-primary">Register Assignment</button>
     </div>
 </form>
+
+<script src="static/js/totals.js"></script>

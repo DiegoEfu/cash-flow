@@ -310,22 +310,32 @@ class TagAssignment(LoginRequiredMixin, View):
 
     def get_forms(self, account):
         tags = Tag.objects.filter(user=self.request.user)
+        totals = MoneyTag.objects.filter(tag__in=tags.values_list('id', flat=True)).annotate(total=Sum('amount'))
         forms = []
 
-        # TODO CONTINUE BY ADDING THE SUM OF THE MONEY TAGS
-        for tag in tags:
-            instance = MoneyTag.objects.get_or_create(
-                tag=tag, account=account
-            )[0] # GETS MONEY TAG
+        with transaction.atomic():
+            for tag in tags:
+                instance = MoneyTag.objects \
+                .get_or_create(
+                    tag=tag, account=account
+                )[0]
 
-            forms.append(MoneyTagForm(instance=instance))
+                forms.append({
+                    'form': MoneyTagForm(instance=instance, prefix=tag.pk),
+                    'total': totals.get(tag=tag).total
+                })
 
         return forms
     
     def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
+        context = {}
         context['account'] = Account.objects.select_related('currency').get(pk=self.kwargs['pk'])
         context['forms'] = self.get_forms(context['account'])
+        context['totals'] = {
+            'total_account': sum(MoneyTag.objects.filter(account=context['account']).values_list('amount', flat=True)),
+            'total_tags': sum(MoneyTag.objects.filter(tag__in=Tag.objects.filter(user=self.request.user)).values_list('amount', flat=True))
+        }
+        context['totals']['not_assigned'] = context['account'].current_balance - context['totals']['total_tags']
         return context
 
     def get(self, request, *args, **kwargs):

@@ -94,9 +94,9 @@ class Transaction(models.Model):
     class Meta:
         ordering = ("-date",)
     
-class MoneyTag(StrAsNameMixin, models.Model):
+class MoneyTag(models.Model):
     id = models.UUIDField(default=uuid.uuid4, primary_key=True)
-    amount = models.DecimalField(max_digits=15, decimal_places=2)
+    amount = models.DecimalField(max_digits=15, decimal_places=2, default=0.00)
     active = models.BooleanField(default=True)
     account = models.ForeignKey(Account, on_delete=models.PROTECT, related_name="accounts_money_tags")
     tag = models.ForeignKey(Tag, on_delete=models.PROTECT, related_name="money_tags")
