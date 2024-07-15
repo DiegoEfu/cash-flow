@@ -12,6 +12,7 @@
     </div>
 </div>
 
+<input type="hidden" id="account_balance" name="account_balance" value="{{account.current_balance}}">
 <form {% if not edit %} hx-post="{% url 'tag_creation' %}" {% else %} hx-post="{% url 'tag_update' pk=form.instance.pk %}" {% endif %} hx-target="main" hx-select="main" class="grid grid-cols-1">
     {% csrf_token %}
     
@@ -24,7 +25,7 @@
                   <th>Tag Name</th>
                   <th>Previous Assigned in the Account</th>
                   <th>Money to Assign</th>
-                  <th>Total Money Assigned</th>
+                  <th>Total Assigned in Tag</th>
                 </tr>
               </thead>
               <tbody>
@@ -36,19 +37,19 @@
                     <input type="hidden" name="{{form.form.instance.pk}}-tag" value="{{form.form.instance.tag.pk}}">               
                   </td>
                   <td class="previous-assigned">{{form.form.instance.amount}}</td>
-                  <td class="money-to-assign">{% render_field form.form.amount class="input input-bordered w-full" %}</td>
-                  <td class="total">{{form.total}}</td>
+                  <td class="money-to-assign">{% render_field form.form.amount class="input input-bordered w-full total" %}</td>
+                  <td class="total-tag">{{form.total}}</td>
                 </tr>
                 {% endfor %}
                 <tr>
                   <th colspan="2">Totals</th>
                   <td id="total-assigned-previous">{{totals.total_account}}</td>
                   <td id="total-assigned-now">{{totals.total_account}}</td>
-                  <td>{{totals.total_tags}}</td>
+                  <td id="total-assigned-tags">{{totals.total_tags}}</td>
                 </tr>
                 <tr>
                   <th colspan="3">Not Assigned</th>
-                  <td>{{totals.not_assigned}}</td>
+                  <td id="not-assigned">{{totals.not_assigned}}</td>
                 </tr>
               </tbody>
             </table>
@@ -59,4 +60,4 @@
     </div>
 </form>
 
-<script src="static/js/totals.js"></script>
+<script type="text/javascript" src="/static/js/totals.js"></script>
