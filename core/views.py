@@ -308,7 +308,7 @@ class TagDelete(LoginRequiredMixin, View):
 class TagAssignment(LoginRequiredMixin, View):
     template_name = 'partials/tags/assignment_form.html'
 
-    def get_forms(self, account):
+    def get_forms(self, account, request = None):
         tags = Tag.objects.filter(user=self.request.user)
         totals = MoneyTag.objects.filter(tag__in=tags.values_list('id', flat=True)).annotate(total=Sum('amount'))
         forms = []
@@ -321,16 +321,16 @@ class TagAssignment(LoginRequiredMixin, View):
                 )[0]
 
                 forms.append({
-                    'form': MoneyTagForm(instance=instance, prefix=tag.pk),
+                    'form': MoneyTagForm(request, instance=instance, prefix=tag.pk),
                     'total': totals.get(tag=tag).total
                 })
 
         return forms
     
-    def get_context_data(self, **kwargs):
+    def get_context_data(self, request = None):
         context = {}
         context['account'] = Account.objects.select_related('currency').get(pk=self.kwargs['pk'])
-        context['forms'] = self.get_forms(context['account'])
+        context['forms'] = self.get_forms(context['account'], request)
         context['totals'] = {
             'total_account': sum(MoneyTag.objects.filter(account=context['account']).values_list('amount', flat=True)),
             'total_tags': sum(MoneyTag.objects.filter(tag__in=Tag.objects.filter(user=self.request.user)).values_list('amount', flat=True))
@@ -341,8 +341,24 @@ class TagAssignment(LoginRequiredMixin, View):
     def get(self, request, *args, **kwargs):
         return render(request, self.template_name, self.get_context_data())
 
-    def post(self, request, *args, **kwargs):
-        pass
+    def post(self, request, pk):
+        print(pk)
+        account = Account.objects.get(pk=pk)
+        tags = Tag.objects.filter(user=self.request.user)
+        forms = []
+
+        for tag in tags:
+            forms.append(MoneyTagForm(request.POST, instance=tag.money_tags.get(account=account), prefix=tag.pk))
+
+        with transaction.atomic():
+            for form in forms:
+                if form.is_valid():
+                    form.save()
+                else:
+                    messages.error(request, "An error has ocurred while assigning your tags.")
+                    return render(request, self.template_name, self.get_context_data(request.POST))
+
+        return redirect(f"/transactions/{account.pk}/")
 
 def logout_view(request):
     logout(request)

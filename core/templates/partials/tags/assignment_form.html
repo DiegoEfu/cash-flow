@@ -2,7 +2,7 @@
  
 <div class="grid grid-cols-3">
     <div class="flex justify-center">
-        <a href="{% url 'tag_list' %}" class="btn">Go back</a>
+        <a href="{% url 'transactions_list' pk=account.pk %}" class="btn">Go back</a>
     </div>
     <div>
         <h1 class="text-center text-4xl xl:text-4xl">Assign Money to the Account {{account}}</h1>
@@ -13,7 +13,8 @@
 </div>
 
 <input type="hidden" id="account_balance" name="account_balance" value="{{account.current_balance}}">
-<form {% if not edit %} hx-post="{% url 'tag_creation' %}" {% else %} hx-post="{% url 'tag_update' pk=form.instance.pk %}" {% endif %} hx-target="main" hx-select="main" class="grid grid-cols-1">
+
+<form hx-post="{% url 'tag_assignment' pk=account.pk %}" hx-target="main" hx-select="main" class="grid grid-cols-1">
     {% csrf_token %}
     
     <div class="mb-3">
@@ -35,7 +36,7 @@
                   <td>{{forloop.counter}}</td>
                   <td>
                     {{form.form.instance.tag}}
-                    <input type="hidden" name="{{form.form.instance.pk}}-tag" value="{{form.form.instance.tag.pk}}">               
+                    <input type="hidden" name="{{form.form.instance.tag.pk}}-id" value="{{form.form.instance.id}}">               
                   </td>
                   <td class="previous-assigned" id="previous-{{form.form.prefix}}">{{form.form.instance.amount}}</td>
                   <td class="money-to-assign">{% render_field form.form.amount class="input input-bordered w-full total" %}</td>

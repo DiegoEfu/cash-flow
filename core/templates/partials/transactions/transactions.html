@@ -13,7 +13,7 @@
         </div>
         <div class="flex justify-center items-center flex-col p-2">
             <a hx-get="{% url 'transaction_creation' pk=account.pk %}" hx-target="main" class="btn mb-2 btn-success">+ New Transaction</a>
-            <a hx-get="{% url 'tag_assignment' pk=account.pk %}" hx-target="main" class="btn btn-success">Assign Tags</a>
+            <a hx-get="{% url 'tag_assignment' pk=account.pk %}" hx-target="main" class="btn btn-secondary">Assign Tags</a>
         </div>
     </div>
 
