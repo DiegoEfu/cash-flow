@@ -1,8 +1,7 @@
 from typing import Any
 from django.db.models.query import QuerySet
-from django.db.models import Sum
+from django.db.models import Sum, F
 from django.db import transaction
-from django.forms.forms import BaseForm
 from django.http import HttpRequest, HttpResponse, HttpResponseForbidden, HttpResponseRedirect
 from django.shortcuts import render, redirect
 from django.contrib.auth import logout
@@ -11,6 +10,7 @@ from django.contrib.auth.views import LoginView
 from django.views.generic import FormView, ListView
 from django.contrib import messages
 from django.views.generic import View
+from .utils import convert_all
 
 from decimal import Decimal
 
@@ -21,7 +21,19 @@ from .filters import *
 # Create your views here.
 
 def welcome_view(request):
-    return render(request, 'welcome.html')
+    amounts_balance = Account.objects.annotate(total=Sum('current_balance')).values('currency','total')
+    amounts_income = Transaction.objects.select_related('from_account__currency').filter(transaction_type='+', hold=False).annotate(total=Sum('amount'), currency=F('from_account__currency')).values('total', 'currency')
+    amounts_expense = Transaction.objects.select_related('from_account__currency').filter(transaction_type='-', hold=False).annotate(total=Sum('amount'), currency=F('from_account__currency')).values('total', 'currency')
+
+    total_balance = convert_all(amounts_balance, request.user.main_currency.pk)
+    total_income = convert_all(amounts_income, request.user.main_currency.pk)
+    total_expense = convert_all(amounts_expense, request.user.main_currency.pk)
+
+    return render(request, 'welcome.html', context={
+        'balance': round(total_balance, 2),
+        'current_month_income': round(total_income, 2),
+        'current_month_expense': round(total_expense, 2)
+    })
 
 class LoginView(LoginView):
     template_name = 'login.html'
