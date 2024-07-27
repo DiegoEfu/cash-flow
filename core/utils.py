@@ -14,8 +14,6 @@ def convert_all(amounts, main_currency_pk):
             exchange_rate = next((rate['exchange_rate'] for rate in exchange_rates if \
                                   rate['currency1'] == amount['currency'] and rate['currency2'] == main_currency_pk
                                 ), None)
-            
-            print(exchange_rate)
 
             if not exchange_rate:
                 exchange_rate = 1/next((rate['exchange_rate'] for rate in exchange_rates if \
@@ -27,3 +25,11 @@ def convert_all(amounts, main_currency_pk):
             acc += amount['total']
     
     return acc
+
+def calculate_percentage(current, comparison):
+    try:
+        percentage = round((current - comparison) /comparison * 100, 2)
+    except:
+        percentage = None
+    
+    return percentage

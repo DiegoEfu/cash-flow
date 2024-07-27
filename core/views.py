@@ -10,7 +10,7 @@ from django.contrib.auth.views import LoginView
 from django.views.generic import FormView, ListView
 from django.contrib import messages
 from django.views.generic import View
-from .utils import convert_all
+from .utils import convert_all, calculate_percentage
 
 from decimal import Decimal
 
@@ -29,10 +29,29 @@ def welcome_view(request):
     total_income = convert_all(amounts_income, request.user.main_currency.pk)
     total_expense = convert_all(amounts_expense, request.user.main_currency.pk)
 
+    previous_month = datetime.datetime.now().month-1 if datetime.datetime.now().month > 1 else 12
+
+    balances_last_month = HistoricBalance.objects.filter(account__owner=request.user, date__month=previous_month).annotate(total=F('balance'), currency=F('account__currency')).values('total','currency')
+    balance_last_month = convert_all(balances_last_month, request.user.main_currency.pk)
+    
+    incomes_last_month = Transaction.objects.select_related('from_account__currency').filter(transaction_type='+', hold=False, date__month=previous_month).annotate(total=Sum('amount'), currency=F('from_account__currency')).values('total', 'currency')
+    income_last_month = convert_all(incomes_last_month, request.user.main_currency.pk)
+
+    expenses_last_month = Transaction.objects.select_related('from_account__currency').filter(transaction_type='-', hold=False, date__month=previous_month).annotate(total=Sum('amount'), currency=F('from_account__currency')).values('amount', 'currency')
+    expense_last_month = convert_all(expenses_last_month, request.user.main_currency.pk)
+
+    percentage_balance = calculate_percentage(total_balance, balance_last_month)
+    percentage_income = calculate_percentage(total_income, income_last_month)
+    percentage_expense = calculate_percentage(total_expense, expense_last_month)
+
     return render(request, 'welcome.html', context={
         'balance': round(total_balance, 2),
         'current_month_income': round(total_income, 2),
-        'current_month_expense': round(total_expense, 2)
+        'current_month_expense': round(total_expense, 2),
+
+        'percentage_balance': percentage_balance,
+        'percentage_income': percentage_income,
+        'percentage_expense': percentage_expense
     })
 
 class LoginView(LoginView):

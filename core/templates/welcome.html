@@ -19,20 +19,20 @@
         {% with currency=request.user.main_currency.code %}
         <div class="stat place-items-center">
           <div class="stat-title">Current Balance</div>
-          <div class="stat-value">{{currency}} {{balance}}</div>
-          <div class="stat-desc">Increased by __%.</div>
+          <div class="stat-value">{{currency}} {{balance|floatformat:2}}</div>
+          <div class="stat-desc">Increased by {{percentage_balance|default:'-'}}%.</div>
         </div>
       
         <div class="stat place-items-center">
           <div class="stat-title">Income of this Month</div>
-          <div class="stat-value text-success">{{currency}} {{current_month_income}}</div>
-          <div class="stat-desc text-success">More than last month by __%</div>
+          <div class="stat-value text-success">{{currency}} {{current_month_income|floatformat:2}}</div>
+          <div class="stat-desc text-success">More than last month by {{percentage_income|default:'-'}}%</div>
         </div>
       
         <div class="stat place-items-center">
           <div class="stat-title">Expenses of this Month</div>
-          <div class="stat-value text-warning">{{currency}} {{current_month_expense}}</div>
-          <div class="stat-desc text-warning">Less than last month by __%</div>
+          <div class="stat-value text-warning">{{currency}} {{current_month_expense|floatformat:2}}</div>
+          <div class="stat-desc text-warning">Less than last month by {{percentage_expense|default:'-'}}%</div>
         </div>
         {% endwith %}
       </div>
