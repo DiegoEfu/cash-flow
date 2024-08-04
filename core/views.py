@@ -21,38 +21,44 @@ from .filters import *
 # Create your views here.
 
 def welcome_view(request):
-    amounts_balance = Account.objects.annotate(total=Sum('current_balance')).values('currency','total')
-    amounts_income = Transaction.objects.select_related('from_account__currency').filter(transaction_type='+', hold=False).annotate(total=Sum('amount'), currency=F('from_account__currency')).values('total', 'currency')
-    amounts_expense = Transaction.objects.select_related('from_account__currency').filter(transaction_type='-', hold=False).annotate(total=Sum('amount'), currency=F('from_account__currency')).values('total', 'currency')
+    def make_context():
+        if(request.user.is_authenticated):
+            amounts_balance = Account.objects.annotate(total=Sum('current_balance')).values('currency','total')
+            amounts_income = Transaction.objects.select_related('from_account__currency').filter(transaction_type='+', hold=False).annotate(total=Sum('amount'), currency=F('from_account__currency')).values('total', 'currency')
+            amounts_expense = Transaction.objects.select_related('from_account__currency').filter(transaction_type='-', hold=False).annotate(total=Sum('amount'), currency=F('from_account__currency')).values('total', 'currency')
 
-    total_balance = convert_all(amounts_balance, request.user.main_currency.pk)
-    total_income = convert_all(amounts_income, request.user.main_currency.pk)
-    total_expense = convert_all(amounts_expense, request.user.main_currency.pk)
+            total_balance = convert_all(amounts_balance, request.user.main_currency.pk)
+            total_income = convert_all(amounts_income, request.user.main_currency.pk)
+            total_expense = convert_all(amounts_expense, request.user.main_currency.pk)
 
-    previous_month = datetime.datetime.now().month-1 if datetime.datetime.now().month > 1 else 12
+            previous_month = datetime.datetime.now().month-1 if datetime.datetime.now().month > 1 else 12
 
-    balances_last_month = HistoricBalance.objects.filter(account__owner=request.user, date__month=previous_month).annotate(total=F('balance'), currency=F('account__currency')).values('total','currency')
-    balance_last_month = convert_all(balances_last_month, request.user.main_currency.pk)
-    
-    incomes_last_month = Transaction.objects.select_related('from_account__currency').filter(transaction_type='+', hold=False, date__month=previous_month).annotate(total=Sum('amount'), currency=F('from_account__currency')).values('total', 'currency')
-    income_last_month = convert_all(incomes_last_month, request.user.main_currency.pk)
+            balances_last_month = HistoricBalance.objects.filter(account__owner=request.user, date__month=previous_month).annotate(total=F('balance'), currency=F('account__currency')).values('total','currency')
+            balance_last_month = convert_all(balances_last_month, request.user.main_currency.pk)
+            
+            incomes_last_month = Transaction.objects.select_related('from_account__currency').filter(transaction_type='+', hold=False, date__month=previous_month).annotate(total=Sum('amount'), currency=F('from_account__currency')).values('total', 'currency')
+            income_last_month = convert_all(incomes_last_month, request.user.main_currency.pk)
 
-    expenses_last_month = Transaction.objects.select_related('from_account__currency').filter(transaction_type='-', hold=False, date__month=previous_month).annotate(total=Sum('amount'), currency=F('from_account__currency')).values('amount', 'currency')
-    expense_last_month = convert_all(expenses_last_month, request.user.main_currency.pk)
+            expenses_last_month = Transaction.objects.select_related('from_account__currency').filter(transaction_type='-', hold=False, date__month=previous_month).annotate(total=Sum('amount'), currency=F('from_account__currency')).values('amount', 'currency')
+            expense_last_month = convert_all(expenses_last_month, request.user.main_currency.pk)
 
-    percentage_balance = calculate_percentage(total_balance, balance_last_month)
-    percentage_income = calculate_percentage(total_income, income_last_month)
-    percentage_expense = calculate_percentage(total_expense, expense_last_month)
+            percentage_balance = calculate_percentage(total_balance, balance_last_month)
+            percentage_income = calculate_percentage(total_income, income_last_month)
+            percentage_expense = calculate_percentage(total_expense, expense_last_month)
 
-    return render(request, 'welcome.html', context={
-        'balance': round(total_balance, 2),
-        'current_month_income': round(total_income, 2),
-        'current_month_expense': round(total_expense, 2),
+            return {
+                'balance': round(total_balance, 2),
+                'current_month_income': round(total_income, 2),
+                'current_month_expense': round(total_expense, 2),
 
-        'percentage_balance': percentage_balance,
-        'percentage_income': percentage_income,
-        'percentage_expense': percentage_expense
-    })
+                'percentage_balance': percentage_balance,
+                'percentage_income': percentage_income,
+                'percentage_expense': percentage_expense
+            }
+        else:
+            return {}
+
+    return render(request, 'welcome.html', context=make_context())
 
 class LoginView(LoginView):
     template_name = 'login.html'
@@ -270,6 +276,28 @@ class TransactionDelete(LoginRequiredMixin, View):
             transaction_instance.delete()
 
         return render(request, 'partials/transactions/updated-balance.html', {'account': account})
+
+class GeneralTransactionListView(GeneralListView):
+    model = Transaction
+    template_name = 'partials/transactions/transactions_general.html'
+    filter_class = TransactionFilter
+    paginate_by = 15
+    
+    def get_queryset(self) -> QuerySet[Any]:
+        return self.filter_class(
+            self.request.GET,
+            queryset=self.model.objects.filter(from_account__owner=self.request.user)
+        )
+    
+    def get_context_data(self, **kwargs: Any) -> dict[str, Any]:
+        context = super().get_context_data(**kwargs)
+
+        amounts_balance = Account.objects.annotate(total=Sum('current_balance')).values('currency','total')
+        main_currency = self.request.user.main_currency
+
+        context['current_balance']  = round(convert_all(amounts_balance, main_currency.pk), 2)
+        context['main_currency']  = main_currency.code
+        return context
 
 # TAGS VIEWS
 class TagCreation(LoginRequiredMixin, FormView):

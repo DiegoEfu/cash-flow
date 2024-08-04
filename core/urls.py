@@ -14,6 +14,7 @@ urlpatterns = [
     path('accounts/update/<str:pk>/', AccountUpdate.as_view(), name="account_update"),
 
     # TRANSACTIONS VIEWS
+    path('transactions/general/', GeneralTransactionListView.as_view(), name="general_transactions_list"),
     path('transactions/<str:pk>/', TransactionListView.as_view(), name="transactions_list"),
     path('transactions/create/<str:pk>/', TransactionCreation.as_view(), name="transaction_creation"),
     path('transactions/update/<str:pk>/', TransactionUpdate.as_view(), name="transaction_update"),
