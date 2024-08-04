@@ -1,5 +1,10 @@
 {% extends 'base.html' %}
 {% load widget_tweaks %}
+{% load static %}
+
+{% block head %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.2.1/dist/chart.umd.min.js"></script>
+{% endblock %}
 
 {% block content %}
 <div class="p-8">
@@ -14,6 +19,8 @@
             <a hx-get="{% url 'account_creation' %}" hx-target="main" class="btn btn-success">+ New Account</a>
         </div>
     </div>
+
+    <canvas id="chart" style="max-width: 100% !important; max-height: 60vh"></canvas>
 
     <div class="divider"></div>
 
@@ -109,13 +116,45 @@
     </div>
 </div>
 
+<script src="{% static 'js/block-screen.js' %}"></script>
 <script>
-  document.body.addEventListener('htmx:beforeRequest', function(evt) {
-    document.body.style.opacity = 0.5;
-  });
+let results = undefined;
+let ctx = document.getElementById("chart").getContext("2d");
+let chart = undefined;
 
-  document.body.addEventListener('htmx:afterRequest', function(evt) {
-    document.body.style.opacity = 1.0;
-  });
+async function makeGraph() {
+  const xhttp = new XMLHttpRequest();
+  const name = document.getElementById("id_name__icontains").value;
+  const description = document.getElementById("id_description__icontains").value;
+  const currency = document.getElementById("id_currency").value;
+  xhttp.open("GET", `{% url 'account_graph_view' %}?name__icontains=${name}&description__icontains=${description}&currency=${currency}`, true);
+  xhttp.send();
+  xhttp.onreadystatechange = function() {
+    if (this.readyState == 4 && this.status == 200) {
+      results = JSON.parse(this.responseText);
+
+      chart = new Chart(ctx, {
+        type: "pie",
+        data: {
+          labels: Object.values(results).map(account => account.name),
+          datasets: [
+              {
+                label: "Account Total Balance",
+                data: Object.values(results).map(account => account.total),
+              }
+          ]
+        },
+        options: {
+          title: {
+              text: "Current Balance Distribution by Account ({{request.user.main_currency.code}})",
+              display: true
+          }
+        }
+      });
+    }
+  };
+}
+
+makeGraph();
 </script>
 {% endblock %}

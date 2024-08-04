@@ -26,4 +26,7 @@ urlpatterns = [
     path('tags/update/<str:pk>/', TagUpdate.as_view(), name="tag_update"),
     path('tags/delete/<str:pk>/', TagDelete.as_view(), name="tag_delete"),
     path('tags/assignment/<str:pk>/', TagAssignment.as_view(), name="tag_assignment"),
+
+    # GRAPH VIEWS
+    path('graph/', graph_by_accounts, name="account_graph_view"),
 ]

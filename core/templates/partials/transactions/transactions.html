@@ -20,6 +20,18 @@
 
     <div class="divider"></div>
 
+    {% if messages %}
+      <div role="alert" class="alert alert-success">
+          <span>
+            {% for message in messages %}
+            {{message}}
+            {% endfor %}
+          </span>
+    </div>
+    <div class="divider"></div>
+    {% endif %}
+
+
     <div class="collapse bg-base-200 mb-3">
       <input type="checkbox" />
       <div class="collapse-title text-xl font-medium">Filters</div>

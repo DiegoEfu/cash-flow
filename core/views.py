@@ -2,7 +2,7 @@ from typing import Any
 from django.db.models.query import QuerySet
 from django.db.models import Sum, F
 from django.db import transaction
-from django.http import HttpRequest, HttpResponse, HttpResponseForbidden, HttpResponseRedirect
+from django.http import HttpRequest, HttpResponse, HttpResponseForbidden, JsonResponse
 from django.shortcuts import render, redirect
 from django.contrib.auth import logout
 from django.contrib.auth.mixins import LoginRequiredMixin
@@ -10,7 +10,7 @@ from django.contrib.auth.views import LoginView
 from django.views.generic import FormView, ListView
 from django.contrib import messages
 from django.views.generic import View
-from .utils import convert_all, calculate_percentage
+from .utils import convert_all, convert_each, calculate_percentage
 
 from decimal import Decimal
 
@@ -131,7 +131,7 @@ class AccountListView(GeneralListView):
     def get_queryset(self) -> QuerySet[Any]:
         return self.filter_class(
             self.request.GET,
-            queryset=self.model.objects.filter(owner=self.request.user)
+            queryset=self.model.objects.filter(owner=self.request.user).select_related('currency')
         )
     
     def post(self, request):
@@ -431,3 +431,9 @@ class TagAssignment(LoginRequiredMixin, View):
 def logout_view(request):
     logout(request)
     return redirect("/login")
+
+def graph_by_accounts(request):
+    accounts = AccountFilter(request.GET, queryset=Account.objects.filter(owner=request.user).select_related('currency')).qs.annotate(total=F('current_balance')).values('name', 'currency', 'total')
+    accounts = convert_each(accounts, request.user.main_currency.pk)
+
+    return JsonResponse(accounts, safe=False)
