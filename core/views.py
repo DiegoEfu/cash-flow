@@ -23,24 +23,33 @@ from .filters import *
 def welcome_view(request):
     def make_context():
         if(request.user.is_authenticated):
+            exchange_rates = ExchangeRate.objects.filter(active=True) \
+                .select_related('currency1', 'currency2').values('exchange_rate', 'currency1', 'currency2')
+             
             amounts_balance = Account.objects.annotate(total=Sum('current_balance')).values('currency','total')
-            amounts_income = Transaction.objects.select_related('from_account__currency').filter(transaction_type='+', hold=False).annotate(total=Sum('amount'), currency=F('from_account__currency')).values('total', 'currency')
-            amounts_expense = Transaction.objects.select_related('from_account__currency').filter(transaction_type='-', hold=False).annotate(total=Sum('amount'), currency=F('from_account__currency')).values('total', 'currency')
+            
+            amounts = Transaction.objects.select_related('from_account__currency').filter(hold=False).annotate(total=Sum('amount'), currency=F('from_account__currency')).values('total', 'transaction_type', 'currency')
+            amounts_income = [transaction for transaction in amounts if transaction['transaction_type'] == '+']
+            amounts_expense = [transaction for transaction in amounts if transaction['transaction_type'] == '-']
 
-            total_balance = convert_all(amounts_balance, request.user.main_currency.pk)
-            total_income = convert_all(amounts_income, request.user.main_currency.pk)
-            total_expense = convert_all(amounts_expense, request.user.main_currency.pk)
+            total_balance = convert_all(amounts_balance, request.user.main_currency.pk, exchange_rates)
+            total_income = convert_all(amounts_income, request.user.main_currency.pk, exchange_rates)
+            total_expense = convert_all(amounts_expense, request.user.main_currency.pk, exchange_rates)
 
             previous_month = datetime.datetime.now().month-1 if datetime.datetime.now().month > 1 else 12
 
             balances_last_month = HistoricBalance.objects.filter(account__owner=request.user, date__month=previous_month).annotate(total=F('balance'), currency=F('account__currency')).values('total','currency')
-            balance_last_month = convert_all(balances_last_month, request.user.main_currency.pk)
+            balance_last_month = convert_all(balances_last_month, request.user.main_currency.pk, exchange_rates)
             
-            incomes_last_month = Transaction.objects.select_related('from_account__currency').filter(transaction_type='+', hold=False, date__month=previous_month).annotate(total=Sum('amount'), currency=F('from_account__currency')).values('total', 'currency')
-            income_last_month = convert_all(incomes_last_month, request.user.main_currency.pk)
+            transactions = Transaction.objects.select_related('from_account__currency').filter(hold=False, date__month=previous_month) \
+                .annotate(total=Sum('amount'), currency=F('from_account__currency')) \
+                .values('total', 'currency', 'transaction_type')
+            
+            incomes_last_month = [transaction for transaction in transactions if transaction['transaction_type'] == '+']
+            income_last_month = convert_all(incomes_last_month, request.user.main_currency.pk, exchange_rates)
 
-            expenses_last_month = Transaction.objects.select_related('from_account__currency').filter(transaction_type='-', hold=False, date__month=previous_month).annotate(total=Sum('amount'), currency=F('from_account__currency')).values('amount', 'currency')
-            expense_last_month = convert_all(expenses_last_month, request.user.main_currency.pk)
+            expenses_last_month = [transaction for transaction in transactions if transaction['transaction_type'] == '-']
+            expense_last_month = convert_all(expenses_last_month, request.user.main_currency.pk, exchange_rates)
 
             percentage_balance = calculate_percentage(total_balance, balance_last_month)
             percentage_income = calculate_percentage(total_income, income_last_month)
