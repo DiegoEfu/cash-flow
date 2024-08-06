@@ -65,27 +65,25 @@
         <div class="stats shadow mb-3 border">
           <div class="grid gap-4 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 border">
             <div class="stat place-items-center p-2 border-r border-b">
-              <div class="text-center text-2xl font-bold">{{account.name.upper}}</div>
-              <div class="text-center text-sm overflow-x-auto">{{account.description}}</div>
-              <div class="text-center text-sm"><b>Account ID</b>: {{account.id}}</div>
+              <div class="text-center text-2xl font-bold">{{account.account.name.upper}}</div>
+              <div class="text-center text-sm overflow-x-auto">{{account.account.description}}</div>
+              <div class="text-center text-sm"><b>Account ID</b>: {{account.account.id}}</div>
             </div>
           
             <div class="stat place-items-center p-2 border-r border-b">
               <div class="text-center">Current Balance</div>
-              <div class="text-center text-2xl font-bold">{{account.currency.code}} {{account.current_balance}}</div>
+              <div class="text-center text-2xl font-bold">{{account.account.currency.code}} {{account.account.current_balance}}</div>
               <div class="text-center text-sm overflow-x-auto"> 
-                <!--
-                TODO: MAKE THIS TO SHOW THE CURRENCY IF THE CURRENCY IS DIFFERENT FROM THE MAIN ONE
-                -->
+                <small>{{request.user.main_currency.code}} {{account.mc_bal}}</small>
               </div>
             </div>
 
             <div class="stat place-items-center p-2 border-b">
-              <a href="{% url 'transactions_list' pk=account.pk %}" class="btn btn-success w-full">VISUALIZE TRANSACTIONS</a>
-              <a hx-target="main" hx-get="{% url 'account_update' pk=account.pk %}" class="btn btn-primary w-full mt-2">EDIT ACCOUNT DETAILS</a>
+              <a href="{% url 'transactions_list' pk=account.account.pk %}" class="btn btn-success w-full">VISUALIZE TRANSACTIONS</a>
+              <a hx-target="main" hx-get="{% url 'account_update' pk=account.account.pk %}" class="btn btn-primary w-full mt-2">EDIT ACCOUNT DETAILS</a>
               <form hx-post="{% url 'account_list' %}" hx-confirm="Are you sure? You won't be able to recover the account you deleted." hx-target="body" method="post" class="w-full">
                 {% csrf_token %}
-                <button name="pk" value="{{account.pk}}" type="submit" class="btn btn-secondary w-full mt-2">DELETE ACCOUNT</button>
+                <button name="pk" value="{{account.account.pk}}" type="submit" class="btn btn-secondary w-full mt-2">DELETE ACCOUNT</button>
               </form>
             </div>
           </div>
@@ -136,11 +134,11 @@ async function makeGraph() {
       chart = new Chart(ctx, {
         type: "pie",
         data: {
-          labels: Object.values(results).map(account => account.name),
+          labels: Object.values(results).map(account => account.account.name),
           datasets: [
               {
                 label: "Account Total Balance",
-                data: Object.values(results).map(account => account.total),
+                data: Object.values(results).map(account => account.account.total),
               }
           ]
         },

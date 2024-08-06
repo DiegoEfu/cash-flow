@@ -5,6 +5,7 @@ def convert(amount, exchange_rate):
 
 def convert_all(amounts, main_currency_pk, exchange_rates = None):
     acc = 0
+    print(amounts)
 
     if(not exchange_rates):    
         exchange_rates = ExchangeRate.objects.filter(active=True) \
@@ -18,7 +19,7 @@ def convert_all(amounts, main_currency_pk, exchange_rates = None):
 
             if not exchange_rate:
                 exchange_rate = 1/next((rate['exchange_rate'] for rate in exchange_rates if \
-                                      amount['currency1'] == main_currency_pk and amount['currency2'] == amount['currency']
+                                      rate['currency1'] == main_currency_pk and rate['currency2'] == amount['currency']
                                     ), None)
             
             acc += convert(amount['total'], exchange_rate)

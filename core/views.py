@@ -129,10 +129,18 @@ class AccountListView(GeneralListView):
     filter_class = AccountFilter
 
     def get_queryset(self) -> QuerySet[Any]:
+        queryset = self.model.objects.filter(owner=self.request.user).select_related('currency')
+        
         return self.filter_class(
             self.request.GET,
-            queryset=self.model.objects.filter(owner=self.request.user).select_related('currency')
+            queryset=queryset
         )
+    
+    def get_context_data(self, **kwargs: Any):
+        context = super().get_context_data(**kwargs)
+        exchange_rates = ExchangeRate.objects.filter(active=True).values('currency1', 'currency2', 'exchange_rate')
+        context['object_list'] = [{'account': account, 'mc_bal': convert_all([{'total': account.current_balance, 'currency': account.currency.pk}], self.request.user.main_currency.pk, exchange_rates)} for account in context['object_list'] if account.visible]
+        return context
     
     def post(self, request):
         if(request.POST.get('pk')):
