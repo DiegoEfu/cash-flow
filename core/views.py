@@ -204,12 +204,19 @@ class TransactionListView(GeneralListView):
     def get_queryset(self) -> QuerySet[Any]:
         return self.filter_class(
             self.request.GET,
-            queryset=self.model.objects.filter(from_account=Account.objects.get(pk=self.kwargs['pk']))
+            queryset=self.model.objects.filter(
+                from_account=Account.objects.get(pk=self.kwargs['pk'])
+            )
         )
     
     def get_context_data(self, **kwargs: Any) -> dict[str, Any]:
         context = super().get_context_data(**kwargs)
-        context['account'] = Account.objects.filter(pk=self.kwargs['pk']).select_related('currency').first()
+        account = Account.objects.filter(pk=self.kwargs['pk']).select_related('currency').first()
+        exchange_rates = ExchangeRate.objects.filter(active=True).values('currency1', 'currency2', 'exchange_rate')
+        
+        context['account'] = account
+        context['mc_account_balance'] = convert_all([{'total': account.current_balance, 'currency': account.currency.pk}], self.request.user.main_currency.pk, exchange_rates)
+        context['object_list'] = [{'mc_amount': convert_all([{'total': transaction.amount, 'currency': account.currency.pk}], self.request.user.main_currency.pk, exchange_rates), 'transaction': transaction} for transaction in context['object_list']]
         return context
 
 class TransactionCreation(FormView):
@@ -312,6 +319,8 @@ class GeneralTransactionListView(GeneralListView):
         amounts_balance = Account.objects.annotate(total=Sum('current_balance')).values('currency','total')
         main_currency = self.request.user.main_currency
 
+        exchange_rates = ExchangeRate.objects.filter(active=True).values('currency1', 'currency2', 'exchange_rate')
+        context['object_list'] = [{'mc_amount': convert_all([{'total': transaction.amount, 'currency': transaction.from_account.currency.pk}], main_currency.pk, exchange_rates), 'transaction': transaction} for transaction in context['object_list']]
         context['current_balance']  = round(convert_all(amounts_balance, main_currency.pk), 2)
         context['main_currency']  = main_currency.code
         return context

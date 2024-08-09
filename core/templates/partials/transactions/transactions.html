@@ -10,7 +10,9 @@
         </div>        
         <div class="p-2">
             <h1 class="text-center text-4xl xl:text-4xl">{{account.name}}</h1>
-            <h3 id="balance" class="text-center text-success text-2xl xl:text-2xl">{{account.currency.code}} {{account.current_balance}}</h3>
+            <h3 id="balance" class="text-center text-success text-2xl xl:text-2xl">
+                <span data-tip="{{request.user.main_currency}} {{mc_account_balance}}" class="tooltip">{{account.currency.code}} {{account.current_balance}}</span>
+            </h3>
         </div>
         <div class="flex justify-center items-center flex-col p-2">
             <a hx-get="{% url 'transaction_creation' pk=account.pk %}" hx-target="main" class="btn mb-2 btn-success">+ New Transaction</a>
@@ -82,14 +84,14 @@
             <tbody>
                 {% for transaction in object_list %}
                 <tr>
-                    <td>{{transaction.date}} {% if transaction.hold %} <span class="badge badge-warning">(On Hold)</span> {%endif%}</td>
-                    <td>{{transaction.description|default:'-'}}</td>
-                    <td><span class="badge badge-{% if transaction.transaction_type == '+' %}success{% else %}error{% endif %}">{% if transaction.transaction_type == '+' %}INCOME{% else %}EXPENSE{% endif %}</span> </td>
-                    <td>{% if transaction.transaction_type == '-' %}-{%endif%}{{transaction.amount}}</td>
-                    <td>{{transaction.reference|default:'-'}}</td>
+                    <td>{{transaction.transaction.date}} {% if transaction.transaction.hold %} <span class="badge badge-warning">(On Hold)</span> {%endif%}</td>
+                    <td>{{transaction.transaction.description|default:'-'}}</td>
+                    <td><span class="badge badge-{% if transaction.transaction.transaction_type == '+' %}success{% else %}error{% endif %}">{% if transaction.transaction.transaction_type == '+' %}INCOME{% else %}EXPENSE{% endif %}</span> </td>
+                    <td class="tooltip" data-tip="{{request.user.main_currency.code}} {{transaction.mc_amount}}">{% if transaction.transaction.transaction_type == '-' %}-{%endif%}{{transaction.transaction.amount}}</td>
+                    <td>{{transaction.transaction.reference|default:'-'}}</td>
                     <td>
-                      <a hx-target="main" hx-get="{% url 'transaction_update' pk=transaction.pk %}" class="text-primary hover:underline">Edit</a>
-                      <a hx-target="closest tr" hx-confirm="Are you sure you want to delete this transaction?" hx-delete="{% url 'transaction_delete' pk=transaction.pk %}" class="text-secondary hover:underline">Delete</a>
+                      <a hx-target="main" hx-get="{% url 'transaction_update' pk=transaction.transaction.pk %}" class="text-primary hover:underline">Edit</a>
+                      <a hx-target="closest tr" hx-confirm="Are you sure you want to delete this transaction?" hx-delete="{% url 'transaction_delete' pk=transaction.transaction.pk %}" class="text-secondary hover:underline">Delete</a>
                     </td>
                 </tr>
                 {% empty %}                     

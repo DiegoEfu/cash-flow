@@ -134,11 +134,11 @@ async function makeGraph() {
       chart = new Chart(ctx, {
         type: "pie",
         data: {
-          labels: Object.values(results).map(account => account.account.name),
+          labels: Object.values(results).map(account => account.name),
           datasets: [
               {
                 label: "Account Total Balance",
-                data: Object.values(results).map(account => account.account.total),
+                data: Object.values(results).map(account => account.total),
               }
           ]
         },

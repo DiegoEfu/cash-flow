@@ -66,12 +66,12 @@
             <tbody>
                 {% for transaction in object_list %}
                 <tr>
-                    <td>{{transaction.date}} {% if transaction.hold %} <span class="badge badge-warning">(On Hold)</span> {%endif%}</td>
-                    <td>{{transaction.account}}</td>
-                    <td>{{transaction.description|default:'-'}}</td>
-                    <td><span class="badge badge-{% if transaction.transaction_type == '+' %}success{% else %}error{% endif %}">{% if transaction.transaction_type == '+' %}INCOME{% else %}EXPENSE{% endif %}</span> </td>
-                    <td>{% if transaction.transaction_type == '-' %}-{%endif%}{{transaction.amount}}</td>
-                    <td>{{transaction.reference|default:'-'}}</td>
+                    <td>{{transaction.transaction.date}} {% if transaction.transaction.hold %} <span class="badge badge-warning">(On Hold)</span> {%endif%}</td>
+                    <td>{{transaction.transaction.from_account}}</td>
+                    <td>{{transaction.transaction.description|default:'-'}}</td>
+                    <td><span class="badge badge-{% if transaction.transaction.transaction_type == '+' %}success{% else %}error{% endif %}">{% if transaction.transaction.transaction_type == '+' %}INCOME{% else %}EXPENSE{% endif %}</span> </td>
+                    <td>{% if transaction.transaction.transaction_type == '-' %}-{%endif%}{{transaction.mc_amount}}</td>
+                    <td>{{transaction.transaction.reference|default:'-'}}</td>
                 </tr>
                 {% empty %}                     
                 <tr class="table-primary">
