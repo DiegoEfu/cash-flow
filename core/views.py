@@ -10,13 +10,14 @@ from django.contrib.auth.views import LoginView
 from django.views.generic import FormView, ListView
 from django.contrib import messages
 from django.views.generic import View
-from .utils import convert_all, convert_each, calculate_percentage
+from .utils import find_transaction_fitting_exchange_rate, convert_all, convert_each, calculate_percentage
 
 from decimal import Decimal
 
 from .forms import *
 from .models import *
 from .filters import *
+from .constants import *
 
 # Create your views here.
 
@@ -28,8 +29,8 @@ def welcome_view(request):
              
             amounts_balance = Account.objects.annotate(total=Sum('current_balance')).values('currency','total')
             
-            amounts = Transaction.objects.select_related('from_account__currency').filter(hold=False).annotate(total=Sum('amount'), currency=F('from_account__currency')).values('total', 'transaction_type', 'currency')
-            amounts_income = [transaction for transaction in amounts if transaction['transaction_type'] == '+']
+            amounts = Transaction.objects.select_related('from_account__currency').filter(hold=False).annotate(total=Sum('amount'), currency=F('from_account__currency')).values('total', 'transaction_type', 'opening', 'currency')
+            amounts_income = [transaction for transaction in amounts if transaction['transaction_type'] == '+' and not transaction['opening']]
             amounts_expense = [transaction for transaction in amounts if transaction['transaction_type'] == '-']
 
             total_balance = convert_all(amounts_balance, request.user.main_currency.pk, exchange_rates)
@@ -43,9 +44,9 @@ def welcome_view(request):
             
             transactions = Transaction.objects.select_related('from_account__currency').filter(hold=False, date__month=previous_month) \
                 .annotate(total=Sum('amount'), currency=F('from_account__currency')) \
-                .values('total', 'currency', 'transaction_type')
+                .values('total', 'currency', 'transaction_type', 'opening')
             
-            incomes_last_month = [transaction for transaction in transactions if transaction['transaction_type'] == '+']
+            incomes_last_month = [transaction for transaction in transactions if transaction['transaction_type'] == '+' and not transaction['opening']]
             income_last_month = convert_all(incomes_last_month, request.user.main_currency.pk, exchange_rates)
 
             expenses_last_month = [transaction for transaction in transactions if transaction['transaction_type'] == '-']
@@ -169,8 +170,18 @@ class AccountCreation(LoginRequiredMixin, FormView):
             form.instance.owner = self.request.user
             form.save()
 
-        messages.success(self.request, "The account has been created successfully.")
+            if(form.instance.current_balance > 0):
+                Transaction.objects.create(
+                    from_account=form.instance,
+                    amount=form.instance.current_balance,
+                    transaction_type='+',
+                    description=OPENING_BALANCE_DESCRIPTION,
+                    date=form.instance.opening_time,
+                    opening=True,
+                    exchange_rate=find_transaction_fitting_exchange_rate(form.instance.currency, self.request.user.main_currency, form.instance.opening_time)
+                )
 
+        messages.success(self.request, "The account has been created successfully.")
         return res
     
     def form_invalid(self, form: Any) -> HttpResponse:
@@ -228,6 +239,7 @@ class TransactionCreation(FormView):
             account = Account.objects.get(pk=self.kwargs['pk'])
 
             form.instance.from_account = account
+            form.instance.exchange_rate = find_transaction_fitting_exchange_rate(account.currency, self.request.user.main_currency, form.instance.date)
             form.save()
 
             if not form.instance.hold:

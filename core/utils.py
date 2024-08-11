@@ -59,3 +59,9 @@ def calculate_percentage(current, comparison):
         percentage = None
     
     return percentage
+
+def find_transaction_fitting_exchange_rate(currency1, currency2, date):
+    return ExchangeRate.objects.filter(
+        currency1=currency1, currency2=currency2,
+        date__lte=date
+    ).latest('date') if currency1.pk != currency2.pk else None

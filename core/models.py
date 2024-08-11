@@ -34,6 +34,7 @@ class User(AbstractUser):
 
 class ExchangeRate(StrAsNameMixin, models.Model):
     id = models.UUIDField(default=uuid.uuid4, primary_key=True)
+    date = models.DateField(auto_now=True)
     exchange_rate = models.DecimalField(max_digits=15, decimal_places=2)
     active = models.BooleanField(default=True)
     currency1 = models.ForeignKey(Currency, on_delete=models.PROTECT, related_name="currency1_exchange_rate")
@@ -84,7 +85,8 @@ class Transaction(models.Model):
     hold = models.BooleanField(default=False)
     date = models.DateTimeField(default=datetime.datetime.now())
     from_account = models.ForeignKey(Account, on_delete=models.PROTECT, related_name="transaction_from_account", null=True)
-    to_account = models.ForeignKey(Account, on_delete=models.PROTECT, related_name="transaction_to_account", null=True)
+    exchange_rate = models.ForeignKey(ExchangeRate, on_delete=models.PROTECT, null=True, blank=True)
+    opening = models.BooleanField(default=False, blank=True)
 
     objects = TransactionQuerySet.as_manager()
 
