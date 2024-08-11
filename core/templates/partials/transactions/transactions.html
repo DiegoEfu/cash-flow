@@ -11,7 +11,7 @@
         <div class="p-2">
             <h1 class="text-center text-4xl xl:text-4xl">{{account.name}}</h1>
             <h3 id="balance" class="text-center text-success text-2xl xl:text-2xl">
-                <span data-tip="{{request.user.main_currency}} {{mc_account_balance}}" class="tooltip">{{account.currency.code}} {{account.current_balance}}</span>
+                <span data-tip="{{request.user.main_currency}} {{mc_account_balance}}" class="tooltip tooltip-success">{{account.currency.code}} {{account.current_balance}}</span>
             </h3>
         </div>
         <div class="flex justify-center items-center flex-col p-2">
@@ -87,7 +87,11 @@
                     <td>{{transaction.transaction.date}} {% if transaction.transaction.hold %} <span class="badge badge-warning">(On Hold)</span> {%endif%}</td>
                     <td>{{transaction.transaction.description|default:'-'}}</td>
                     <td><span class="badge badge-{% if transaction.transaction.transaction_type == '+' %}success{% else %}error{% endif %}">{% if transaction.transaction.transaction_type == '+' %}INCOME{% else %}EXPENSE{% endif %}</span> </td>
-                    <td class="tooltip" data-tip="{{request.user.main_currency.code}} {{transaction.mc_amount}}">{% if transaction.transaction.transaction_type == '-' %}-{%endif%}{{transaction.transaction.amount}}</td>
+                    <td class="tooltip tooltip-success" data-tip="{{request.user.main_currency.code}} {{transaction.mc_amount}}">
+                      <span class="tooltip tooltip-warning tooltip-bottom" data-tip="Value at Time of Transaction: {{request.user.main_currency.code}} {{transaction.transaction.previous_value|floatformat:2}}">
+                        {% if transaction.transaction.transaction_type == '-' %}-{%endif%}{{transaction.transaction.amount}}
+                      </span>                     
+                    </td>
                     <td>{{transaction.transaction.reference|default:'-'}}</td>
                     <td>
                       <a hx-target="main" hx-get="{% url 'transaction_update' pk=transaction.transaction.pk %}" class="text-primary hover:underline">Edit</a>

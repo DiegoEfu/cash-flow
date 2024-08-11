@@ -215,8 +215,12 @@ class TransactionListView(GeneralListView):
     def get_queryset(self) -> QuerySet[Any]:
         return self.filter_class(
             self.request.GET,
-            queryset=self.model.objects.filter(
-                from_account=Account.objects.get(pk=self.kwargs['pk'])
+            queryset=self.model.objects.select_related(
+                'exchange_rate'
+            ).filter(
+                from_account=Account.objects.get(pk=self.kwargs['pk']),
+            ).annotate(
+                previous_value=F('amount') / F('exchange_rate__exchange_rate'),
             )
         )
     
@@ -227,7 +231,14 @@ class TransactionListView(GeneralListView):
         
         context['account'] = account
         context['mc_account_balance'] = convert_all([{'total': account.current_balance, 'currency': account.currency.pk}], self.request.user.main_currency.pk, exchange_rates)
-        context['object_list'] = [{'mc_amount': convert_all([{'total': transaction.amount, 'currency': account.currency.pk}], self.request.user.main_currency.pk, exchange_rates), 'transaction': transaction} for transaction in context['object_list']]
+        context['object_list'] = [{
+                'mc_amount': convert_all([
+                    {
+                        'total': transaction.amount, 
+                        'currency': account.currency.pk,
+                    }],  self.request.user.main_currency.pk, exchange_rates), 
+                'transaction': transaction,
+            } for transaction in context['object_list']]
         return context
 
 class TransactionCreation(FormView):
@@ -322,7 +333,9 @@ class GeneralTransactionListView(GeneralListView):
     def get_queryset(self) -> QuerySet[Any]:
         return self.filter_class(
             self.request.GET,
-            queryset=self.model.objects.filter(from_account__owner=self.request.user)
+            queryset=self.model.objects.select_related(
+                'from_account', 'from_account__currency'
+            ).filter(from_account__owner=self.request.user)
         )
     
     def get_context_data(self, **kwargs: Any) -> dict[str, Any]:
@@ -407,7 +420,7 @@ class TagAssignment(LoginRequiredMixin, View):
 
     def get_forms(self, account, request = None):
         tags = Tag.objects.filter(user=self.request.user)
-        totals = MoneyTag.objects.filter(tag__in=tags.values_list('id', flat=True)).annotate(total=Sum('amount'))
+        totals = MoneyTag.objects.filter(tag__in=tags.values_list('id', flat=True), account=account).annotate(total=Sum('amount'))
         forms = []
 
         with transaction.atomic():
@@ -439,7 +452,6 @@ class TagAssignment(LoginRequiredMixin, View):
         return render(request, self.template_name, self.get_context_data())
 
     def post(self, request, pk):
-        print(pk)
         account = Account.objects.get(pk=pk)
         tags = Tag.objects.filter(user=self.request.user)
         forms = []

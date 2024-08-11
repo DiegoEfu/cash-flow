@@ -70,7 +70,7 @@
                     <td>{{transaction.transaction.from_account}}</td>
                     <td>{{transaction.transaction.description|default:'-'}}</td>
                     <td><span class="badge badge-{% if transaction.transaction.transaction_type == '+' %}success{% else %}error{% endif %}">{% if transaction.transaction.transaction_type == '+' %}INCOME{% else %}EXPENSE{% endif %}</span> </td>
-                    <td>{% if transaction.transaction.transaction_type == '-' %}-{%endif%}{{transaction.mc_amount}}</td>
+                    <td class="tooltip" data-tip="{{transaction.transaction.from_account.currency.code}} {{transaction.transaction.amount}}">{% if transaction.transaction.transaction_type == '-' %}-{%endif%}{{transaction.mc_amount}}</td>
                     <td>{{transaction.transaction.reference|default:'-'}}</td>
                 </tr>
                 {% empty %}                     
@@ -79,7 +79,7 @@
                 </tr>
                 {% endfor %}
                 {% if page_obj.has_next %}
-                <tr hx-trigger="revealed" hx-target="this" hx-swap="outerHTML" hx-select="#items" hx-get="{% url 'transaction_list' %}?page={{page_obj.next_page_number }}" hx-include=".input, .select"></tr>
+                <tr hx-trigger="revealed" hx-target="this" hx-swap="outerHTML" hx-select="#items" hx-get="{% url 'general_transactions_list' %}?page={{page_obj.next_page_number }}" hx-include=".input, .select"></tr>
                 {% endif %}
             </tbody>
         </table>        
