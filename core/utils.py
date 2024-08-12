@@ -5,7 +5,6 @@ def convert(amount, exchange_rate):
 
 def convert_all(amounts, main_currency_pk, exchange_rates = None):
     acc = 0
-    print(amounts)
 
     if(not exchange_rates):    
         exchange_rates = ExchangeRate.objects.filter(active=True) \

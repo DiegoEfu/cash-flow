@@ -130,17 +130,23 @@ class AccountListView(GeneralListView):
     filter_class = AccountFilter
 
     def get_queryset(self) -> QuerySet[Any]:
-        queryset = self.model.objects.filter(owner=self.request.user).select_related('currency')
-        
-        return self.filter_class(
+        queryset = self.model.objects.filter(owner=self.request.user, visible=True).select_related('currency')
+        filterx= self.filter_class(
             self.request.GET,
             queryset=queryset
         )
+
+        print(filterx.qs)
+
+        return filterx
     
     def get_context_data(self, **kwargs: Any):
         context = super().get_context_data(**kwargs)
+        print(context['object_list'])
         exchange_rates = ExchangeRate.objects.filter(active=True).values('currency1', 'currency2', 'exchange_rate')
-        context['object_list'] = [{'account': account, 'mc_bal': convert_all([{'total': account.current_balance, 'currency': account.currency.pk}], self.request.user.main_currency.pk, exchange_rates)} for account in context['object_list'] if account.visible]
+        context['object_list'] = [{'account': account, 'mc_bal': convert_all([{'total': account.current_balance, 'currency': account.currency.pk}], self.request.user.main_currency.pk, exchange_rates)} for account in context['object_list']]
+        
+        
         return context
     
     def post(self, request):
@@ -265,7 +271,6 @@ class TransactionCreation(FormView):
     
     def form_invalid(self, form: Any) -> HttpResponse:
         messages.error(self.request, "An error has ocurred while creating your Transaction.")
-        print(form.errors)
         return render(self.request, 'partials/transactions/form.html', {'form': form, 'account': Account.objects.get(pk=self.kwargs['pk'])})
 
     def get_context_data(self, **kwargs: Any) -> dict[str, Any]:
@@ -474,7 +479,7 @@ def logout_view(request):
     return redirect("/login")
 
 def graph_by_accounts(request):
-    accounts = AccountFilter(request.GET, queryset=Account.objects.filter(owner=request.user).select_related('currency')).qs.annotate(total=F('current_balance')).values('name', 'currency', 'total')
+    accounts = AccountFilter(request.GET, queryset=Account.objects.filter(visible=True, owner=request.user).select_related('currency')).qs.annotate(total=F('current_balance')).values('name', 'currency', 'total')
     accounts = convert_each(accounts, request.user.main_currency.pk)
 
     return JsonResponse(accounts, safe=False)

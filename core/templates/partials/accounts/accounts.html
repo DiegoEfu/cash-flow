@@ -37,7 +37,7 @@
       <input type="checkbox" />
       <div class="collapse-title text-xl font-medium">Filters</div>
         <div class="collapse-content">
-          <form hx-get="{% url 'account_list' %}" hx-select="#items" hx-target="#items" hx-swap="outerHTML" hx-indicator="#loading-bars" hx-trigger="submit, change, keyup delay:1s">
+          <form id="form" hx-get="{% url 'account_list' %}" hx-select="#items" hx-target="#items" hx-swap="outerHTML" hx-indicator="#loading-bars" hx-trigger="submit, change, keyup delay:1s">
             <div class="grid lg:grid-cols-3 md:grid-cols-1 sm:grid-cols-1 xs:grid-cols-1">
               <div class="me-4">
                 <label for="id_name__icontains">Name:</label> <br>
@@ -81,7 +81,7 @@
             <div class="stat place-items-center p-2 border-b">
               <a href="{% url 'transactions_list' pk=account.account.pk %}" class="btn btn-success w-full">VISUALIZE TRANSACTIONS</a>
               <a hx-target="main" hx-get="{% url 'account_update' pk=account.account.pk %}" class="btn btn-primary w-full mt-2">EDIT ACCOUNT DETAILS</a>
-              <form hx-post="{% url 'account_list' %}" hx-confirm="Are you sure? You won't be able to recover the account you deleted." hx-target="body" method="post" class="w-full">
+              <form hx-post="{% url 'account_list' %}#" hx-confirm="Are you sure? You won't be able to recover the account you deleted, but the transactions will remain in your general history. They will also be removed from your income and expenses." hx-target="body" method="post" class="w-full">
                 {% csrf_token %}
                 <button name="pk" value="{{account.account.pk}}" type="submit" class="btn btn-secondary w-full mt-2">DELETE ACCOUNT</button>
               </form>
@@ -92,12 +92,10 @@
         <div role="alert" class="alert alert-warning">
           <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
           <span><b>No accounts were found. </b> Create a new one by clicking the button above or change your filtering criteria.</span>
-      </div>
+        </div>
         {% endfor %}
 
-        {% if page_obj.has_next %}
-        <div hx-trigger="revealed" hx-target="this" hx-swap="outerHTML" hx-select="#items" hx-get="{% url 'account_list' %}?page={{page_obj.next_page_number }}" hx-include=".input, .select"></div>
-        {% endif %}
+       
     </div>
 
     <div id="loading-bars" class="htmx-indicator indicator-style">
@@ -116,9 +114,9 @@
 
 <script src="{% static 'js/block-screen.js' %}"></script>
 <script>
-let results = undefined;
-let ctx = document.getElementById("chart").getContext("2d");
-let chart = undefined;
+var results = undefined;
+var ctx = document.getElementById("chart").getContext("2d");
+var chart = undefined;
 
 async function makeGraph() {
   const xhttp = new XMLHttpRequest();
@@ -137,7 +135,7 @@ async function makeGraph() {
           labels: Object.values(results).map(account => account.name),
           datasets: [
               {
-                label: "Account Total Balance",
+                label: "Account Total Balance ({{request.user.main_currency.code}})",
                 data: Object.values(results).map(account => account.total),
               }
           ]
@@ -154,5 +152,10 @@ async function makeGraph() {
 }
 
 makeGraph();
+
+document.getElementById('form').addEventListener("change", function() {
+  chart.destroy();
+  makeGraph();
+});
 </script>
 {% endblock %}

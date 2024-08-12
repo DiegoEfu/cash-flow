@@ -20,9 +20,7 @@ class UserForm(forms.ModelForm):
 
         if(len(password) < 8):
             raise forms.ValidationError("The password must be at least 8 characters long.")
-        
-        print(password)
-        
+                
         password = make_password(password)
 
         return password

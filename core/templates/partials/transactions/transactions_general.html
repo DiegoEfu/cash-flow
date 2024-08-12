@@ -51,7 +51,7 @@
         </div>
     </div>
 
-    <div id="items" class="table-wrapper">
+    <div class="table-wrapper">
         <table class="table table-xs w-full text-center">
             <thead>
                 <tr class="bg-base-200">
@@ -63,7 +63,7 @@
                     <th>Reference</th>
                 </tr>
             </thead>
-            <tbody>
+            <tbody id="items">
                 {% for transaction in object_list %}
                 <tr>
                     <td>{{transaction.transaction.date}} {% if transaction.transaction.hold %} <span class="badge badge-warning">(On Hold)</span> {%endif%}</td>
@@ -79,7 +79,7 @@
                 </tr>
                 {% endfor %}
                 {% if page_obj.has_next %}
-                <tr hx-trigger="revealed" hx-target="this" hx-swap="outerHTML" hx-select="#items" hx-get="{% url 'general_transactions_list' %}?page={{page_obj.next_page_number }}" hx-include=".input, .select"></tr>
+                <tr hx-trigger="revealed" hx-target="this" hx-swap="outerHTML" hx-select="#items > tr" hx-get="{% url 'general_transactions_list' %}?page={{page_obj.next_page_number }}" hx-include=".input, .select"></tr>
                 {% endif %}
             </tbody>
         </table>        

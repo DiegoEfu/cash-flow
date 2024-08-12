@@ -88,7 +88,7 @@
                     <td>{{transaction.transaction.description|default:'-'}}</td>
                     <td><span class="badge badge-{% if transaction.transaction.transaction_type == '+' %}success{% else %}error{% endif %}">{% if transaction.transaction.transaction_type == '+' %}INCOME{% else %}EXPENSE{% endif %}</span> </td>
                     <td class="tooltip tooltip-success" data-tip="{{request.user.main_currency.code}} {{transaction.mc_amount}}">
-                      <span class="tooltip tooltip-warning tooltip-bottom" data-tip="Value at Time of Transaction: {{request.user.main_currency.code}} {{transaction.transaction.previous_value|floatformat:2}}">
+                      <span {% if transaction.transaction.previous_value %}class="tooltip tooltip-warning tooltip-bottom" data-tip="Value at Time of Transaction: {{request.user.main_currency.code}} {{transaction.transaction.previous_value|floatformat:2}}"{%endif%}>
                         {% if transaction.transaction.transaction_type == '-' %}-{%endif%}{{transaction.transaction.amount}}
                       </span>                     
                     </td>
