@@ -1,6 +1,6 @@
 from typing import Any
 from django.db.models.query import QuerySet
-from django.db.models import Sum, F
+from django.db.models import Sum, F, Prefetch
 from django.db import transaction
 from django.http import HttpRequest, HttpResponse, HttpResponseForbidden, JsonResponse
 from django.shortcuts import render, redirect
@@ -136,16 +136,12 @@ class AccountListView(GeneralListView):
             queryset=queryset
         )
 
-        print(filterx.qs)
-
         return filterx
     
     def get_context_data(self, **kwargs: Any):
         context = super().get_context_data(**kwargs)
-        print(context['object_list'])
         exchange_rates = ExchangeRate.objects.filter(active=True).values('currency1', 'currency2', 'exchange_rate')
         context['object_list'] = [{'account': account, 'mc_bal': convert_all([{'total': account.current_balance, 'currency': account.currency.pk}], self.request.user.main_currency.pk, exchange_rates)} for account in context['object_list']]
-        
         
         return context
     
@@ -378,8 +374,14 @@ class TagListView(GeneralListView):
         return self.filter_class(
             self.request.GET,
             queryset=self.model.objects.filter(user=self.request.user)
-                .prefetch_related('money_tags')
-                .annotate(assigned=Sum('money_tags__amount'))
+                .prefetch_related(Prefetch('money_tags', 
+                                           queryset=MoneyTag.objects
+                                                .select_related(
+                                                    'account', 
+                                                    'account__currency'
+                                                )
+                                            )
+                ).annotate(assigned=Sum('money_tags__amount'))
         )
 
 class TagUpdate(LoginRequiredMixin, FormView):
@@ -480,6 +482,12 @@ def logout_view(request):
 
 def graph_by_accounts(request):
     accounts = AccountFilter(request.GET, queryset=Account.objects.filter(visible=True, owner=request.user).select_related('currency')).qs.annotate(total=F('current_balance')).values('name', 'currency', 'total')
+    accounts = convert_each(accounts, request.user.main_currency.pk)
+
+    return JsonResponse(accounts, safe=False)
+
+def graph_by_tags(request):
+    accounts = AccountFilter(request.GET, queryset=MoneyTag.objects.filter(account__visible=True, account__owner=request.user).select_related('currency')).qs.annotate(total=F('current_balance')).values('name', 'currency', 'total')
     accounts = convert_each(accounts, request.user.main_currency.pk)
 
     return JsonResponse(accounts, safe=False)
