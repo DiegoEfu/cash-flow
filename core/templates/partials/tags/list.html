@@ -55,19 +55,19 @@
             <thead>
                 <tr class="bg-base-200">
                     <th>Tag</th>
-                    <th>Total Money Assigned</th>
+                    <th>Total Money Assigned ({{request.user.main_currency}})</th>
                     <th>Actions</th>
                 </tr>
             </thead>
             <tbody>
                 {% for tag in object_list %}
                 <tr>
-                    <td>{{tag.name}}</td>
-                    <td>{{tag.assigned|default:'0.00'}}</td>
+                    <td>{{tag.tag.name}}</td>
+                    <td>{{tag.total|default:'0.00'}}</td>
                     <td>
-                      <a hx-target="main" hx-get="{% url 'tag_update' pk=tag.pk %}" class="text-primary hover:underline">Edit</a>
+                      <a hx-target="main" hx-get="{% url 'tag_update' pk=tag.tag.pk %}" class="text-primary hover:underline">Edit</a>
                       
-                      {% if not tag.assigned %}
+                      {% if not tag.tag.assigned %}
                       <a hx-target="closest tr" hx-confirm="Are you sure you want to delete this tag?" hx-delete="{% url 'tag_delete' pk=tag.pk %}" class="text-secondary hover:underline">Delete</a>
                       {% endif %}
                     </td>

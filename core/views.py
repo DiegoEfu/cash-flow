@@ -383,6 +383,25 @@ class TagListView(GeneralListView):
                                             )
                 ).annotate(assigned=Sum('money_tags__amount'))
         )
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+       
+        exchange_rates = ExchangeRate.objects.filter(active=True).values('currency1', 'currency2', 'exchange_rate')
+        alt = []
+        for tag in context['object_list']:
+            total = 0
+            
+            for money_tag in tag.money_tags.all():
+                total += convert_all([{'total': money_tag.amount, 'currency': money_tag.account.currency.pk}], self.request.user.main_currency.pk, exchange_rates)
+            
+            alt.append({
+                'tag': tag,
+                'total': total
+            })
+
+        context['object_list'] = alt        
+        return context
 
 class TagUpdate(LoginRequiredMixin, FormView):
     form_class = TagForm
