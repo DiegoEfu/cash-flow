@@ -35,6 +35,8 @@ class AccountForm(forms.ModelForm):
         exclude = ('id', 'opening_time', 'owner', 'visible')
 
 class TransactionForm(forms.ModelForm):
+    subtract_from_tag = forms.ModelChoiceField(Tag.objects.all(), required=False)
+
     class Meta:
         model = Transaction
         exclude = ('id', 'from_account', 'exchange_rate')

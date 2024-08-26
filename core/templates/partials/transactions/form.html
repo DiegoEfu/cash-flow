@@ -33,15 +33,20 @@
         </div>       
     </div>
 
-    <div class="mb-3 grid grid-cols-2">
+    <div class="mb-3 grid grid-cols-3">
         <div class="me-3">
             <label for="id_transaction_type" class="form-label">Transaction Type:</label>
-            {% render_field form.transaction_type class="select select-bordered w-full" %}
+            {% render_field form.transaction_type class="select select-bordered w-full" hx-select="#id_subtract_from_tag" hx-target="#id_subtract_from_tag" hx-swap="outerHTML" hx-get="" hx-trigger="change" %}
+        </div>
+
+        <div class="me-3">
+            <label for="id_amount" class="form-label">Amount ({{account.currency.code}}):</label>
+            {% render_field form.amount class="input input-bordered w-full" min="0.01" step="0.01" placeholder="Must be greater than or equal to 0.01" %}
         </div>
 
         <div>
-            <label for="id_amount" class="form-label">Amount ({{account.currency.code}}):</label>
-            {% render_field form.amount class="input input-bordered w-full" min="0.01" step="0.01" placeholder="Must be greater than or equal to 0.01" %}
+            <label for="id_amount" class="form-label">Subtract from Tag:</label>
+            {% render_field form.subtract_from_tag class="select select-bordered w-full" disabled="" %}
         </div>
     </div>
     <div class="mb-3 flex justify-center flex-col items-center">

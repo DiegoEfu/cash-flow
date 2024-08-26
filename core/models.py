@@ -103,6 +103,9 @@ class MoneyTag(models.Model):
     account = models.ForeignKey(Account, on_delete=models.PROTECT, related_name="accounts_money_tags")
     tag = models.ForeignKey(Tag, on_delete=models.PROTECT, related_name="money_tags")
 
+    def __str__(self) -> str:
+        return f"MoneyTag ({self.tag}) of {self.amount} on {self.date} on account {self.account} owned by {self.account.user}."
+
 class HistoricBalance(StrAsNameMixin, models.Model):
     id = models.UUIDField(default=uuid.uuid4, primary_key=True)
     balance = models.DecimalField(max_digits=15, decimal_places=2)
