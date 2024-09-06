@@ -261,9 +261,9 @@ class TransactionCreation(FormView):
                 account.current_balance += amount
                 account.save()
 
-                if(form.subtract_from_tag):
-                    tag = MoneyTag.objects.get(tag=form.subtract_from_tag, account=account)
-                    tag.amount -= amount
+                if(form.data.get('subtract_from_tag')):
+                    tag = MoneyTag.objects.get(tag__pk=form.data['subtract_from_tag'], account=account)
+                    tag.amount += amount
                     tag.save()
 
             messages.success(self.request, "The Transaction has been made successfully.")
@@ -298,6 +298,11 @@ class TransactionUpdate(TransactionCreation):
                 account.save()
 
             form.save()
+
+            if(form.data.get('subtract_from_tag')):
+                tag = MoneyTag.objects.get(tag__pk=form.data['subtract_from_tag'], account=account)
+                tag.amount += amount
+                tag.save()
 
             messages.success(self.request, "The Transaction has been updated successfully.")
 

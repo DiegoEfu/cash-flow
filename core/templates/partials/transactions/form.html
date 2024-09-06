@@ -43,11 +43,12 @@
             <label for="id_amount" class="form-label">Amount ({{account.currency.code}}):</label>
             {% render_field form.amount class="input input-bordered w-full" min="0.01" step="0.01" placeholder="Must be greater than or equal to 0.01" %}
         </div>
-
+        {% if not form.instance.account %}
         <div>
-            <label for="id_amount" class="form-label">Subtract from Tag:</label>
+            <label for="id_subtract_from_tag" class="form-label">Subtract from Tag:</label>            
             {% render_field form.subtract_from_tag class="select select-bordered w-full" disabled="" %}
         </div>
+        {% endif %}
     </div>
     <div class="mb-3 flex justify-center flex-col items-center">
         <label for="id_hold" class="form-label">On Hold:</label>
