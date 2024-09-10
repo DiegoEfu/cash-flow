@@ -492,7 +492,7 @@ class TagAssignment(LoginRequiredMixin, View):
                 )]
             )
         }
-        context['totals']['not_assigned'] = context['account'].current_balance - context['totals']['total_tags']
+        context['totals']['not_assigned'] = context['account'].current_balance - context['totals']['total_account']
         return context
 
     def get(self, request, *args, **kwargs):

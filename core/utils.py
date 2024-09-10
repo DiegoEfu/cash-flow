@@ -42,7 +42,7 @@ def convert_each(amounts, main_currency_pk, exchange_rates = None):
 
             if not exchange_rate:
                 exchange_rate = 1/next((rate['exchange_rate'] for rate in exchange_rates if \
-                                      amount['currency1'] == main_currency_pk and amount['currency2'] == amount['currency']
+                                      rate['currency1'] == main_currency_pk and rate['currency2'] == amount['currency']
                                     ), None)
             
             new_amounts[-1]['total'] = convert(amount['total'], exchange_rate)
