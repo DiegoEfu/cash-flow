@@ -478,8 +478,19 @@ class TagAssignment(LoginRequiredMixin, View):
         context['account'] = Account.objects.select_related('currency').get(pk=self.kwargs['pk'])
         context['forms'] = self.get_forms(context['account'], request)
         context['totals'] = {
-            'total_account': sum(MoneyTag.objects.filter(account=context['account']).values_list('amount', flat=True)),
-            'total_tags': sum(MoneyTag.objects.filter(tag__in=Tag.objects.filter(user=self.request.user)).values_list('amount', flat=True))
+            'total_account': sum([ x['total'] for x in convert_each(
+                MoneyTag.objects.filter(account=context['account']).annotate(
+                    total=F('amount'), currency=F('account__currency__pk')
+                ).values('total', 'currency'), 
+                context['account'].currency.pk
+            )]),
+            'total_tags': sum([ x['total'] for x in convert_each(
+                    MoneyTag.objects.filter(tag__in=Tag.objects.filter(user=self.request.user)).annotate(
+                        total=F('amount'), currency=F('account__currency__pk')
+                    ).values('total', 'currency'),
+                    context['account'].currency.pk
+                )]
+            )
         }
         context['totals']['not_assigned'] = context['account'].current_balance - context['totals']['total_tags']
         return context
