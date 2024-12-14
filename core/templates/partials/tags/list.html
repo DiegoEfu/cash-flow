@@ -68,7 +68,7 @@
                       <a hx-target="main" hx-get="{% url 'tag_update' pk=tag.tag.pk %}" class="text-primary hover:underline">Edit</a>
                       
                       {% if not tag.tag.assigned %}
-                      <a hx-target="closest tr" hx-confirm="Are you sure you want to delete this tag?" hx-delete="{% url 'tag_delete' pk=tag.pk %}" class="text-secondary hover:underline">Delete</a>
+                      <a hx-target="closest tr" hx-confirm="Are you sure you want to delete this tag?" hx-delete="{% url 'tag_delete' pk=tag.tag.pk %}" class="text-secondary hover:underline">Delete</a>
                       {% endif %}
                     </td>
                 </tr>

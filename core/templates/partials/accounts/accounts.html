@@ -135,14 +135,14 @@ async function makeGraph() {
           labels: Object.values(results).map(account => account.name),
           datasets: [
               {
-                label: "Account Total Balance ({{request.user.main_currency.code}})",
+                label: "Account Total Balance ({{request.user.main_currency.currency.code}})",
                 data: Object.values(results).map(account => account.total),
               }
           ]
         },
         options: {
           title: {
-              text: "Current Balance Distribution by Account ({{request.user.main_currency.code}})",
+              text: "Current Balance Distribution by Account ({{request.user.main_currency.currency.code}})",
               display: true
           }
         }

@@ -141,7 +141,7 @@ class AccountListView(GeneralListView):
     def get_context_data(self, **kwargs: Any):
         context = super().get_context_data(**kwargs)
         exchange_rates = ExchangeRate.objects.filter(active=True).values('currency1', 'currency2', 'exchange_rate')
-        context['object_list'] = [{'account': account, 'mc_bal': convert_all([{'total': account.current_balance, 'currency': account.currency.pk}], self.request.user.main_currency.pk, exchange_rates)} for account in context['object_list']]
+        context['object_list'] = [{'account': account, 'mc_bal': convert_all([{'total': account.current_balance, 'currency': account.currency.pk}], self.request.user.main_currency.currency.pk, exchange_rates)} for account in context['object_list']]
         
         return context
     
@@ -180,7 +180,7 @@ class AccountCreation(LoginRequiredMixin, FormView):
                     description=OPENING_BALANCE_DESCRIPTION,
                     date=form.instance.opening_time,
                     opening=True,
-                    exchange_rate=find_transaction_fitting_exchange_rate(form.instance.currency, self.request.user.main_currency, form.instance.opening_time)
+                    exchange_rate=find_transaction_fitting_exchange_rate(form.instance.currency, self.request.user.main_currency.currency, form.instance.opening_time)
                 )
 
         messages.success(self.request, "The account has been created successfully.")
@@ -232,13 +232,13 @@ class TransactionListView(GeneralListView):
         exchange_rates = ExchangeRate.objects.filter(active=True).values('currency1', 'currency2', 'exchange_rate')
         
         context['account'] = account
-        context['mc_account_balance'] = convert_all([{'total': account.current_balance, 'currency': account.currency.pk}], self.request.user.main_currency.pk, exchange_rates)
+        context['mc_account_balance'] = convert_all([{'total': account.current_balance, 'currency': account.currency.pk}], self.request.user.main_currency.currency.pk, exchange_rates)
         context['object_list'] = [{
                 'mc_amount': convert_all([
                     {
                         'total': transaction.amount, 
                         'currency': account.currency.pk,
-                    }],  self.request.user.main_currency.pk, exchange_rates), 
+                    }],  self.request.user.main_currency.currency.pk, exchange_rates), 
                 'transaction': transaction,
             } for transaction in context['object_list']]
         return context
@@ -252,7 +252,7 @@ class TransactionCreation(FormView):
             account = Account.objects.get(pk=self.kwargs['pk'])
 
             form.instance.from_account = account
-            form.instance.exchange_rate = find_transaction_fitting_exchange_rate(account.currency, self.request.user.main_currency, form.instance.date)
+            form.instance.exchange_rate = find_transaction_fitting_exchange_rate(account.currency, self.request.user.main_currency.currency, form.instance.date)
             form.save()
 
             if not form.instance.hold:
@@ -353,7 +353,7 @@ class GeneralTransactionListView(GeneralListView):
         context = super().get_context_data(**kwargs)
 
         amounts_balance = Account.objects.annotate(total=Sum('current_balance')).values('currency','total')
-        main_currency = self.request.user.main_currency
+        main_currency = self.request.user.main_currency.currency
 
         exchange_rates = ExchangeRate.objects.filter(active=True).values('currency1', 'currency2', 'exchange_rate')
         context['object_list'] = [{'mc_amount': convert_all([{'total': transaction.amount, 'currency': transaction.from_account.currency.pk}], main_currency.pk, exchange_rates), 'transaction': transaction} for transaction in context['object_list']]
@@ -403,7 +403,7 @@ class TagListView(GeneralListView):
             total = 0
             
             for money_tag in tag.money_tags.all():
-                total += convert_all([{'total': money_tag.amount, 'currency': money_tag.account.currency.pk}], self.request.user.main_currency.pk, exchange_rates)
+                total += convert_all([{'total': money_tag.amount, 'currency': money_tag.account.currency.pk}], self.request.user.main_currency.currency.pk, exchange_rates)
             
             alt.append({
                 'tag': tag,

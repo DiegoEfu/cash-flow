@@ -84,7 +84,7 @@ WSGI_APPLICATION = 'finances.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
-        'NAME': 'finances',
+        'NAME': 'finances2',
         'USER': 'root',
         'PASSWORD': '',
         'HOST':'localhost',
@@ -140,7 +140,6 @@ STATICFILES_DIRS = [
 # https://docs.djangoproject.com/en/4.1/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
-AUTH_USER_MODEL = "core.User"
 AUTHENTICATION_BACKENDS = ['finances.backends.EmailBackend']
 
 ACCOUNT_AUTHENTICATION_METHOD = 'email'

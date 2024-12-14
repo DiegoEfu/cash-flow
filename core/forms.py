@@ -26,7 +26,7 @@ class UserForm(forms.ModelForm):
         return password
 
     class Meta:
-        model = User
+        model = get_user_model()
         exclude = ('id', 'username', 'date_joined')
 
 class AccountForm(forms.ModelForm):

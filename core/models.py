@@ -1,6 +1,6 @@
 from django.db import models
 from django.core.validators import MinValueValidator
-from django.contrib.auth.models import AbstractUser
+from django.contrib.auth import get_user_model
 
 from .mixins import StrAsNameMixin
 from .managers import *
@@ -25,17 +25,17 @@ class Currency(models.Model):
     class Meta:
         ordering = ("code",)
 
-class User(AbstractUser):
-    main_currency = models.ForeignKey(Currency, on_delete=models.CASCADE, default=1)
-    username = None
-    USERNAME_FIELD = 'email'
-    email = models.EmailField(unique=True)
-    REQUIRED_FIELDS = []
+class MainCurrency(models.Model):
+    user = models.OneToOneField(get_user_model(), on_delete=models.PROTECT, null=True, related_name="main_currency")
+    currency = models.ForeignKey(Currency, on_delete=models.PROTECT, null=True)
+
+    def __str__(self) -> str:
+        return self.currency.code
 
 class ExchangeRate(StrAsNameMixin, models.Model):
     id = models.UUIDField(default=uuid.uuid4, primary_key=True)
     date = models.DateField(auto_now=True)
-    exchange_rate = models.DecimalField(max_digits=15, decimal_places=2)
+    exchange_rate = models.DecimalField(max_digits=15, decimal_places=6, validators=[MinValueValidator(0.000001)])
     active = models.BooleanField(default=True)
     currency1 = models.ForeignKey(Currency, on_delete=models.PROTECT, related_name="currency1_exchange_rate")
     currency2 = models.ForeignKey(Currency, on_delete=models.PROTECT, related_name="currency2_exchange_rate")
@@ -43,7 +43,7 @@ class ExchangeRate(StrAsNameMixin, models.Model):
 class Account(StrAsNameMixin, models.Model):
     id = models.UUIDField(default=uuid.uuid4, primary_key=True)
     currency = models.ForeignKey(Currency, on_delete=models.PROTECT)
-    owner = models.ForeignKey(User, on_delete=models.PROTECT, null=True)
+    owner = models.ForeignKey(get_user_model(), on_delete=models.PROTECT, null=True)
     name = models.CharField(max_length=50)
     description = models.CharField(max_length = 100)
     opening_time = models.DateTimeField(auto_now=True)
@@ -56,7 +56,7 @@ class Account(StrAsNameMixin, models.Model):
 class Tag(StrAsNameMixin, models.Model):
     id = models.UUIDField(default=uuid.uuid4, primary_key=True)
     name = models.CharField(max_length=50, unique=True)
-    user = models.ForeignKey(User, on_delete=models.PROTECT)
+    user = models.ForeignKey(get_user_model(), on_delete=models.PROTECT)
 
     class Meta:
         verbose_name_plural = "Tags"
