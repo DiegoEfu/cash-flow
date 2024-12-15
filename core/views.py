@@ -212,7 +212,7 @@ class TransactionListView(GeneralListView):
     model = Transaction
     template_name = 'partials/transactions/transactions.html'
     filter_class = TransactionFilter
-    paginate_by = 15
+    paginate_by = 4
     
     def get_queryset(self) -> QuerySet[Any]:
         return self.filter_class(
@@ -241,6 +241,7 @@ class TransactionListView(GeneralListView):
                     }],  self.request.user.main_currency.currency.pk, exchange_rates), 
                 'transaction': transaction,
             } for transaction in context['object_list']]
+        
         return context
 
 class TransactionCreation(FormView):

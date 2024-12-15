@@ -74,7 +74,7 @@
               <div class="text-center">Current Balance</div>
               <div class="text-center text-2xl font-bold">{{account.account.currency.code}} {{account.account.current_balance}}</div>
               <div class="text-center text-sm overflow-x-auto"> 
-                <small>{{request.user.main_currency.code}} {{account.mc_bal}}</small>
+                <small>{{request.user.main_currency.currency.code}} {{account.mc_bal}}</small>
               </div>
             </div>
 
@@ -94,8 +94,9 @@
           <span><b>No accounts were found. </b> Create a new one by clicking the button above or change your filtering criteria.</span>
         </div>
         {% endfor %}
-
-       
+        {% if page_obj.has_next %}
+        <div hx-indicator="#loading-bars" hx-trigger="revealed" hx-target="this" hx-swap="outerHTML" hx-select="#items" hx-get="{% url 'account_list' %}?page={{page_obj.next_page_number }}" hx-include=".input, .select"></div>
+        {% endif %}       
     </div>
 
     <div id="loading-bars" class="htmx-indicator indicator-style">

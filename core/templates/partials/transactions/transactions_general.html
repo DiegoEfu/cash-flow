@@ -79,7 +79,7 @@
                 </tr>
                 {% endfor %}
                 {% if page_obj.has_next %}
-                <tr hx-trigger="revealed" hx-target="this" hx-swap="outerHTML" hx-select="#items > tr" hx-get="{% url 'general_transactions_list' %}?page={{page_obj.next_page_number }}" hx-include=".input, .select"></tr>
+                <tr hx-indicator="#loading-bars" hx-trigger="revealed" hx-target="this"  hx-select="#items > tr" hx-get="{% url 'general_transactions_list' %}?page={{page_obj.next_page_number }}" hx-include=".input, .select"></tr>
                 {% endif %}
             </tbody>
         </table>        

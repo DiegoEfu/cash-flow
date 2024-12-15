@@ -69,7 +69,7 @@
         </div>
     </div>
 
-    <div id="items" class="table-wrapper">
+    <div class="table-wrapper">
         <table class="table table-xs w-full text-center">
             <thead>
                 <tr class="bg-base-200">
@@ -81,14 +81,14 @@
                     <th>Actions</th>
                 </tr>
             </thead>
-            <tbody>
+            <tbody id="items">
                 {% for transaction in object_list %}
                 <tr>
                     <td>{{transaction.transaction.date}} {% if transaction.transaction.hold %} <span class="badge badge-warning">(On Hold)</span> {%endif%}</td>
                     <td>{{transaction.transaction.description|default:'-'}}</td>
                     <td><span class="badge badge-{% if transaction.transaction.transaction_type == '+' %}success{% else %}error{% endif %}">{% if transaction.transaction.transaction_type == '+' %}INCOME{% else %}EXPENSE{% endif %}</span> </td>
-                    <td class="tooltip tooltip-success" data-tip="{{request.user.main_currency.code}} {{transaction.mc_amount}}">
-                      <span {% if transaction.transaction.previous_value %}class="tooltip tooltip-warning tooltip-bottom" data-tip="Value at Time of Transaction: {{request.user.main_currency.code}} {{transaction.transaction.previous_value|floatformat:2}}"{%endif%}>
+                    <td class="tooltip tooltip-success" data-tip="{{request.user.main_currency.currency.code}} {{transaction.mc_amount}}">
+                      <span {% if transaction.transaction.previous_value %}class="tooltip tooltip-warning tooltip-bottom" data-tip="Value at Time of Transaction: {{request.user.main_currency.currency.code}} {{transaction.transaction.previous_value|floatformat:2}}"{%endif%}>
                         {% if transaction.transaction.transaction_type == '-' %}-{%endif%}{{transaction.transaction.amount}}
                       </span>                     
                     </td>
@@ -104,7 +104,7 @@
                 </tr>
                 {% endfor %}
                 {% if page_obj.has_next %}
-                <tr hx-trigger="revealed" hx-target="this" hx-swap="outerHTML" hx-select="#items" hx-get="{% url 'transaction_list' %}?page={{page_obj.next_page_number }}" hx-include=".input, .select"></tr>
+                <tr hx-trigger="revealed" hx-indicator="#loading-bars" hx-target="this" hx-swap="outerHTML" hx-select="#items > tr" hx-get="{% url 'transactions_list' pk=account.pk %}?page={{page_obj.next_page_number }}" hx-include=".input, .select"></tr>
                 {% endif %}
             </tbody>
         </table>        
