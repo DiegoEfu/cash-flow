@@ -457,7 +457,7 @@ class TagAssignment(LoginRequiredMixin, View):
 
     def get_forms(self, account, request = None):
         tags = Tag.objects.filter(user=self.request.user)
-        totals = MoneyTag.objects.filter(tag__in=tags.values_list('id', flat=True), account=account).annotate(total=Sum('amount'))
+        totals = MoneyTag.objects.filter(tag__in=tags.values_list('id', flat=True))
         forms = []
 
         with transaction.atomic():
@@ -469,7 +469,11 @@ class TagAssignment(LoginRequiredMixin, View):
 
                 forms.append({
                     'form': MoneyTagForm(request, instance=instance, prefix=tag.pk),
-                    'total': totals.get(tag=tag).total
+                    'total': sum([
+                        x['total'] for x in 
+                        convert_each(totals.filter(tag=tag).annotate(total=F('amount'), currency=F('account__currency'))
+                                         .values('total', 'currency'), account.currency.pk)
+                    ])
                 })
 
         return forms

@@ -28,6 +28,7 @@ def convert_all(amounts, main_currency_pk, exchange_rates = None):
     return acc
 
 def convert_each(amounts, main_currency_pk, exchange_rates = None):
+    print(amounts)
     if(not exchange_rates):    
         exchange_rates = ExchangeRate.objects.filter(active=True) \
             .select_related('currency1', 'currency2').values('exchange_rate', 'currency1', 'currency2')
@@ -48,7 +49,8 @@ def convert_each(amounts, main_currency_pk, exchange_rates = None):
             new_amounts[-1]['total'] = convert(amount['total'], exchange_rate)
         
         del(new_amounts[-1]['currency'])
-    
+
+    print(new_amounts)    
     return new_amounts
 
 def calculate_percentage(current, comparison):
