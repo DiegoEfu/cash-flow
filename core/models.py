@@ -40,6 +40,9 @@ class ExchangeRate(StrAsNameMixin, models.Model):
     currency1 = models.ForeignKey(Currency, on_delete=models.PROTECT, related_name="currency1_exchange_rate")
     currency2 = models.ForeignKey(Currency, on_delete=models.PROTECT, related_name="currency2_exchange_rate")
 
+    class Meta:
+        ordering = ("-date",)
+
 class Account(StrAsNameMixin, models.Model):
     id = models.UUIDField(default=uuid.uuid4, primary_key=True)
     currency = models.ForeignKey(Currency, on_delete=models.PROTECT)
@@ -105,6 +108,9 @@ class MoneyTag(models.Model):
 
     def __str__(self) -> str:
         return f"MoneyTag ({self.tag}) of {self.amount} on {self.date} on account {self.account} owned by {self.account.user}."
+    
+    class Meta:
+        ordering = ("tag",)
 
 class HistoricBalance(StrAsNameMixin, models.Model):
     id = models.UUIDField(default=uuid.uuid4, primary_key=True)

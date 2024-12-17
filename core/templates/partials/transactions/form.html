@@ -45,8 +45,12 @@
         </div>
         {% if not form.instance.account %}
         <div>
-            <label for="id_subtract_from_tag" class="form-label">Subtract from Tag:</label>            
-            {% render_field form.subtract_from_tag class="select select-bordered w-full" disabled="" %}
+            <label for="id_operate_on_tag" class="form-label">Operate on Tag:</label>            
+            <select name="operate_on_tag" id="operate_on_tag" class="select select-bordered w-full">
+                {% for tag in tags %}
+                <option value="{{tag.pk}}">{{tag.tag.name}}</option>
+                {% endfor %}
+            </select>
         </div>
         {% endif %}
     </div>

@@ -1,6 +1,6 @@
 from typing import Any
 from django.db.models.query import QuerySet
-from django.db.models import Sum, F, Prefetch
+from django.db.models import Sum, F, Prefetch, Case, When
 from django.db import transaction
 from django.http import HttpRequest, HttpResponse, HttpResponseForbidden, JsonResponse
 from django.shortcuts import render, redirect
@@ -212,7 +212,7 @@ class TransactionListView(GeneralListView):
     model = Transaction
     template_name = 'partials/transactions/transactions.html'
     filter_class = TransactionFilter
-    paginate_by = 4
+    paginate_by = 10
     
     def get_queryset(self) -> QuerySet[Any]:
         return self.filter_class(
@@ -262,10 +262,25 @@ class TransactionCreation(FormView):
                 account.current_balance += amount
                 account.save()
 
-                if(form.data.get('subtract_from_tag')):
-                    tag = MoneyTag.objects.get(tag__pk=form.data['subtract_from_tag'], account=account)
-                    tag.amount += amount
-                    tag.save()
+                if(self.request.POST.get('operate_on_tag')):
+                    tag = MoneyTag.objects.get(pk=self.request.POST['operate_on_tag'])
+
+                    if self.request.POST['transaction_type'] == '+':
+                        tag.amount += amount
+                        tag.save()
+                    else:
+                        money_tags = MoneyTag.objects.filter(tag=tag.tag, amount__gt=0).order_by(
+                            Case(
+                                When(account=account, then=0),
+                                default=1
+                            )
+                        )
+                        for money_tag in money_tags:
+                            converted_amount = -convert_each([{'total': amount, 'currency': account.currency.pk}], money_tag.account.currency.pk)[0]['total']
+                            subtracted_amount = min(money_tag.amount, converted_amount)
+                            money_tag.amount -= subtracted_amount
+                            money_tag.save()
+                            amount -= convert_each([{'total': subtracted_amount, 'currency': money_tag.account.currency.pk}], account.currency.pk)[0]['total']
 
             messages.success(self.request, "The Transaction has been made successfully.")
 
@@ -278,6 +293,7 @@ class TransactionCreation(FormView):
     def get_context_data(self, **kwargs: Any) -> dict[str, Any]:
         context = super().get_context_data(**kwargs)
         context['account'] = Account.objects.filter(pk=self.kwargs['pk']).select_related('currency').first()
+        context['tags'] = MoneyTag.objects.filter(account=context['account']).select_related('tag').all()
         return context
 
 class TransactionUpdate(TransactionCreation):
