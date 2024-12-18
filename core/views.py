@@ -289,6 +289,11 @@ class TransactionCreation(FormView):
     def form_invalid(self, form: Any) -> HttpResponse:
         messages.error(self.request, "An error has ocurred while creating your Transaction.")
         return render(self.request, 'partials/transactions/form.html', {'form': form, 'account': Account.objects.get(pk=self.kwargs['pk'])})
+    
+    def get_form(self, form_class = None):
+        form = super().get_form(self.form_class)
+        form.initial['date'] = datetime.datetime.now()
+        return form
 
     def get_context_data(self, **kwargs: Any) -> dict[str, Any]:
         context = super().get_context_data(**kwargs)

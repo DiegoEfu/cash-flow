@@ -47,6 +47,7 @@
         <div>
             <label for="id_operate_on_tag" class="form-label">Operate on Tag:</label>            
             <select name="operate_on_tag" id="operate_on_tag" class="select select-bordered w-full">
+                <option value="">---------------------</option>
                 {% for tag in tags %}
                 <option value="{{tag.pk}}">{{tag.tag.name}}</option>
                 {% endfor %}

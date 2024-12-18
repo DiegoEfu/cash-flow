@@ -86,7 +86,7 @@ class Transaction(models.Model):
     amount = models.DecimalField(max_digits=15, decimal_places=2, validators=[MinValueValidator(0.01)])
     description = models.CharField(max_length=100, null=True, blank=True)
     hold = models.BooleanField(default=False)
-    date = models.DateTimeField(default=datetime.datetime.now())
+    date = models.DateTimeField()
     from_account = models.ForeignKey(Account, on_delete=models.PROTECT, related_name="transaction_from_account", null=True)
     exchange_rate = models.ForeignKey(ExchangeRate, on_delete=models.PROTECT, null=True, blank=True)
     opening = models.BooleanField(default=False, blank=True)
