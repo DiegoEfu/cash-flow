@@ -107,7 +107,7 @@ class MoneyTag(models.Model):
     tag = models.ForeignKey(Tag, on_delete=models.PROTECT, related_name="money_tags")
 
     def __str__(self) -> str:
-        return f"MoneyTag ({self.tag}) of {self.amount} on {self.date} on account {self.account} owned by {self.account.user}."
+        return f"MoneyTag ({self.tag}) of {self.amount} on account {self.account} owned by {self.account.owner}."
     
     class Meta:
         ordering = ("tag",)

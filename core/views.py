@@ -469,6 +469,7 @@ class TagDelete(LoginRequiredMixin, View):
             return HttpResponseForbidden()
         
         with transaction.atomic():
+            instance.money_tags.all().delete()
             instance.delete()
 
         return render(request, 'partials/transactions/updated-balance.html')
