@@ -10,7 +10,7 @@ from django.contrib.auth.views import LoginView
 from django.views.generic import FormView, ListView
 from django.contrib import messages
 from django.views.generic import View
-from .utils import find_transaction_fitting_exchange_rate, convert_all, convert_each, calculate_percentage
+from .utils import find_transaction_fitting_exchange_rate, convert_all, convert_each, calculate_percentage, get_new_exchange_rate
 
 from decimal import Decimal
 
@@ -88,6 +88,7 @@ class LoginView(LoginView):
         if(response.status_code == 200 and not request.user.is_authenticated):
             messages.warning(request, "Provided credentials are invalid.")
 
+        get_new_exchange_rate() # Ideally change this to a cron job, but it's a paid feature in PythonAnywhere so I'm leaving it as it is for now
         return response
     
 class SignUpView(FormView):

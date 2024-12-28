@@ -55,10 +55,20 @@
         </div>
         {% endif %}
     </div>
-    <div class="mb-3 flex justify-center flex-col items-center">
-        <label for="id_hold" class="form-label">On Hold:</label>
-        {% render_field form.hold type="checkbox" class="checkbox" %}
+    <div class="grid grid-cols-6">
+        <div class="mb-3 flex justify-center flex-col items-center">
+            <label for="id_hold" class="form-label">On Hold:</label>
+            {% render_field form.hold type="checkbox" class="checkbox" %}
+        </div>
     </div>
+    {% if not form.instance.account %}
+    <div class="grid grid-cols-6">
+        <div class="mb-3 flex justify-center flex-col items-center">
+            <label for="id_hold" class="form-label">Internal Operation:</label>
+            {% render_field form.internal type="checkbox" class="checkbox" tooltip="Internal operations are not visible to the general income/expenses reports." %}
+        </div>
+    </div>
+    {% endif %}
     <div class="flex justify-center">
         <button type="submit" class="btn btn-primary">Register Transaction</button>
     </div>
