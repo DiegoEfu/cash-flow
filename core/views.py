@@ -29,7 +29,11 @@ def welcome_view(request):
              
             amounts_balance = Account.objects.annotate(total=Sum('current_balance')).values('currency','total')
             
-            amounts = Transaction.objects.select_related('from_account__currency').filter(hold=False).annotate(total=Sum('amount'), currency=F('from_account__currency')).values('total', 'transaction_type', 'opening', 'currency')
+            amounts = Transaction.objects.select_related('from_account__currency').filter(
+                hold=False, internal=False, 
+            ).annotate(total=Sum('amount'), currency=F('from_account__currency')
+            ).values('total', 'transaction_type', 'opening', 'currency')
+            
             amounts_income = [transaction for transaction in amounts if transaction['transaction_type'] == '+' and not transaction['opening']]
             amounts_expense = [transaction for transaction in amounts if transaction['transaction_type'] == '-']
 
@@ -68,6 +72,10 @@ def welcome_view(request):
         else:
             return {}
 
+    context = make_context()
+
+    get_new_exchange_rate() # Ideally change this to a cron job, but it's a paid feature in PythonAnywhere so I'm leaving it as it is for now
+
     return render(request, 'welcome.html', context=make_context())
 
 class LoginView(LoginView):
@@ -88,7 +96,6 @@ class LoginView(LoginView):
         if(response.status_code == 200 and not request.user.is_authenticated):
             messages.warning(request, "Provided credentials are invalid.")
 
-        get_new_exchange_rate() # Ideally change this to a cron job, but it's a paid feature in PythonAnywhere so I'm leaving it as it is for now
         return response
     
 class SignUpView(FormView):
