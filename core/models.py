@@ -64,6 +64,19 @@ class Tag(StrAsNameMixin, models.Model):
 
     class Meta:
         verbose_name_plural = "Tags"
+    
+class MoneyTag(models.Model):
+    id = models.UUIDField(default=uuid.uuid4, primary_key=True)
+    amount = models.DecimalField(max_digits=15, decimal_places=2, default=0.00)
+    active = models.BooleanField(default=True)
+    account = models.ForeignKey(Account, on_delete=models.PROTECT, related_name="accounts_money_tags")
+    tag = models.ForeignKey(Tag, on_delete=models.PROTECT, related_name="money_tags")
+
+    def __str__(self) -> str:
+        return f"MoneyTag ({self.tag}) of {self.amount} on account {self.account} owned by {self.account.owner}."
+    
+    class Meta:
+        ordering = ("tag",)
 
 class Transaction(models.Model):
     """
@@ -92,6 +105,7 @@ class Transaction(models.Model):
     exchange_rate = models.ForeignKey(ExchangeRate, on_delete=models.PROTECT, null=True, blank=True)
     opening = models.BooleanField(default=False, blank=True)
     internal = models.BooleanField(default=False, blank=True)
+    money_tag = models.ForeignKey(MoneyTag, on_delete=models.PROTECT, null=True, blank=True)
     voucher = models.FileField(blank=True, null=True, unique=True, validators=[FileExtensionValidator(allowed_extensions=['pdf','jpg','png'])], upload_to="vouchers/")
 
     objects = TransactionQuerySet.as_manager()
@@ -101,19 +115,6 @@ class Transaction(models.Model):
     
     class Meta:
         ordering = ("-date",)
-    
-class MoneyTag(models.Model):
-    id = models.UUIDField(default=uuid.uuid4, primary_key=True)
-    amount = models.DecimalField(max_digits=15, decimal_places=2, default=0.00)
-    active = models.BooleanField(default=True)
-    account = models.ForeignKey(Account, on_delete=models.PROTECT, related_name="accounts_money_tags")
-    tag = models.ForeignKey(Tag, on_delete=models.PROTECT, related_name="money_tags")
-
-    def __str__(self) -> str:
-        return f"MoneyTag ({self.tag}) of {self.amount} on account {self.account} owned by {self.account.owner}."
-    
-    class Meta:
-        ordering = ("tag",)
 
 class HistoricBalance(StrAsNameMixin, models.Model):
     id = models.UUIDField(default=uuid.uuid4, primary_key=True)

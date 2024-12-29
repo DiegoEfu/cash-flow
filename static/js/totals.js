@@ -43,3 +43,26 @@ function calculateTotals(event) {
     let notAssigned = balance - totalNow;
     document.getElementById('not-assigned').innerText = notAssigned.toFixed(2);
 }
+
+console.log(document.querySelectorAll('.remove-btn'));
+
+
+document.querySelectorAll('.remove-btn').forEach(button => {
+    console.log(button);
+    
+    button.addEventListener('click', event => {
+        console.log("PRESSED!");
+        
+        const row = event.target.closest('tr');
+        const table = event.target.closest('table');
+        const rows = table.rows;
+        
+        row.remove();
+        calculateTotals(event);
+
+        for(let i = 1; i < rows.length - 2; i++){
+            const row = rows[i];
+            row.cells[0].textContent = i;
+        }
+    });
+});

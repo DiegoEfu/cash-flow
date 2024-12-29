@@ -223,6 +223,16 @@ class TransactionListView(GeneralListView):
     template_name = 'partials/transactions/transactions.html'
     filter_class = TransactionFilter
     paginate_by = 10
+
+    def update_tags(self, account):
+        with transaction.atomic():
+            tags = Tag.objects.filter(user=self.request.user)
+
+            for tag in tags:
+                MoneyTag.objects \
+                    .get_or_create(
+                        tag=tag, account=account
+                    )[0]
     
     def get_queryset(self) -> QuerySet[Any]:
         return self.filter_class(
@@ -252,6 +262,8 @@ class TransactionListView(GeneralListView):
                 'transaction': transaction,
             } for transaction in context['object_list']]
         
+        self.update_tags(account)
+
         return context
 
 class TransactionCreation(FormView):
@@ -501,10 +513,9 @@ class TagAssignment(LoginRequiredMixin, View):
 
         with transaction.atomic():
             for tag in tags:
-                instance = MoneyTag.objects \
-                .get_or_create(
+                instance = MoneyTag.objects.get(
                     tag=tag, account=account
-                )[0]
+                )
 
                 forms.append({
                     'form': MoneyTagForm(request, instance=instance, prefix=tag.pk),
@@ -547,16 +558,19 @@ class TagAssignment(LoginRequiredMixin, View):
         tags = Tag.objects.filter(user=self.request.user)
         forms = []
 
-        for tag in tags:
-            forms.append(MoneyTagForm(request.POST, instance=tag.money_tags.get(account=account), prefix=tag.pk))
-
         with transaction.atomic():
-            for form in forms:
-                if form.is_valid():
-                    form.save()
+            for tag in tags:
+                money_tag = tag.money_tags.get(account=account)
+                if f"{tag.pk}-id" in request.POST:
+                    form = MoneyTagForm(request.POST, instance=money_tag, prefix=tag.pk)
+                    if form.is_valid():
+                        form.save()
+                    else:
+                        messages.error(request, "An error has occurred while assigning your tags.")
+                        return render(request, self.template_name, self.get_context_data(request.POST))
                 else:
-                    messages.error(request, "An error has ocurred while assigning your tags.")
-                    return render(request, self.template_name, self.get_context_data(request.POST))
+                    money_tag.amount = 0
+                    money_tag.save()
 
         return redirect(f"/transactions/{account.pk}/")
 

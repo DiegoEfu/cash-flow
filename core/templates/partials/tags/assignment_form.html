@@ -36,7 +36,10 @@
                   <td>{{forloop.counter}}</td>
                   <td>
                     {{form.form.instance.tag}}
-                    <input type="hidden" name="{{form.form.instance.tag.pk}}-id" value="{{form.form.instance.id}}">               
+                    <input type="hidden" name="{{form.form.instance.tag.pk}}-id" value="{{form.form.instance.id}}">
+                    <button type="button" class="btn btn-xs remove-btn" id="remove-{{form.form.prefix}}"> 
+                      x
+                    </button>
                   </td>
                   <td class="previous-assigned" id="previous-{{form.form.prefix}}">{{form.form.instance.amount}}</td>
                   <td class="money-to-assign">{% render_field form.form.amount class="input input-bordered w-full total" %}</td>
