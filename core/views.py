@@ -13,6 +13,7 @@ from django.views.generic import View
 from .utils import find_transaction_fitting_exchange_rate, convert_all, convert_each, calculate_percentage, get_new_exchange_rate
 
 from decimal import Decimal
+import datetime
 
 from .forms import *
 from .models import *
@@ -188,6 +189,7 @@ class AccountCreation(LoginRequiredMixin, FormView):
                     description=OPENING_BALANCE_DESCRIPTION,
                     date=form.instance.opening_time,
                     opening=True,
+                    internal=True,
                     exchange_rate=find_transaction_fitting_exchange_rate(form.instance.currency, self.request.user.main_currency.currency, form.instance.opening_time)
                 )
 
@@ -293,6 +295,13 @@ class TransactionCreation(FormView):
             messages.success(self.request, "The Transaction has been made successfully.")
 
         return redirect(f"/transactions/{account.pk}")
+    
+    def get_form_kwargs(self):
+        form_kwargs = super().get_form_kwargs()
+
+        print(form_kwargs)
+
+        return form_kwargs
     
     def form_invalid(self, form: Any) -> HttpResponse:
         messages.error(self.request, "An error has ocurred while creating your Transaction.")

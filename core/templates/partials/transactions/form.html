@@ -15,7 +15,7 @@
     </div>
 </div>
 
-<form {% if not edit %} hx-post="{% url 'transaction_creation' pk=account.pk %}" {% else %} hx-post="{% url 'transaction_update' pk=form.instance.pk %}" {% endif %} hx-target="main" hx-select="main" class="grid grid-cols-1">
+<form {% if not edit %} hx-post="{% url 'transaction_creation' pk=account.pk %}" {% else %} hx-post="{% url 'transaction_update' pk=form.instance.pk %}" {% endif %} hx-target="main" hx-select="main" class="grid grid-cols-1" enctype="multipart/form-data">
     {% csrf_token %}
     
     <div class="mb-3">
@@ -55,21 +55,36 @@
         </div>
         {% endif %}
     </div>
-    <div class="grid grid-cols-6">
+    <div class="grid grid-cols-3">
         <div class="mb-3 flex justify-center flex-col items-center">
             <label for="id_hold" class="form-label">On Hold:</label>
             {% render_field form.hold type="checkbox" class="checkbox" %}
         </div>
-    </div>
-    {% if not form.instance.account %}
-    <div class="grid grid-cols-6">
+
+        {% if not form.instance.account %}
         <div class="mb-3 flex justify-center flex-col items-center">
             <label for="id_hold" class="form-label">Internal Operation:</label>
             {% render_field form.internal type="checkbox" class="checkbox" tooltip="Internal operations are not visible to the general income/expenses reports." %}
         </div>
+        {% endif %}
+
+        <div class="mb-3 flex justify-center flex-col items-center">
+            <label for="id_voucher" class="form-label">Voucher:</label>
+            {% render_field form.voucher type="file" accept=".pdf, .jpg, .png" %}
+        </div>
     </div>
-    {% endif %}
     <div class="flex justify-center">
         <button type="submit" class="btn btn-primary">Register Transaction</button>
     </div>
 </form>
+
+<script>
+const uploadField = document.getElementById("id_voucher");
+
+uploadField.onchange = function() {
+    if(this.files[0].size > 0.5*1024*1024) {
+       alert("File should not exceed 0.5 MiB!");
+       this.value = "";
+    }
+};
+</script>

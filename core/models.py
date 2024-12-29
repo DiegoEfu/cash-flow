@@ -1,11 +1,12 @@
 from django.db import models
 from django.core.validators import MinValueValidator
 from django.contrib.auth import get_user_model
+from finances.settings import MEDIA_ROOT
 
 from .mixins import StrAsNameMixin
 from .managers import *
 
-import datetime
+from django.core.validators import FileExtensionValidator
 import uuid
 
 # TODO: Use API https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1/currencies/usd.json
@@ -91,6 +92,7 @@ class Transaction(models.Model):
     exchange_rate = models.ForeignKey(ExchangeRate, on_delete=models.PROTECT, null=True, blank=True)
     opening = models.BooleanField(default=False, blank=True)
     internal = models.BooleanField(default=False, blank=True)
+    voucher = models.FileField(blank=True, null=True, unique=True, validators=[FileExtensionValidator(allowed_extensions=['pdf','jpg','png'])], upload_to="vouchers/")
 
     objects = TransactionQuerySet.as_manager()
 

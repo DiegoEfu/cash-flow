@@ -2,6 +2,7 @@ from typing import Any
 from core.models import *
 from django import forms
 from django.contrib.auth.hashers import make_password 
+from .validators import file_size_validator
 
 class UserForm(forms.ModelForm):
     repeat_password = forms.CharField(min_length=8)
@@ -35,6 +36,8 @@ class AccountForm(forms.ModelForm):
         exclude = ('id', 'opening_time', 'owner', 'visible')
 
 class TransactionForm(forms.ModelForm):
+    voucher = forms.FileField(required=False, validators=[FileExtensionValidator(allowed_extensions=['pdf','jpg','png']), file_size_validator])
+
     class Meta:
         model = Transaction
         exclude = ('id', 'from_account', 'exchange_rate')
