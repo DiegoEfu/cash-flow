@@ -259,6 +259,7 @@ class TransactionListView(GeneralListView):
                         'total': transaction.amount, 
                         'currency': account.currency.pk,
                     }],  self.request.user.main_currency.currency.pk, exchange_rates), 
+                'fixed_pk': str(transaction.pk).replace('-', ''),
                 'transaction': transaction,
             } for transaction in context['object_list']]
         
@@ -284,8 +285,8 @@ class TransactionCreation(FormView):
                 account.current_balance += amount
                 account.save()
 
-                if(self.request.POST.get('operate_on_tag')):
-                    tag = MoneyTag.objects.get(pk=self.request.POST['operate_on_tag'])
+                if(form.instance.tag):
+                    tag = MoneyTag.objects.get(tag=self.request.POST['tag'], account=account)
 
                     if self.request.POST['transaction_type'] == '+':
                         tag.amount += amount
@@ -308,13 +309,6 @@ class TransactionCreation(FormView):
 
         return redirect(f"/transactions/{account.pk}")
     
-    def get_form_kwargs(self):
-        form_kwargs = super().get_form_kwargs()
-
-        print(form_kwargs)
-
-        return form_kwargs
-    
     def form_invalid(self, form: Any) -> HttpResponse:
         messages.error(self.request, "An error has ocurred while creating your Transaction.")
         return render(self.request, 'partials/transactions/form.html', {'form': form, 'account': Account.objects.get(pk=self.kwargs['pk'])})
@@ -334,7 +328,7 @@ class TransactionUpdate(TransactionCreation):
     def form_valid(self, form: Any):
         with transaction.atomic():
             transaction_instance = Transaction.objects.get(pk=self.kwargs['pk'])
-            form = self.form_class(form.data, instance=transaction_instance)
+            form = self.form_class(form.data, form.files, instance=transaction_instance)
             account = transaction_instance.from_account
 
             if not transaction_instance.hold:
@@ -348,12 +342,17 @@ class TransactionUpdate(TransactionCreation):
                 account.current_balance += amount
                 account.save()
 
-            form.save()
+                if(form.instance.tag):
+                    if transaction_instance.tag:
+                        old_tag = MoneyTag.objects.get(tag=transaction_instance.tag, account=account)
+                        old_tag.amount -= transaction_instance.amount if transaction_instance.transaction_type == '+' else -transaction_instance.amount
+                        old_tag.save()
 
-            if(form.data.get('subtract_from_tag')):
-                tag = MoneyTag.objects.get(tag__pk=form.data['subtract_from_tag'], account=account)
-                tag.amount += amount
-                tag.save()
+                    new_tag = MoneyTag.objects.get(tag__pk=self.request.POST['tag'], account=account)
+                    new_tag.amount += amount if form.instance.transaction_type == '+' else -amount
+                    new_tag.save()
+
+            form.save()
 
             messages.success(self.request, "The Transaction has been updated successfully.")
 
@@ -381,6 +380,11 @@ class TransactionDelete(LoginRequiredMixin, View):
                 amount = transaction_instance.amount if transaction_instance.transaction_type == '+' else -transaction_instance.amount
                 account.current_balance -= amount
                 account.save()
+
+                if transaction_instance.tag:
+                    tag = MoneyTag.objects.get(tag=transaction_instance.tag, account=account)
+                    tag.amount -= amount if transaction_instance.transaction_type == '+' else -amount
+                    tag.save()
 
             transaction_instance.delete()
 

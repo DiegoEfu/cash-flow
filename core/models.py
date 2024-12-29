@@ -106,7 +106,8 @@ class Transaction(models.Model):
     opening = models.BooleanField(default=False, blank=True)
     internal = models.BooleanField(default=False, blank=True)
     money_tag = models.ForeignKey(MoneyTag, on_delete=models.PROTECT, null=True, blank=True)
-    voucher = models.FileField(blank=True, null=True, unique=True, validators=[FileExtensionValidator(allowed_extensions=['pdf','jpg','png'])], upload_to="vouchers/")
+    voucher = models.FileField(blank=True, null=True, validators=[FileExtensionValidator(allowed_extensions=['pdf','jpg','png'])], upload_to="vouchers/")
+    tag = models.ForeignKey(Tag, on_delete=models.PROTECT, null=True, blank=True)
 
     objects = TransactionQuerySet.as_manager()
 
