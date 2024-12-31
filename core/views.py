@@ -28,7 +28,7 @@ def welcome_view(request):
             exchange_rates = ExchangeRate.objects.filter(active=True) \
                 .select_related('currency1', 'currency2').values('exchange_rate', 'currency1', 'currency2')
              
-            amounts_balance = Account.objects.annotate(total=Sum('current_balance')).values('currency','total')
+            amounts_balance = Account.objects.filter(owner=request.user, visible=True).annotate(total=Sum('current_balance')).values('currency','total')
             
             amounts = Transaction.objects.select_related('from_account__currency').filter(
                 hold=False, internal=False, 
@@ -77,7 +77,7 @@ def welcome_view(request):
 
     get_new_exchange_rate() # Ideally change this to a cron job, but it's a paid feature in PythonAnywhere so I'm leaving it as it is for now
 
-    return render(request, 'welcome.html', context=make_context())
+    return render(request, 'welcome.html', context=context)
 
 class LoginView(LoginView):
     template_name = 'login.html'
