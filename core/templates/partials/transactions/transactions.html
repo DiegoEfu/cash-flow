@@ -116,8 +116,8 @@
                       <span class="badge badge-warning tooltip tooltip-bottom" data-tip="External Operation - Accountable">External</span>
                       {% endif %}  
                     </td>
-                    <td class="tooltip tooltip-success" data-tip="{{request.user.main_currency.currency.code}} {{transaction.mc_amount}}">
-                      <span {% if transaction.transaction.previous_value %}class="tooltip tooltip-warning tooltip-bottom" data-tip="Value at Time of Transaction: {{request.user.main_currency.currency.code}} {{transaction.transaction.previous_value|floatformat:2}}"{%endif%}>
+                    <td>
+                      <span class="tooltip tooltip-success" data-tip="{{request.user.main_currency.currency.code}} {{transaction.mc_amount}}" {% if transaction.transaction.previous_value %}class="tooltip tooltip-warning tooltip-bottom" data-tip="Value at Time of Transaction: {{request.user.main_currency.currency.code}} {{transaction.transaction.previous_value|floatformat:2}}"{%endif%}>
                         {% if transaction.transaction.transaction_type == '-' %}-{%endif%}{{transaction.transaction.amount}}
                       </span>  
                     </td>

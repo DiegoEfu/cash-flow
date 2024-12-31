@@ -122,3 +122,6 @@ class HistoricBalance(StrAsNameMixin, models.Model):
     balance = models.DecimalField(max_digits=15, decimal_places=2)
     date = models.DateField(auto_now=True)
     account = models.ForeignKey(Account, on_delete=models.PROTECT)
+
+    class Meta:
+        ordering = ("-date",)

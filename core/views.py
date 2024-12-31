@@ -44,8 +44,12 @@ def welcome_view(request):
 
             previous_month = datetime.datetime.now().month-1 if datetime.datetime.now().month > 1 else 12
 
-            balances_last_month = HistoricBalance.objects.filter(account__owner=request.user, date__month=previous_month).annotate(total=F('balance'), currency=F('account__currency')).values('total','currency')
-            balance_last_month = convert_all(balances_last_month, request.user.main_currency.pk, exchange_rates)
+            balances_last_month = HistoricBalance.objects.filter(account__owner=request.user, date__month=previous_month)
+            if(balances_last_month.count() > 0):
+                balances_last_month = balances_last_month.latest('date').annotate(total=F('balance'), currency=F('account__currency')).values('total','currency')
+                balance_last_month = convert_all(balances_last_month, request.user.main_currency.pk, exchange_rates)
+            else:
+                balance_last_month = 0
             
             transactions = Transaction.objects.select_related('from_account__currency').filter(hold=False, date__month=previous_month) \
                 .annotate(total=Sum('amount'), currency=F('from_account__currency')) \
@@ -110,6 +114,8 @@ class SignUpView(FormView):
 
             form.instance.is_active = True
             form.save()
+
+            MainCurrency.objects.create(user=form.instance, currency=Currency.objects.get(pk=self.request.POST['main_currency']))
 
             messages.success(self.request, "Your account has been created successfully. Now log in.")
 
@@ -434,6 +440,7 @@ class TagListView(GeneralListView):
     model = Tag
     template_name = 'partials/tags/list.html'
     filter_class = TagFilter
+    paginate_by = 20
 
     def get_queryset(self):
         return self.filter_class(

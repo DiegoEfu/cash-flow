@@ -6,6 +6,7 @@ from .validators import file_size_validator
 
 class UserForm(forms.ModelForm):
     repeat_password = forms.CharField(min_length=8)
+    main_currency = forms.ModelChoiceField(queryset=Currency.objects.all(), required=True)
 
     def clean_repeat_password(self):
         password = self.data['password'].replace(" ", "")
@@ -25,6 +26,13 @@ class UserForm(forms.ModelForm):
         password = make_password(password)
 
         return password
+    
+    def clean_username(self):
+        username = self.cleaned_data['username']
+        user = get_user_model().objects.filter(username=username).first()
+        if user:
+            raise forms.ValidationError("Username already exists.")
+        return username
 
     class Meta:
         model = get_user_model()
