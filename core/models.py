@@ -97,7 +97,7 @@ class Transaction(models.Model):
     id = models.UUIDField(default=uuid.uuid4, primary_key=True)
     reference = models.CharField(max_length=15, null=True, blank=True)
     transaction_type = models.CharField(max_length=1, choices=TRANSACTION_TYPES)
-    amount = models.DecimalField(max_digits=15, decimal_places=2, validators=[MinValueValidator(0.01)])
+    amount = models.DecimalField(max_digits=15, decimal_places=2, validators=[MinValueValidator(0)])
     description = models.CharField(max_length=100, null=True, blank=True)
     hold = models.BooleanField(default=False)
     date = models.DateTimeField()
@@ -120,8 +120,9 @@ class Transaction(models.Model):
 class HistoricBalance(StrAsNameMixin, models.Model):
     id = models.UUIDField(default=uuid.uuid4, primary_key=True)
     balance = models.DecimalField(max_digits=15, decimal_places=2)
-    date = models.DateField(auto_now=True)
-    account = models.ForeignKey(Account, on_delete=models.PROTECT)
+    month = models.PositiveSmallIntegerField()
+    year = models.PositiveSmallIntegerField()
+    account = models.ForeignKey(Account, on_delete=models.PROTECT, related_name="account_historic_balance")
 
     class Meta:
-        ordering = ("-date",)
+        ordering = ("-year","-month")

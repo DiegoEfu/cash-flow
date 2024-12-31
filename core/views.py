@@ -42,11 +42,12 @@ def welcome_view(request):
             total_income = convert_all(amounts_income, request.user.main_currency.pk, exchange_rates)
             total_expense = convert_all(amounts_expense, request.user.main_currency.pk, exchange_rates)
 
-            previous_month = datetime.datetime.now().month-1 if datetime.datetime.now().month > 1 else 12
+            previous_month = datetime.date.today().month - 1 if datetime.date.today().month > 1 else 12
+            year = datetime.date.today().year if previous_month != 12 else datetime.date.today().year - 1
 
-            balances_last_month = HistoricBalance.objects.filter(account__owner=request.user, date__month=previous_month)
-            if(balances_last_month.count() > 0):
-                balances_last_month = balances_last_month.latest('date').annotate(total=F('balance'), currency=F('account__currency')).values('total','currency')
+            balances_last_month = HistoricBalance.objects.filter(account__owner=request.user, month=previous_month, year=year)
+            if(balances_last_month.exists() > 0):
+                balances_last_month = balances_last_month.annotate(total=F('balance'), currency=F('account__currency')).values('total','currency')
                 balance_last_month = convert_all(balances_last_month, request.user.main_currency.pk, exchange_rates)
             else:
                 balance_last_month = 0
@@ -198,6 +199,8 @@ class AccountCreation(LoginRequiredMixin, FormView):
                     internal=True,
                     exchange_rate=find_transaction_fitting_exchange_rate(form.instance.currency, self.request.user.main_currency.currency, form.instance.opening_time)
                 )
+            
+            HistoricBalance.objects.create(account=form.instance, balance=form.instance.current_balance, date=form.instance.opening_time)
 
         messages.success(self.request, "The account has been created successfully.")
         return res
@@ -311,12 +314,26 @@ class TransactionCreation(FormView):
                             money_tag.save()
                             amount -= convert_each([{'total': subtracted_amount, 'currency': money_tag.account.currency.pk}], account.currency.pk)[0]['total']
 
-            messages.success(self.request, "The Transaction has been made successfully.")
+                historic_balance, created = HistoricBalance.objects.get_or_create(
+                    account=account,
+                    month=form.instance.date.month,
+                    year=form.instance.date.year,
+                    defaults={'balance': account.current_balance}
+                )
+
+                if created:
+                    historic_balance.balance = account.current_balance
+                else:
+                    historic_balance.balance += amount
+                historic_balance.save()
+
+            messages.success(self.request, "The Transaction has been made successfully.")            
 
         return redirect(f"/transactions/{account.pk}")
     
     def form_invalid(self, form: Any) -> HttpResponse:
         messages.error(self.request, "An error has ocurred while creating your Transaction.")
+        print(form.errors)
         return render(self.request, 'partials/transactions/form.html', {'form': form, 'account': Account.objects.get(pk=self.kwargs['pk'])})
     
     def get_form(self, form_class = None):
@@ -357,6 +374,19 @@ class TransactionUpdate(TransactionCreation):
                     new_tag = MoneyTag.objects.get(tag__pk=self.request.POST['tag'], account=account)
                     new_tag.amount += amount if form.instance.transaction_type == '+' else -amount
                     new_tag.save()
+                
+                historic_balance, created = HistoricBalance.objects.get_or_create(
+                    account=account,
+                    month=form.instance.date.month,
+                    year=form.instance.date.year,
+                    defaults={'balance': account.current_balance}
+                )
+
+                if created:
+                    historic_balance.balance = account.current_balance
+                else:
+                    historic_balance.balance += amount - (transaction_instance.amount if transaction_instance.transaction_type == '+' else -transaction_instance.amount)
+                historic_balance.save()
 
             form.save()
 
@@ -365,6 +395,7 @@ class TransactionUpdate(TransactionCreation):
         return redirect(f"/transactions/{account.pk}")
     
     def form_invalid(self, form: Any) -> HttpResponse:
+        print(form.errors)
         return render(self.request, '/transactions/form.html', {'form': form, 'edit': True})
 
     def get_context_data(self, **kwargs: Any) -> dict[str, Any]:
@@ -391,6 +422,19 @@ class TransactionDelete(LoginRequiredMixin, View):
                     tag = MoneyTag.objects.get(tag=transaction_instance.tag, account=account)
                     tag.amount -= amount if transaction_instance.transaction_type == '+' else -amount
                     tag.save()
+
+                historic_balance, created = HistoricBalance.objects.get_or_create(
+                    account=account,
+                    month=transaction_instance.date.month,
+                    year=transaction_instance.date.year,
+                    defaults={'balance': account.current_balance}
+                )
+
+                if created:
+                    historic_balance.balance = account.current_balance
+                else:
+                    historic_balance.balance -= amount
+                historic_balance.save()
 
             transaction_instance.delete()
 

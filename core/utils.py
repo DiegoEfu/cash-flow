@@ -1,5 +1,5 @@
 from django.db import transaction
-from core.models import Currency, ExchangeRate
+from core.models import Currency, ExchangeRate, HistoricBalance
 from bs4 import BeautifulSoup
 import datetime
 import requests
@@ -10,8 +10,6 @@ def convert(amount, exchange_rate):
 
 def convert_all(amounts, main_currency_pk, exchange_rates = None):
     acc = 0
-
-    print(len(amounts))
 
     if(not exchange_rates):    
         exchange_rates = ExchangeRate.objects.filter(active=True) \
