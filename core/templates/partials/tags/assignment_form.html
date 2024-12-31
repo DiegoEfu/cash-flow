@@ -2,7 +2,7 @@
  
 <div class="grid grid-cols-3">
     <div class="flex justify-center">
-        <a href="{% url 'tag_list' %}" class="btn">Go back</a>
+        <a href="{% url 'transactions_list' pk=account.pk %}" class="btn">Go back</a>
     </div>
     <div>
         <h1 class="text-center text-4xl xl:text-4xl">Assign Money to the Account {{account}}</h1>
@@ -12,7 +12,9 @@
     </div>
 </div>
 
-<form {% if not edit %} hx-post="{% url 'tag_creation' %}" {% else %} hx-post="{% url 'tag_update' pk=form.instance.pk %}" {% endif %} hx-target="main" hx-select="main" class="grid grid-cols-1">
+<input type="hidden" id="account_balance" name="account_balance" value="{{account.current_balance}}">
+
+<form hx-post="{% url 'tag_assignment' pk=account.pk %}" hx-target="main" hx-select="main" class="grid grid-cols-1">
     {% csrf_token %}
     
     <div class="mb-3">
@@ -22,9 +24,10 @@
                 <tr>
                   <th></th>
                   <th>Tag Name</th>
-                  <th>Previous Assigned in the Account</th>
-                  <th>Money to Assign</th>
-                  <th>Total Money Assigned</th>
+                  <th>Previous Assigned in the Account ({{account.currency.code}})</th>
+                  <th>Money Assigned in Account ({{account.currency.code}})</th>
+                  <th>Current Total Assigned in Tag ({{account.currency.code}})</th>
+                  <th>Total Assigned in Tag after Changes ({{account.currency.code}})</th>
                 </tr>
               </thead>
               <tbody>
@@ -33,22 +36,27 @@
                   <td>{{forloop.counter}}</td>
                   <td>
                     {{form.form.instance.tag}}
-                    <input type="hidden" name="{{form.form.instance.pk}}-tag" value="{{form.form.instance.tag.pk}}">               
+                    <input type="hidden" name="{{form.form.instance.tag.pk}}-id" value="{{form.form.instance.id}}">
+                    <button type="button" class="btn btn-xs remove-btn" id="remove-{{form.form.prefix}}"> 
+                      x
+                    </button>
                   </td>
-                  <td class="previous-assigned">{{form.form.instance.amount}}</td>
-                  <td class="money-to-assign">{% render_field form.form.amount class="input input-bordered w-full" %}</td>
-                  <td class="total">{{form.total}}</td>
+                  <td class="previous-assigned" id="previous-{{form.form.prefix}}">{{form.form.instance.amount}}</td>
+                  <td class="money-to-assign">{% render_field form.form.amount class="input input-bordered w-full total" %}</td>
+                  <td id="total-tag-before-{{form.form.prefix}}">{{form.total}}</td>
+                  <td class="assigned-future" id="total-tag-after-{{form.form.prefix}}">{{form.total}}</td>
                 </tr>
                 {% endfor %}
                 <tr>
                   <th colspan="2">Totals</th>
                   <td id="total-assigned-previous">{{totals.total_account}}</td>
                   <td id="total-assigned-now">{{totals.total_account}}</td>
-                  <td>{{totals.total_tags}}</td>
+                  <td id="total-assigned-tags-before">{{totals.total_tags}}</td>
+                  <td id="total-assigned-tags-after">{{totals.total_tags}}</td>
                 </tr>
                 <tr>
-                  <th colspan="3">Not Assigned</th>
-                  <td>{{totals.not_assigned}}</td>
+                  <th colspan="5">Not Assigned in this Account</th>
+                  <td id="not-assigned">{{totals.not_assigned}}</td>
                 </tr>
               </tbody>
             </table>
@@ -59,4 +67,4 @@
     </div>
 </form>
 
-<script src="static/js/totals.js"></script>
+<script type="text/javascript" src="/static/js/totals.js"></script>

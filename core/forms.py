@@ -2,9 +2,11 @@ from typing import Any
 from core.models import *
 from django import forms
 from django.contrib.auth.hashers import make_password 
+from .validators import file_size_validator
 
 class UserForm(forms.ModelForm):
     repeat_password = forms.CharField(min_length=8)
+    main_currency = forms.ModelChoiceField(queryset=Currency.objects.all(), required=True)
 
     def clean_repeat_password(self):
         password = self.data['password'].replace(" ", "")
@@ -20,15 +22,20 @@ class UserForm(forms.ModelForm):
 
         if(len(password) < 8):
             raise forms.ValidationError("The password must be at least 8 characters long.")
-        
-        print(password)
-        
+                
         password = make_password(password)
 
         return password
+    
+    def clean_username(self):
+        username = self.cleaned_data['username']
+        user = get_user_model().objects.filter(username=username).first()
+        if user:
+            raise forms.ValidationError("Username already exists.")
+        return username
 
     class Meta:
-        model = User
+        model = get_user_model()
         exclude = ('id', 'username', 'date_joined')
 
 class AccountForm(forms.ModelForm):
@@ -37,9 +44,11 @@ class AccountForm(forms.ModelForm):
         exclude = ('id', 'opening_time', 'owner', 'visible')
 
 class TransactionForm(forms.ModelForm):
+    voucher = forms.FileField(required=False, validators=[FileExtensionValidator(allowed_extensions=['pdf','jpg','png']), file_size_validator])
+
     class Meta:
         model = Transaction
-        exclude = ('id', 'from_account', 'to_account')
+        exclude = ('id', 'from_account', 'exchange_rate')
 
 class TagForm(forms.ModelForm):
     class Meta:

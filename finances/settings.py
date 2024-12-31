@@ -84,7 +84,7 @@ WSGI_APPLICATION = 'finances.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
-        'NAME': 'finances',
+        'NAME': 'finances2',
         'USER': 'root',
         'PASSWORD': '',
         'HOST':'localhost',
@@ -120,7 +120,7 @@ AUTH_PASSWORD_VALIDATORS = [
 
 LANGUAGE_CODE = 'en-us'
 
-TIME_ZONE = 'UTC'
+TIME_ZONE='America/Caracas'
 
 USE_I18N = True
 
@@ -140,7 +140,6 @@ STATICFILES_DIRS = [
 # https://docs.djangoproject.com/en/4.1/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
-AUTH_USER_MODEL = "core.User"
 AUTHENTICATION_BACKENDS = ['finances.backends.EmailBackend']
 
 ACCOUNT_AUTHENTICATION_METHOD = 'email'
@@ -151,3 +150,6 @@ ACCOUNT_USERNAME_REQUIRED = False
 INTERNAL_IPS = [
     "127.0.0.1",
 ]
+
+MEDIA_URL = '/media/'
+MEDIA_ROOT = BASE_DIR / 'media'

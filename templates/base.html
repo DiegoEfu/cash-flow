@@ -15,6 +15,8 @@
     <!-- INTERNAL IMPORTS -->
     <link rel="stylesheet" href="{% static 'css/styles.css' %}">
 
+    {% block head %}
+    {% endblock %}
 </head>
 <body hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
     <div class="flex flex-col min-h-screen">

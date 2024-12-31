@@ -50,25 +50,25 @@
         </div>
     </div>
 
-    <div id="items" class="table-wrapper">
+    <div class="table-wrapper">
         <table class="table table-xs w-full text-center">
             <thead>
                 <tr class="bg-base-200">
                     <th>Tag</th>
-                    <th>Total Money Assigned</th>
+                    <th>Total Money Assigned ({{request.user.main_currency}})</th>
                     <th>Actions</th>
                 </tr>
             </thead>
-            <tbody>
+            <tbody id="items">
                 {% for tag in object_list %}
                 <tr>
-                    <td>{{tag.name}}</td>
-                    <td>{{tag.assigned|default:'0.00'}}</td>
+                    <td>{{tag.tag.name}}</td>
+                    <td>{{tag.total|default:'0.00'}}</td>
                     <td>
-                      <a hx-target="main" hx-get="{% url 'tag_update' pk=tag.pk %}" class="text-primary hover:underline">Edit</a>
+                      <a hx-target="main" hx-get="{% url 'tag_update' pk=tag.tag.pk %}" class="text-primary hover:underline">Edit</a>
                       
-                      {% if not tag.assigned %}
-                      <a hx-target="closest tr" hx-confirm="Are you sure you want to delete this tag?" hx-delete="{% url 'tag_delete' pk=tag.pk %}" class="text-secondary hover:underline">Delete</a>
+                      {% if not tag.tag.assigned %}
+                      <a hx-target="closest tr" hx-confirm="Are you sure you want to delete this tag?" hx-delete="{% url 'tag_delete' pk=tag.tag.pk %}" class="text-secondary hover:underline">Delete</a>
                       {% endif %}
                     </td>
                 </tr>
@@ -78,7 +78,7 @@
                 </tr>
                 {% endfor %}
                 {% if page_obj.has_next %}
-                <tr hx-trigger="revealed" hx-target="this" hx-swap="outerHTML" hx-select="#items" hx-get="{% url 'transaction_list' %}?page={{page_obj.next_page_number }}" hx-include=".input, .select"></tr>
+                <tr hx-trigger="revealed" hx-target="this" hx-swap="outerHTML" hx-select="#items > tr" hx-get="{% url 'tag_list' %}?page={{page_obj.next_page_number }}" hx-include=".input, .select"></tr>
                 {% endif %}
             </tbody>
         </table>        

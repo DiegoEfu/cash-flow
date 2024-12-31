@@ -19,29 +19,31 @@
         {% with currency=request.user.main_currency.code %}
         <div class="stat place-items-center">
           <div class="stat-title">Current Balance</div>
-          <div class="stat-value">{{currency}} __</div>
-          <div class="stat-desc">Increased by __%.</div>
+          <div class="stat-value">{{currency}} {{balance|floatformat:2}}</div>
+          <div class="stat-desc">
+            {{percentage_balance|default:'-'}}% compared to last month.
+          </div>
         </div>
       
         <div class="stat place-items-center">
           <div class="stat-title">Income of this Month</div>
-          <div class="stat-value text-success">{{currency}} __</div>
-          <div class="stat-desc text-success">More than last month by __%</div>
+          <div class="stat-value text-success">{{currency}} {{current_month_income|floatformat:2}}</div>
+          <div class="stat-desc text-success">{{percentage_income|default:'-'}}% compared to last month.</div>
         </div>
       
         <div class="stat place-items-center">
           <div class="stat-title">Expenses of this Month</div>
-          <div class="stat-value text-warning">{{currency}} __</div>
-          <div class="stat-desc text-warning">Less than last month by __%</div>
+          <div class="stat-value text-warning">{{currency}} {{current_month_expense|floatformat:2}}</div>
+          <div class="stat-desc text-warning">{{percentage_expense|default:'-'}}% compared to last month.</div>
         </div>
         {% endwith %}
       </div>
     </div>
 
     <div class="flex justify-center items-center mt-8 mb-8">
-        <a class="btn btn-outline btn-success">Check my Accounts</a>
-        <a href="" class="btn btn-outline btn-primary mx-2">Check My Transactions</a>
-        <a class="btn btn-outline btn-warning">Check My Tags</a>
+        <a href="{% url 'account_list' %}" class="btn btn-outline btn-success">Check my Accounts</a>
+        <a href="{% url 'general_transactions_list' %}" href="" class="btn btn-outline btn-primary mx-2">Check My Transactions</a>
+        <a href="{% url 'tag_list' %}" class="btn btn-outline btn-warning">Check My Tags</a>
        <form method="post" action="{% url 'logout_view' %}">
             {% csrf_token %}
             <button type="submit" class="btn btn-outline btn-danger mx-2">Log Out</button>
@@ -50,7 +52,7 @@
     
     {% else %}
     <div class="flex justify-center items-center mt-8 mb-8">
-        <a class="btn btn-outline btn-success">Sign Up Now!</a>
+        <a href="{% url 'sign_up_view' %}" class="btn btn-outline btn-success">Sign Up Now!</a>
         <a href="{% url 'login_view' %}" class="btn btn-outline btn-primary mx-2">Log In Now!</a>
     </div>
     {% endif %}

@@ -31,7 +31,7 @@
                         <path d="M2.5 3A1.5 1.5 0 0 0 1 4.5v.793c.026.009.051.02.076.032L7.674 8.51c.206.1.446.1.652 0l6.598-3.185A.755.755 0 0 1 15 5.293V4.5A1.5 1.5 0 0 0 13.5 3h-11Z" />
                         <path d="M15 6.954 8.978 9.86a2.25 2.25 0 0 1-1.956 0L1 6.954V11.5A1.5 1.5 0 0 0 2.5 13h11a1.5 1.5 0 0 0 1.5-1.5V6.954Z" />
                     </svg>
-                    {% render_field form.email class="w-full" placeholder="Email*" %}
+                    {% render_field form.email class="w-full" placeholder="Email*" required="required" minlength="1" maxlength="50" %}
                 </label>
 
                 {% if form.email.errors %}
@@ -48,7 +48,7 @@
             <div class="grid grid-rows-1 grid-cols-2">
                 <div>
                     <label class="input input-bordered flex items-center gap-0">
-                        {% render_field form.first_name placeholder="First Name*" %}
+                        {% render_field form.first_name placeholder="First Name*" required="required" minlength="1" maxlength="50" %}
                     </label>
                     {% if form.first_name.errors %}
                     <div role="alert" class="alert alert-warning">
@@ -63,7 +63,7 @@
     
                 <div>
                     <label class="input input-bordered flex items-center gap-2">
-                        {% render_field form.last_name placeholder="Last Name" %}
+                        {% render_field form.last_name placeholder="Last Name" required="required" minlength="1" maxlength="50" %}
                     </label>
                     {% if form.last_name.errors %}
                     <div role="alert" class="alert alert-warning">
@@ -80,30 +80,30 @@
             <div class="grid grid-rows-1 grid-cols-2">
                 <div>
                     <label class="input input-bordered flex items-center">
-                        {% render_field form.password placeholder="Password" class="grow" type="password" min_length="8" %}
+                        {% render_field form.password placeholder="Password" class="grow" type="password" minlength="8" %}
                     </label>
                     {% if form.password.errors %}
                         <div role="alert" class="alert alert-warning">
-                            <span>
+                            <small>
                                 {% for error in form.password.errors %}
                                 {{error}}
                                 {% endfor %}
-                            </span>
+                            </small>
                         </div>
                     {% endif %}
                 </div>
     
                 <div>
                     <label class="input input-bordered flex items-center">
-                        {% render_field form.repeat_password type="password" min_length="8" placeholder="Repeat Password" %}
+                        {% render_field form.repeat_password type="password" minlength="8" placeholder="Repeat Password" value="" %}
                     </label>
                     {% if form.repeat_password.errors %}
                         <div role="alert" class="alert alert-warning">
-                            <span>
+                            <small>
                                 {% for error in form.repeat_password.errors %}
                                 {{error}}
                                 {% endfor %}
-                            </span>
+                            </small>
                         </div>
                     {% endif %}
                 </div>
