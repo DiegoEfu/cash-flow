@@ -359,20 +359,20 @@ class TransactionUpdate(TransactionCreation):
                 account.current_balance -= amount
                 account.save()
 
-            if not form.instance.hold:
+            if not self.request.POST['hold']:
                 amount = Decimal(form.data['amount'])
                 amount = amount if form.data['transaction_type'] == '+' else -amount
                 account.current_balance += amount
                 account.save()
 
-                if(form.instance.tag):
+                if(self.request.POST['tag']):
                     if transaction_instance.tag:
                         old_tag = MoneyTag.objects.get(tag=transaction_instance.tag, account=account)
                         old_tag.amount -= transaction_instance.amount if transaction_instance.transaction_type == '+' else -transaction_instance.amount
                         old_tag.save()
 
                     new_tag = MoneyTag.objects.get(tag__pk=self.request.POST['tag'], account=account)
-                    new_tag.amount += amount if form.instance.transaction_type == '+' else -amount
+                    new_tag.amount += amount
                     new_tag.save()
                 
                 historic_balance, created = HistoricBalance.objects.get_or_create(
@@ -420,7 +420,7 @@ class TransactionDelete(LoginRequiredMixin, View):
 
                 if transaction_instance.tag:
                     tag = MoneyTag.objects.get(tag=transaction_instance.tag, account=account)
-                    tag.amount -= amount if transaction_instance.transaction_type == '+' else -amount
+                    tag.amount -= amount
                     tag.save()
 
                 historic_balance, created = HistoricBalance.objects.get_or_create(
@@ -457,7 +457,7 @@ class GeneralTransactionListView(GeneralListView):
     def get_context_data(self, **kwargs: Any) -> dict[str, Any]:
         context = super().get_context_data(**kwargs)
 
-        amounts_balance = Account.objects.annotate(total=Sum('current_balance')).values('currency','total')
+        amounts_balance = Account.objects.filter(owner=self.request.user, visible=True).annotate(total=Sum('current_balance')).values('currency','total')
         main_currency = self.request.user.main_currency.currency
 
         exchange_rates = ExchangeRate.objects.filter(active=True).values('currency1', 'currency2', 'exchange_rate')
