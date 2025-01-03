@@ -146,19 +146,60 @@ class AccountListView(GeneralListView):
     filter_class = AccountFilter
 
     def get_queryset(self) -> QuerySet[Any]:
-        queryset = self.model.objects.filter(owner=self.request.user, visible=True).select_related('currency')
-        filterx= self.filter_class(
-            self.request.GET,
-            queryset=queryset
-        )
-
-        return filterx
+        queryset = self.model.objects.filter(owner=self.request.user, visible=True).prefetch_related(
+            'accounts_money_tags', 'transaction_from_account'
+        ).select_related('currency')
+        return self.filter_class(self.request.GET, queryset=queryset)
     
     def get_context_data(self, **kwargs: Any):
         context = super().get_context_data(**kwargs)
         exchange_rates = ExchangeRate.objects.filter(active=True).values('currency1', 'currency2', 'exchange_rate')
-        context['object_list'] = [{'account': account, 'mc_bal': convert_all([{'total': account.current_balance, 'currency': account.currency.pk}], self.request.user.main_currency.currency.pk, exchange_rates)} for account in context['object_list']]
-        
+        current_month = datetime.date.today().month
+        current_year = datetime.date.today().year
+
+        def aggregate_currency(account, transaction_type):
+            return account.transaction_from_account.filter(
+                date__year=current_year, date__month=current_month, internal=False, transaction_type=transaction_type
+            ).aggregate(total=Sum('amount'))['total'] or 0
+
+        object_list = []
+        for account in context['object_list']:
+            monthly_income_total = aggregate_currency(account, '+')
+            monthly_expense_total = aggregate_currency(account, '-')
+            assigned_total = account.accounts_money_tags.aggregate(total=Sum('amount'))['total'] or 0
+            current_balance_total = account.current_balance
+
+            monthly_income = convert_all(
+                [{'total': monthly_income_total, 'currency': account.currency.pk}],
+                self.request.user.main_currency.currency.pk, exchange_rates
+            )
+            monthly_expense = convert_all(
+                [{'total': monthly_expense_total, 'currency': account.currency.pk}],
+                self.request.user.main_currency.currency.pk, exchange_rates
+            )
+            assigned = convert_all(
+                [{'total': assigned_total, 'currency': account.currency.pk}],
+                self.request.user.main_currency.currency.pk, exchange_rates
+            )
+            mc_bal = convert_all(
+                [{'total': current_balance_total, 'currency': account.currency.pk}],
+                self.request.user.main_currency.currency.pk, exchange_rates
+            )
+            not_assigned = {
+                'account_currency': current_balance_total - assigned_total,
+                'main_currency': mc_bal - assigned
+            }
+
+            object_list.append({
+                'account': account,
+                'monthly_income': {'account_currency': monthly_income_total, 'main_currency': monthly_income},
+                'monthly_expenses': {'account_currency': monthly_expense_total, 'main_currency': monthly_expense},
+                'assigned': {'account_currency': assigned_total, 'main_currency': assigned},
+                'not_assigned': not_assigned,
+                'mc_bal': mc_bal
+            })
+
+        context['object_list'] = object_list
         return context
     
     def post(self, request):

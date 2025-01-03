@@ -61,7 +61,7 @@
                   <th>Actions</th>
                 </tr>
             </thead>
-            <tbody id="items">
+            <tbody>
                 <tr>
                   <td>{{current_balance|default:'0.00'}}</td>
                   <td>{{assigned_balance|default:'0.00'}}</td>
@@ -129,7 +129,6 @@
                       {% endif %}
 
                       <label for="my_modal_{{tag.tag.pk}}" class="btn btn-xs">Check Accounts</label>
-                      <!-- Put this part before tag -->
                       <input type="checkbox" id="my_modal_{{tag.tag.pk}}" class="modal-toggle" />
                       <div class="modal" role="dialog">
                         <div class="modal-box">
