@@ -4,3 +4,17 @@
     left: 50%;
     z-index: 1000;
 }
+
+.table-wrapper {
+    overflow-y: scroll;
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none;  /* Internet Explorer 10+ */
+}
+.table-wrapper::-webkit-scrollbar { /* WebKit */
+    width: 0;
+    height: 0;
+}
+
+a{
+    cursor: pointer;
+}
