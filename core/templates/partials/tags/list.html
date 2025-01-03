@@ -44,6 +44,7 @@
         </div>
     </div>
     <div class="collapse bg-base-200 mb-3">
+      <input type="checkbox" />
         <div class="collapse-title text-xl font-medium">Reports</div>
         <div class="collapse-content">
           <a href="#" class="btn btn-primary">Generate Money Distribution by Tag (PDF)</a>
@@ -51,7 +52,32 @@
     </div>
 
     <div class="table-wrapper">
-        <table class="table table-xs w-full text-center">
+        <table class="table table-xs text-center">
+            <thead>
+                <tr class="bg-base-200">
+                  <th>Current Total Balance ({{request.user.main_currency}})</th>
+                  <th>Total Money Assigned ({{request.user.main_currency}})</th>
+                  <th>Total Money Not Assigned ({{request.user.main_currency}})</th>
+                  <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody id="items">
+                <tr>
+                  <td>{{current_balance|default:'0.00'}}</td>
+                  <td>{{assigned_balance|default:'0.00'}}</td>
+                  <td>{{not_assigned_balance|default:'0.00'}}</td>
+                  <td>
+                    <a href="#" class="text-primary hover:underline">Check Assigned Balances by Account</a>
+                  </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <br>
+
+    <div class="table-wrapper">
+        <table class="table table-xs text-center">
             <thead>
                 <tr class="bg-base-200">
                     <th>Tag</th>
@@ -87,8 +113,6 @@
     <div id="loading-bars" class="htmx-indicator indicator-style">
       <span class="loading loading-bars loading-lg htmx-indicator"></span>
     </div>
-
-    
 </div>
 
 <script>

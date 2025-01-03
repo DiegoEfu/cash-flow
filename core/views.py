@@ -52,7 +52,7 @@ def welcome_view(request):
             else:
                 balance_last_month = 0
             
-            transactions = Transaction.objects.select_related('from_account__currency').filter(hold=False, date__month=previous_month) \
+            transactions = Transaction.objects.select_related('from_account__currency').filter(hold=False, date__month=previous_month, internal=False) \
                 .annotate(total=Sum('amount'), currency=F('from_account__currency')) \
                 .values('total', 'currency', 'transaction_type', 'opening')
             
@@ -515,7 +515,15 @@ class TagListView(GeneralListView):
                 'tag': tag,
                 'total': total
             })
+        
+        cuentas = Account.objects.filter(owner=self.request.user, visible=True).annotate(total=Sum('current_balance')).values('currency','total')
+        context['current_balance']  = convert_all(cuentas, self.request.user.main_currency.currency.pk)
 
+        assigned_balance = MoneyTag.objects.filter(account__owner=self.request.user, account__visible=True).annotate(total=Sum('amount'), currency=F('account__currency__pk')).values('currency','total')
+        context['assigned_balance']  = convert_all(assigned_balance, self.request.user.main_currency.currency.pk)
+
+        context['not_assigned_balance'] = context['current_balance'] - context['assigned_balance']
+        
         context['object_list'] = alt        
         return context
 
