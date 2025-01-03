@@ -83,7 +83,14 @@
                   <small class="text-error tooltip" data-tip="{{request.user.main_currency}} {{account.not_assigned.main_currency}}">Available: {{account.account.currency.code}} {{account.not_assigned.account_currency}}</small>
                 </div>
                 <div>
-                  <small class="text-success tooltip">
+                  <small>
+                    <span class="tooltip tooltip-success" data-tip="{{request.user.main_currency}} {{account.start_balance.main_currency}}">
+                      Month Start Balance: {{account.account.currency.code}} {{account.start_balance.account_currency}}
+                    </span>
+                  </small>
+                </div>
+                <div>
+                  <small class="text-success">
                     <span class="tooltip tooltip-success" data-tip="{{request.user.main_currency}} {{account.monthly_income.main_currency}}">
                       Month Income: {{account.account.currency.code}} {{account.monthly_income.account_currency}}
                     </span>
