@@ -497,15 +497,58 @@ class TagListView(GeneralListView):
                                                     'account__currency'
                                                 )
                                             )
-                ).annotate(assigned=Sum('money_tags__amount'))
+                ).annotate(assigned=Sum('money_tags__amount')).order_by('-assigned')
         )
     
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-       
+        context["accounts"] = self.get_assigned_balance_per_account()
+        context["current_balance"] = self.get_current_balance()
+        context["assigned_balance"] = self.get_assigned_balance()
+        context["not_assigned_balance"] = context["current_balance"] - context["assigned_balance"]
+        context["object_list"] = self.get_object_list(context["object_list"])
+        return context
+    
+    def get_assigned_balance_per_account(self):
+        accounts_money_tags = Account.objects.filter(
+            owner=self.request.user, visible=True
+        ).prefetch_related('accounts_money_tags').select_related('currency').annotate(
+            total=Sum('accounts_money_tags__amount')
+        ).order_by('name')
+        alt = []
+        for account in accounts_money_tags:
+            assigned, balance = [x['total'] for x in convert_each(
+                [{'total': account.total, 'currency': account.currency.pk}, {'total': account.current_balance, 'currency': account.currency.pk}], 
+                 self.request.user.main_currency.currency.pk
+            )]
+
+            alt.append({'account': account,
+            'balance': {
+                'main_currency': balance,
+                'account_currency': account.current_balance
+            },                       
+            'assigned': {
+                'main_currency': assigned,
+                'account_currency': account.total
+            }, 'not_assigned': {
+                'main_currency': balance - assigned,
+                'account_currency': account.current_balance - account.total                
+            }})
+        
+        return alt
+    
+    def get_current_balance(self):
+        accounts_balance = Account.objects.filter(owner=self.request.user, visible=True).annotate(total=Sum('current_balance')).values('currency','total')
+        return convert_all(accounts_balance, self.request.user.main_currency.currency.pk)
+    
+    def get_assigned_balance(self):
+        assigned_balance = MoneyTag.objects.filter(account__owner=self.request.user, account__visible=True).annotate(total=Sum('amount'), currency=F('account__currency__pk')).values('currency','total')
+        return convert_all(assigned_balance, self.request.user.main_currency.currency.pk)
+    
+    def get_object_list(self, object_list):
         exchange_rates = ExchangeRate.objects.filter(active=True).values('currency1', 'currency2', 'exchange_rate')
         alt = []
-        for tag in context['object_list']:
+        for tag in object_list:
             total = 0
             
             for money_tag in tag.money_tags.all():
@@ -515,17 +558,7 @@ class TagListView(GeneralListView):
                 'tag': tag,
                 'total': total
             })
-        
-        cuentas = Account.objects.filter(owner=self.request.user, visible=True).annotate(total=Sum('current_balance')).values('currency','total')
-        context['current_balance']  = convert_all(cuentas, self.request.user.main_currency.currency.pk)
-
-        assigned_balance = MoneyTag.objects.filter(account__owner=self.request.user, account__visible=True).annotate(total=Sum('amount'), currency=F('account__currency__pk')).values('currency','total')
-        context['assigned_balance']  = convert_all(assigned_balance, self.request.user.main_currency.currency.pk)
-
-        context['not_assigned_balance'] = context['current_balance'] - context['assigned_balance']
-        
-        context['object_list'] = alt        
-        return context
+        return alt
 
 class TagUpdate(LoginRequiredMixin, FormView):
     form_class = TagForm

@@ -67,7 +67,38 @@
                   <td>{{assigned_balance|default:'0.00'}}</td>
                   <td>{{not_assigned_balance|default:'0.00'}}</td>
                   <td>
-                    <a href="#" class="text-primary hover:underline">Check Assigned Balances by Account</a>
+                    <label for="modal_accounts" class="btn btn-xs">Check Money Assigned by Account</label>
+                      <input type="checkbox" id="modal_accounts" class="modal-toggle" />
+                      <div class="modal" role="dialog">
+                        <div class="modal-box">
+                          <h3 class="text-lg font-bold">Accounts with money for {{tag.tag.name}}</h3>
+                          <table class="w-full">
+                              <thead>
+                                <tr>
+                                  <th>Account</th>
+                                  <th>Money Assigned ({{request.user.main_currency}})</th>
+                                  <th>Money Assigned ({{request.user.main_currency}})</th>
+                                  <th>Money not Assigned ({{request.user.main_currency}})</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {% for account in accounts %}
+                                <tr>
+                                  <td>{{account.account}}</td>
+                                  <td>
+                                    <p class="tooltip tooltip-success" data-tip="{{account.account.currency.code}} {{account.assigned.account_currency}}">{{account.assigned.main_currency}}</p>
+                                  </td>
+                                  <td>
+                                    <p class="tooltip tooltip-success" data-tip="{{account.account.currency.code}} {{account.not_assigned.account_currency}}">{{account.not_assigned.main_currency}}</p>
+                                  </td>
+                                </tr>
+                                {% endfor %}
+                          </table>
+                          <div class="modal-action">
+                            <label for="modal_accounts" class="btn">Close!</label>
+                          </div>
+                        </div>
+                      </div>
                   </td>
                 </tr>
             </tbody>
@@ -98,7 +129,7 @@
                       {% endif %}
 
                       <label for="my_modal_{{tag.tag.pk}}" class="btn btn-xs">Check Accounts</label>
-                      <!-- Put this part before </body> tag -->
+                      <!-- Put this part before tag -->
                       <input type="checkbox" id="my_modal_{{tag.tag.pk}}" class="modal-toggle" />
                       <div class="modal" role="dialog">
                         <div class="modal-box">
