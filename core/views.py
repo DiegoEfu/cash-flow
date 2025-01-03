@@ -159,7 +159,7 @@ class AccountListView(GeneralListView):
 
         def aggregate_currency(account, transaction_type):
             return account.transaction_from_account.filter(
-                date__year=current_year, date__month=current_month, internal=False, transaction_type=transaction_type
+                date__year=current_year, date__month=current_month, transaction_type=transaction_type
             ).aggregate(total=Sum('amount'))['total'] or 0
 
         object_list = []
@@ -168,7 +168,9 @@ class AccountListView(GeneralListView):
             monthly_expense_total = aggregate_currency(account, '-')
             assigned_total = account.accounts_money_tags.aggregate(total=Sum('amount'))['total'] or 0
             current_balance_total = account.current_balance
-
+            previous_month = current_month - 1 if current_month > 1 else 12
+            year = current_year if previous_month != 12 else current_year - 1
+         
             monthly_income = convert_all(
                 [{'total': monthly_income_total, 'currency': account.currency.pk}],
                 self.request.user.main_currency.currency.pk, exchange_rates
@@ -189,12 +191,23 @@ class AccountListView(GeneralListView):
                 'account_currency': current_balance_total - assigned_total,
                 'main_currency': mc_bal - assigned
             }
+            
+            try:
+                start_balance_ac = account.account_historic_balance.get(year=year, month=previous_month).balance
+            except Exception as e:
+                start_balance_ac = account.transaction_from_account.get(opening=True).amount if account.transaction_from_account.filter(opening=True).exists() else 0
+            
+            start_balance_mc = convert_all(
+                [{'total': start_balance_ac, 'currency': account.currency.pk}],
+                self.request.user.main_currency.currency.pk, exchange_rates
+            )
 
             object_list.append({
                 'account': account,
                 'monthly_income': {'account_currency': monthly_income_total, 'main_currency': monthly_income},
                 'monthly_expenses': {'account_currency': monthly_expense_total, 'main_currency': monthly_expense},
                 'assigned': {'account_currency': assigned_total, 'main_currency': assigned},
+                'start_balance': {'account_currency': start_balance_ac, 'main_currency': start_balance_mc},
                 'not_assigned': not_assigned,
                 'mc_bal': mc_bal
             })
