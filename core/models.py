@@ -33,13 +33,16 @@ class MainCurrency(models.Model):
     def __str__(self) -> str:
         return self.currency.code
 
-class ExchangeRate(StrAsNameMixin, models.Model):
+class ExchangeRate(models.Model):
     id = models.UUIDField(default=uuid.uuid4, primary_key=True)
     date = models.DateField()
     exchange_rate = models.DecimalField(max_digits=15, decimal_places=6, validators=[MinValueValidator(0.000001)])
     active = models.BooleanField(default=True)
     currency1 = models.ForeignKey(Currency, on_delete=models.PROTECT, related_name="currency1_exchange_rate")
     currency2 = models.ForeignKey(Currency, on_delete=models.PROTECT, related_name="currency2_exchange_rate")
+
+    def __str__(self):
+        return f"{self.exchange_rate} {self.currency1} = 1 {self.currency2} on {self.date}"
 
     class Meta:
         ordering = ("-date",)

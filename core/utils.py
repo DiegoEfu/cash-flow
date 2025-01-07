@@ -142,8 +142,8 @@ def get_new_exchange_rate():
                 (dolar, euro, valor_euro / valor_dolar),
                 (euro, dolar, valor_dolar / valor_euro),
             ]
-
             for currency1, currency2, rate in exchange_rate_pairs:
+                print(ExchangeRate.objects.filter(currency1=currency1, currency2=currency2, date__gte=datetime.date.today(), active=True))
                 if not ExchangeRate.objects.filter(currency1=currency1, currency2=currency2, date__gte=datetime.date.today(), active=True).exists():
                     ExchangeRate.objects.filter(currency1=currency1, currency2=currency2, active=True).update(active=False)
                     ExchangeRate.objects.create(currency1=currency1, currency2=currency2, exchange_rate=rate, date=fecha)
