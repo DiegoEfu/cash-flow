@@ -14,10 +14,11 @@ class TransactionFilter(django_filters.FilterSet):
     date_from = django_filters.DateTimeFilter(field_name='date', lookup_expr='gte')
     date_until = django_filters.DateTimeFilter(field_name='date', lookup_expr='lte')
     id__icontains = django_filters.CharFilter('id', lookup_expr='icontains')
+    description__icontains = django_filters.CharFilter('description', lookup_expr='icontains')
 
     class Meta:
         model = Transaction
-        fields = ('transaction_type', 'hold', 'internal')
+        fields = ('transaction_type', 'hold', 'internal', 'tag')
 
 class TagFilter(django_filters.FilterSet):
     name__icontains = django_filters.CharFilter('name', lookup_expr='icontains')

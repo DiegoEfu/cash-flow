@@ -254,7 +254,7 @@ class AccountCreation(LoginRequiredMixin, FormView):
                     exchange_rate=find_transaction_fitting_exchange_rate(form.instance.currency, self.request.user.main_currency.currency, form.instance.opening_time)
                 )
             
-            HistoricBalance.objects.create(account=form.instance, balance=form.instance.current_balance, date=form.instance.opening_time)
+            HistoricBalance.objects.create(account=form.instance, balance=form.instance.current_balance, year=form.instance.opening_time.year, month=form.instance.opening_time.month)
 
         messages.success(self.request, "The account has been created successfully.")
         return res
@@ -301,7 +301,7 @@ class TransactionListView(GeneralListView):
         return self.filter_class(
             self.request.GET,
             queryset=self.model.objects.select_related(
-                'exchange_rate'
+                'exchange_rate', 'tag'
             ).filter(
                 from_account=Account.objects.get(pk=self.kwargs['pk']),
             ).annotate(
@@ -361,12 +361,15 @@ class TransactionCreation(FormView):
                                 default=1
                             )
                         )
+                        amount = abs(amount)
                         for money_tag in money_tags:
-                            converted_amount = -convert_each([{'total': amount, 'currency': account.currency.pk}], money_tag.account.currency.pk)[0]['total']
+                            unassigned_money = account.current_balance - account.accounts_money_tags.aggregate(total=Sum('amount'))['total'] or 0
+                            converted_amount = convert_each([{'total': amount, 'currency': account.currency.pk}], money_tag.account.currency.pk)[0]['total']
                             subtracted_amount = min(money_tag.amount, converted_amount)
                             money_tag.amount -= subtracted_amount
                             money_tag.save()
                             amount -= convert_each([{'total': subtracted_amount, 'currency': money_tag.account.currency.pk}], account.currency.pk)[0]['total']
+                            amount -= unassigned_money if amount >= unassigned_money else amount
 
                 historic_balance, created = HistoricBalance.objects.get_or_create(
                     account=account,
@@ -413,13 +416,13 @@ class TransactionUpdate(TransactionCreation):
                 account.current_balance -= amount
                 account.save()
 
-            if not self.request.POST['hold']:
+            if not self.request.POST.get('hold'):
                 amount = Decimal(form.data['amount'])
                 amount = amount if form.data['transaction_type'] == '+' else -amount
                 account.current_balance += amount
                 account.save()
 
-                if(self.request.POST['tag']):
+                if(self.request.POST.get('tag')):
                     if transaction_instance.tag:
                         old_tag = MoneyTag.objects.get(tag=transaction_instance.tag, account=account)
                         old_tag.amount -= transaction_instance.amount if transaction_instance.transaction_type == '+' else -transaction_instance.amount
@@ -504,7 +507,7 @@ class GeneralTransactionListView(GeneralListView):
         return self.filter_class(
             self.request.GET,
             queryset=self.model.objects.select_related(
-                'from_account', 'from_account__currency'
+                'from_account', 'from_account__currency', 'tag', 'exchange_rate'
             ).filter(from_account__owner=self.request.user)
         )
     

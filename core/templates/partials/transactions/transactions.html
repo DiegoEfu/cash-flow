@@ -51,6 +51,11 @@
               </div>
 
               <div class="me-4">
+                <label for="id_id">Description contains:</label> <br>
+                {% render_field filter.form.description__icontains class="input input-bordered w-full" %}
+              </div>
+
+              <div class="me-4">
                 <label for="id_transaction_type">Transaction Type:</label> <br>
                 {% render_field filter.form.transaction_type class="select select-bordered w-full" %}
               </div>
@@ -66,7 +71,17 @@
               </div>
 
               <div class="me-4">
-                <label for="id_id">Internal ID of Transaction:</label> <br>
+                <label for="id_hold">Internal:</label> <br>
+                {% render_field filter.form.internal class="select select-bordered w-full" %}
+              </div>
+
+              <div class="me-4">
+                <label for="id_hold">Tag:</label> <br>
+                {% render_field filter.form.tag class="select select-bordered w-full" %}
+              </div>
+
+              <div class="me-4">
+                <label for="id_id">Internal ID of Transaction contains:</label> <br>
                 {% render_field filter.form.id__icontains class="input input-bordered w-full" %}
               </div>
 
@@ -103,7 +118,7 @@
                 <tr>
                     <td>{{transaction.transaction.pk}}</td>
                     <td>{{transaction.transaction.date}} {% if transaction.transaction.hold %} <span class="badge badge-warning">(On Hold)</span> {%endif%}</td>
-                    <td>{{transaction.transaction.description|default:'-'}}</td>
+                    <td data-tip="{{transaction.transaction.tag|default:''}}" class="{% if transaction.transaction.tag %}tooltip{% endif %}">{{transaction.transaction.description|default:'-'}}</td>
                     <td>
                       <span class="badge badge-{% if transaction.transaction.transaction_type == '+' %}success{% else %}error{% endif %}">
                         {% if transaction.transaction.transaction_type == '+' %}INCOME{% else %}EXPENSE{% endif %}
