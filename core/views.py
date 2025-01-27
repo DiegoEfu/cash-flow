@@ -344,7 +344,7 @@ class TransactionCreation(FormView):
 
             if not form.instance.hold:
                 amount = form.instance.amount if form.instance.transaction_type == '+' else -form.instance.amount
-
+                previous_balance = account.current_balance
                 account.current_balance += amount
                 account.save()
 
@@ -361,15 +361,21 @@ class TransactionCreation(FormView):
                                 default=1
                             )
                         )
+
                         amount = abs(amount)
                         for money_tag in money_tags:
-                            unassigned_money = account.current_balance - account.accounts_money_tags.aggregate(total=Sum('amount'))['total'] or 0
                             converted_amount = convert_each([{'total': amount, 'currency': account.currency.pk}], money_tag.account.currency.pk)[0]['total']
                             subtracted_amount = min(money_tag.amount, converted_amount)
                             money_tag.amount -= subtracted_amount
                             money_tag.save()
                             amount -= convert_each([{'total': subtracted_amount, 'currency': money_tag.account.currency.pk}], account.currency.pk)[0]['total']
-                            amount -= unassigned_money if amount >= unassigned_money else amount
+                            
+                            if(amount > 0):
+                                unassigned_money = previous_balance - account.accounts_money_tags.aggregate(total=Sum('amount'))['total']
+                                amount -= unassigned_money if amount >= unassigned_money else amount
+                            
+                            if(amount == 0):
+                                break
 
                 historic_balance, created = HistoricBalance.objects.get_or_create(
                     account=account,
