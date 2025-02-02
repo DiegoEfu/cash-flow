@@ -22,16 +22,20 @@ from .constants import *
 
 # Create your views here.
 
-def welcome_view(request):
-    def make_context():
-        if(request.user.is_authenticated):
+from django.views import View
+
+class WelcomeView(View):
+    template_name = 'welcome.html'
+
+    def get_context_data(self, request):
+        if request.user.is_authenticated:
             exchange_rates = ExchangeRate.objects.filter(active=True) \
                 .select_related('currency1', 'currency2').values('exchange_rate', 'currency1', 'currency2')
              
-            amounts_balance = Account.objects.filter(owner=request.user, visible=True).annotate(total=Sum('current_balance')).values('currency','total')
+            amounts_balance = Account.objects.filter(owner=request.user, visible=True).annotate(total=Sum('current_balance')).values('currency', 'total')
             
             amounts = Transaction.objects.select_related('from_account__currency').filter(
-                hold=False, internal=False, 
+                hold=False, internal=False, date__month=datetime.date.today().month, date__year=datetime.date.today().year
             ).annotate(total=Sum('amount'), currency=F('from_account__currency')
             ).values('total', 'transaction_type', 'opening', 'currency')
             
@@ -46,13 +50,13 @@ def welcome_view(request):
             year = datetime.date.today().year if previous_month != 12 else datetime.date.today().year - 1
 
             balances_last_month = HistoricBalance.objects.filter(account__owner=request.user, month=previous_month, year=year)
-            if(balances_last_month.exists() > 0):
-                balances_last_month = balances_last_month.annotate(total=F('balance'), currency=F('account__currency')).values('total','currency')
+            if balances_last_month.exists():
+                balances_last_month = balances_last_month.annotate(total=F('balance'), currency=F('account__currency')).values('total', 'currency')
                 balance_last_month = convert_all(balances_last_month, request.user.main_currency.pk, exchange_rates)
             else:
                 balance_last_month = 0
             
-            transactions = Transaction.objects.select_related('from_account__currency').filter(hold=False, date__month=previous_month, internal=False) \
+            transactions = Transaction.objects.select_related('from_account__currency').filter(hold=False, date__year=year, date__month=previous_month, internal=False) \
                 .annotate(total=Sum('amount'), currency=F('from_account__currency')) \
                 .values('total', 'currency', 'transaction_type', 'opening')
             
@@ -70,7 +74,9 @@ def welcome_view(request):
                 'balance': round(total_balance, 2),
                 'current_month_income': round(total_income, 2),
                 'current_month_expense': round(total_expense, 2),
-
+                'balance_last_month': round(balance_last_month, 2),
+                'income_last_month': round(income_last_month, 2),
+                'expense_last_month': round(expense_last_month, 2),
                 'percentage_balance': percentage_balance,
                 'percentage_income': percentage_income,
                 'percentage_expense': percentage_expense
@@ -78,11 +84,10 @@ def welcome_view(request):
         else:
             return {}
 
-    context = make_context()
-
-    get_new_exchange_rate() # Ideally change this to a cron job, but it's a paid feature in PythonAnywhere so I'm leaving it as it is for now
-
-    return render(request, 'welcome.html', context=context)
+    def get(self, request, *args, **kwargs):
+        context = self.get_context_data(request)
+        get_new_exchange_rate()  # Ideally change this to a cron job, but it's a paid feature in PythonAnywhere so I'm leaving it as it is for now
+        return render(request, self.template_name, context=context)
 
 class LoginView(LoginView):
     template_name = 'login.html'
