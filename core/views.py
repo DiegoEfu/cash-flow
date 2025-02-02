@@ -84,9 +84,30 @@ class WelcomeView(View):
         else:
             return {}
 
+    def update_balances(self, request, *args, **kwargs):
+        current_month = datetime.date.today().month
+        current_year = datetime.date.today().year
+        visible_accounts = Account.objects.filter(owner=request.user, visible=True)
+        historic_balances = HistoricBalance.objects.filter(
+            account__owner=request.user, 
+            account__visible=True,
+            month=current_month, 
+            year=current_year
+        )
+
+        if historic_balances.count() != visible_accounts.count():
+            for account in visible_accounts:
+                HistoricBalance.objects.get_or_create(
+                    account=account,
+                    month=current_month,
+                    year=current_year,
+                    defaults={'balance': account.current_balance}
+                )
+
     def get(self, request, *args, **kwargs):
         context = self.get_context_data(request)
         get_new_exchange_rate()  # Ideally change this to a cron job, but it's a paid feature in PythonAnywhere so I'm leaving it as it is for now
+        self.update_balances(request)
         return render(request, self.template_name, context=context)
 
 class LoginView(LoginView):
@@ -241,7 +262,6 @@ class AccountListView(GeneralListView):
         context['object_list'] = object_list
 
         previous_search = self.request.session.get('previous_search')
-        print("GUARDADO: ", previous_search)
         if previous_search:
             context['filter'] = self.filter_class(previous_search)
         
