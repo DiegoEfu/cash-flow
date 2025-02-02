@@ -154,7 +154,10 @@ class AccountListView(GeneralListView):
         queryset = self.model.objects.filter(owner=self.request.user, visible=True).prefetch_related(
             'accounts_money_tags', 'transaction_from_account'
         ).select_related('currency')
-        return self.filter_class(self.request.GET, queryset=queryset)
+
+        search_params = self.request.session.get('previous_search') or self.request.GET
+        self.request.session['previous_search'] = search_params
+        return self.filter_class(search_params, queryset=queryset)
     
     def get_context_data(self, **kwargs: Any):
         context = super().get_context_data(**kwargs)
@@ -218,6 +221,12 @@ class AccountListView(GeneralListView):
             })
 
         context['object_list'] = object_list
+
+        previous_search = self.request.session.get('previous_search')
+        if previous_search:
+            context['filter'] = self.filter_class(previous_search)
+
+        self.request.session['previous_search'] = self.request.GET
         return context
     
     def post(self, request):
