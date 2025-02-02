@@ -20,7 +20,13 @@
         </div>
     </div>
 
-    <canvas id="chart" style="max-width: 100% !important; max-height: 60vh"></canvas>
+    <div class="grid xl:grid-cols-2 xs:grid-cols-1">
+        <div class="p-5">
+            <canvas id="chart" style="max-width: 100% !important; max-height: 60vh"></canvas>
+        </div>
+        <div class="overflow-x-auto p-5" id="summary" hx-swap-oob="true" hx-trigger="load" hx-get="{% url 'account_summary_table' %}" hx-indicator="#loading-bars">
+        </div>
+    </div>
 
     <div class="divider"></div>
 

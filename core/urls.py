@@ -28,5 +28,8 @@ urlpatterns = [
     path('tags/assignment/<str:pk>/', TagAssignment.as_view(), name="tag_assignment"),
 
     # GRAPH VIEWS
-    path('graph/', graph_by_accounts, name="account_graph_view"),
+    path('accounts/graph/', graph_by_accounts, name="account_graph_view"),
+
+    # SUMMARY TABLE VIEWS
+    path('accounts/summary-table/', AccountSumaryTableView.as_view(), name="account_summary_table"),
 ]

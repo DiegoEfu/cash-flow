@@ -1,0 +1,25 @@
+<table class="table table-xs" id="summary" hx-swap-oob="true">
+    <tbody>
+        <tr>
+            <th class="text-center font-bold">Balance</th>
+            <td class="text-center text-success font-bold">{{request.user.main_currency}} {{total_balance|floatformat:2}}</td>
+        </tr>
+        <tr class="bg-base-100">
+            <th class="text-center font-bold">In</th>
+            <td class="text-center text-success font-bold">{{request.user.main_currency}} {{total_in|floatformat:2}}</td>
+        </tr>
+        <tr>
+            <th class="text-center font-bold">Out</th>
+            <td class="text-center text-error font-bold">{{request.user.main_currency}} {{total_out|floatformat:2}}</td>
+        </tr>
+        <tr class="bg-base-100">
+            <th class="text-center font-bold">Assigned</th>
+            <td class="text-center text-success font-bold">{{request.user.main_currency}} {{total_assigned|floatformat:2}}</td>
+        </tr>
+        <tr>
+            <th class="text-center font-bold">Available</th>
+            <td class="text-center text-warning font-bold">{{request.user.main_currency}} {{total_not_assigned|floatformat:2}}</td>
+        </tr>
+    </tbody>
+</table>
+

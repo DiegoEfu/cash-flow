@@ -159,25 +159,35 @@ class AccountListView(GeneralListView):
         self.request.session['previous_search'] = search_params
         return self.filter_class(search_params, queryset=queryset)
     
-    def get_context_data(self, **kwargs: Any):
-        context = super().get_context_data(**kwargs)
-        exchange_rates = ExchangeRate.objects.filter(active=True).values('currency1', 'currency2', 'exchange_rate')
+    def get_current_month(self):
+        return datetime.date.today().month
+    
+    def get_current_year(self):
+        return datetime.date.today().year
+    
+    def get_previous_month(self):
         current_month = datetime.date.today().month
-        current_year = datetime.date.today().year
-
-        def aggregate_currency(account, transaction_type):
+        return current_month - 1 if current_month > 1 else 12
+    
+    def get_previous_year(self):
+        current_month = self.get_current_month()
+        current_year = self.get_current_year()
+        return current_year if current_month != 1 else current_year - 1
+    
+    def aggregate_currency(self, account, transaction_type, current_year=datetime.date.today().year, current_month=datetime.date.today().month):
             return account.transaction_from_account.filter(
                 date__year=current_year, date__month=current_month, transaction_type=transaction_type
             ).aggregate(total=Sum('amount'))['total'] or 0
-
-        object_list = []
-        for account in context['object_list']:
-            monthly_income_total = aggregate_currency(account, '+')
-            monthly_expense_total = aggregate_currency(account, '-')
+    
+    def get_object_list(self, object_list, exchange_rates):
+        result = []
+        for account in object_list:
+            monthly_income_total = self.aggregate_currency(account, '+')
+            monthly_expense_total = self.aggregate_currency(account, '-')
             assigned_total = account.accounts_money_tags.aggregate(total=Sum('amount'))['total'] or 0
             current_balance_total = account.current_balance
-            previous_month = current_month - 1 if current_month > 1 else 12
-            year = current_year if previous_month != 12 else current_year - 1
+            previous_month = self.get_previous_month()
+            year = self.get_previous_year()
          
             monthly_income = convert_all(
                 [{'total': monthly_income_total, 'currency': account.currency.pk}],
@@ -210,7 +220,7 @@ class AccountListView(GeneralListView):
                 self.request.user.main_currency.currency.pk, exchange_rates
             )
 
-            object_list.append({
+            result.append({
                 'account': account,
                 'monthly_income': {'account_currency': monthly_income_total, 'main_currency': monthly_income},
                 'monthly_expenses': {'account_currency': monthly_expense_total, 'main_currency': monthly_expense},
@@ -220,13 +230,24 @@ class AccountListView(GeneralListView):
                 'mc_bal': mc_bal
             })
 
+        return result
+    
+    def get_context_data(self, **kwargs: Any):
+        context = super().get_context_data(**kwargs)
+        exchange_rates = ExchangeRate.objects.filter(active=True).values('currency1', 'currency2', 'exchange_rate')
+
+        object_list = self.get_object_list(context['object_list'], exchange_rates)
+        
         context['object_list'] = object_list
 
         previous_search = self.request.session.get('previous_search')
+        print("GUARDADO: ", previous_search)
         if previous_search:
             context['filter'] = self.filter_class(previous_search)
-
-        self.request.session['previous_search'] = self.request.GET
+        
+        if(self.request.GET != {}):
+            self.request.session['previous_search'] = self.request.GET
+        
         return context
     
     def post(self, request):
@@ -243,6 +264,31 @@ class AccountListView(GeneralListView):
 
             messages.warning(request, "The account has been deleted successfully.")
             return redirect("/accounts")
+
+class AccountSumaryTableView(AccountListView):
+    template_name = 'partials/accounts/summary.html'
+    paginate_by = None
+
+    def get_context_data(self, **kwargs: Any):
+        qs = self.get_queryset().qs
+        context = {}
+        exchange_rates = ExchangeRate.objects.filter(active=True).values('currency1', 'currency2', 'exchange_rate')
+        
+        object_list = self.get_object_list(qs, exchange_rates)
+
+        total_income = sum([item['monthly_income']['main_currency'] for item in object_list])
+        total_expense = sum([item['monthly_expenses']['main_currency'] for item in object_list])
+        total_balance = sum([item['mc_bal'] for item in object_list])
+        total_assigned = sum([item['assigned']['main_currency'] for item in object_list])
+        total_not_assigned = sum([item['not_assigned']['main_currency'] for item in object_list])
+
+        context['total_in'] = total_income
+        context['total_out'] = total_expense
+        context['total_balance'] = total_balance
+        context['total_assigned'] = total_assigned
+        context['total_not_assigned'] = total_not_assigned
+
+        return context
 
 class AccountCreation(LoginRequiredMixin, FormView):
     form_class = AccountForm
@@ -753,7 +799,13 @@ def logout_view(request):
 
 def graph_by_accounts(request):
     accounts = AccountFilter(request.GET, queryset=Account.objects.filter(visible=True, owner=request.user).select_related('currency')).qs.annotate(total=F('current_balance')).values('name', 'currency', 'total')
-    accounts = convert_each(accounts, request.user.main_currency.pk)
+    accounts = sorted(
+        convert_each(
+            accounts, request.user.main_currency.pk
+        ), 
+        key=lambda x: x['total'], 
+        reverse=True
+    )
 
     return JsonResponse(accounts, safe=False)
 
