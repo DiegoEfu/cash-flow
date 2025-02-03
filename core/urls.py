@@ -3,7 +3,7 @@ from django.urls import path
 from .views import *
 
 urlpatterns = [
-    path('', welcome_view, name="welcome_view"),
+    path('', WelcomeView.as_view(), name="welcome_view"),
     path('login', LoginView.as_view(), name="login_view"),
     path('log-out', logout_view, name="logout_view"),
     path('sign-up', SignUpView.as_view(), name="sign_up_view"),
@@ -28,5 +28,8 @@ urlpatterns = [
     path('tags/assignment/<str:pk>/', TagAssignment.as_view(), name="tag_assignment"),
 
     # GRAPH VIEWS
-    path('graph/', graph_by_accounts, name="account_graph_view"),
+    path('accounts/graph/', graph_by_accounts, name="account_graph_view"),
+
+    # SUMMARY TABLE VIEWS
+    path('accounts/summary-table/', AccountSumaryTableView.as_view(), name="account_summary_table"),
 ]

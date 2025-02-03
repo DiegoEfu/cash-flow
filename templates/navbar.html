@@ -29,7 +29,7 @@
           <li>
             <details class="dropdown">
               <summary class="btn m-1">{{request.user.get_full_name}}</summary>
-              <ul class="menu dropdown-content bg-base-100 rounded-box z-[1] w-52 p-2 shadow">
+              <ul class="menu dropdown-content bg-gray-900 rounded-box z-[1] w-52 p-2 shadow">
                 <li><a>Change Password</a></li>
                 <li>
                   <form method="post" action="{% url 'logout_view' %}">

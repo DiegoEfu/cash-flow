@@ -22,16 +22,20 @@ from .constants import *
 
 # Create your views here.
 
-def welcome_view(request):
-    def make_context():
-        if(request.user.is_authenticated):
+from django.views import View
+
+class WelcomeView(View):
+    template_name = 'welcome.html'
+
+    def get_context_data(self, request):
+        if request.user.is_authenticated:
             exchange_rates = ExchangeRate.objects.filter(active=True) \
                 .select_related('currency1', 'currency2').values('exchange_rate', 'currency1', 'currency2')
              
-            amounts_balance = Account.objects.filter(owner=request.user, visible=True).annotate(total=Sum('current_balance')).values('currency','total')
+            amounts_balance = Account.objects.filter(owner=request.user, visible=True).annotate(total=Sum('current_balance')).values('currency', 'total')
             
             amounts = Transaction.objects.select_related('from_account__currency').filter(
-                hold=False, internal=False, 
+                hold=False, internal=False, date__month=datetime.date.today().month, date__year=datetime.date.today().year
             ).annotate(total=Sum('amount'), currency=F('from_account__currency')
             ).values('total', 'transaction_type', 'opening', 'currency')
             
@@ -46,13 +50,13 @@ def welcome_view(request):
             year = datetime.date.today().year if previous_month != 12 else datetime.date.today().year - 1
 
             balances_last_month = HistoricBalance.objects.filter(account__owner=request.user, month=previous_month, year=year)
-            if(balances_last_month.exists() > 0):
-                balances_last_month = balances_last_month.annotate(total=F('balance'), currency=F('account__currency')).values('total','currency')
+            if balances_last_month.exists():
+                balances_last_month = balances_last_month.annotate(total=F('balance'), currency=F('account__currency')).values('total', 'currency')
                 balance_last_month = convert_all(balances_last_month, request.user.main_currency.pk, exchange_rates)
             else:
                 balance_last_month = 0
             
-            transactions = Transaction.objects.select_related('from_account__currency').filter(hold=False, date__month=previous_month, internal=False) \
+            transactions = Transaction.objects.select_related('from_account__currency').filter(hold=False, date__year=year, date__month=previous_month, internal=False) \
                 .annotate(total=Sum('amount'), currency=F('from_account__currency')) \
                 .values('total', 'currency', 'transaction_type', 'opening')
             
@@ -70,7 +74,9 @@ def welcome_view(request):
                 'balance': round(total_balance, 2),
                 'current_month_income': round(total_income, 2),
                 'current_month_expense': round(total_expense, 2),
-
+                'balance_last_month': round(balance_last_month, 2),
+                'income_last_month': round(income_last_month, 2),
+                'expense_last_month': round(expense_last_month, 2),
                 'percentage_balance': percentage_balance,
                 'percentage_income': percentage_income,
                 'percentage_expense': percentage_expense
@@ -78,11 +84,31 @@ def welcome_view(request):
         else:
             return {}
 
-    context = make_context()
+    def update_balances(self, request, *args, **kwargs):
+        current_month = datetime.date.today().month
+        current_year = datetime.date.today().year
+        visible_accounts = Account.objects.filter(owner=request.user, visible=True)
+        historic_balances = HistoricBalance.objects.filter(
+            account__owner=request.user, 
+            account__visible=True,
+            month=current_month, 
+            year=current_year
+        )
 
-    get_new_exchange_rate() # Ideally change this to a cron job, but it's a paid feature in PythonAnywhere so I'm leaving it as it is for now
+        if historic_balances.count() != visible_accounts.count():
+            for account in visible_accounts:
+                HistoricBalance.objects.get_or_create(
+                    account=account,
+                    month=current_month,
+                    year=current_year,
+                    defaults={'balance': account.current_balance}
+                )
 
-    return render(request, 'welcome.html', context=context)
+    def get(self, request, *args, **kwargs):
+        context = self.get_context_data(request)
+        get_new_exchange_rate()  # Ideally change this to a cron job, but it's a paid feature in PythonAnywhere so I'm leaving it as it is for now
+        self.update_balances(request)
+        return render(request, self.template_name, context=context)
 
 class LoginView(LoginView):
     template_name = 'login.html'
@@ -149,27 +175,40 @@ class AccountListView(GeneralListView):
         queryset = self.model.objects.filter(owner=self.request.user, visible=True).prefetch_related(
             'accounts_money_tags', 'transaction_from_account'
         ).select_related('currency')
-        return self.filter_class(self.request.GET, queryset=queryset)
-    
-    def get_context_data(self, **kwargs: Any):
-        context = super().get_context_data(**kwargs)
-        exchange_rates = ExchangeRate.objects.filter(active=True).values('currency1', 'currency2', 'exchange_rate')
-        current_month = datetime.date.today().month
-        current_year = datetime.date.today().year
 
-        def aggregate_currency(account, transaction_type):
+        search_params = self.request.session.get('previous_search') or self.request.GET
+        self.request.session['previous_search'] = search_params
+        return self.filter_class(search_params, queryset=queryset)
+    
+    def get_current_month(self):
+        return datetime.date.today().month
+    
+    def get_current_year(self):
+        return datetime.date.today().year
+    
+    def get_previous_month(self):
+        current_month = datetime.date.today().month
+        return current_month - 1 if current_month > 1 else 12
+    
+    def get_previous_year(self):
+        current_month = self.get_current_month()
+        current_year = self.get_current_year()
+        return current_year if current_month != 1 else current_year - 1
+    
+    def aggregate_currency(self, account, transaction_type, current_year=datetime.date.today().year, current_month=datetime.date.today().month):
             return account.transaction_from_account.filter(
                 date__year=current_year, date__month=current_month, transaction_type=transaction_type
             ).aggregate(total=Sum('amount'))['total'] or 0
-
-        object_list = []
-        for account in context['object_list']:
-            monthly_income_total = aggregate_currency(account, '+')
-            monthly_expense_total = aggregate_currency(account, '-')
+    
+    def get_object_list(self, object_list, exchange_rates):
+        result = []
+        for account in object_list:
+            monthly_income_total = self.aggregate_currency(account, '+')
+            monthly_expense_total = self.aggregate_currency(account, '-')
             assigned_total = account.accounts_money_tags.aggregate(total=Sum('amount'))['total'] or 0
             current_balance_total = account.current_balance
-            previous_month = current_month - 1 if current_month > 1 else 12
-            year = current_year if previous_month != 12 else current_year - 1
+            previous_month = self.get_previous_month()
+            year = self.get_previous_year()
          
             monthly_income = convert_all(
                 [{'total': monthly_income_total, 'currency': account.currency.pk}],
@@ -202,7 +241,7 @@ class AccountListView(GeneralListView):
                 self.request.user.main_currency.currency.pk, exchange_rates
             )
 
-            object_list.append({
+            result.append({
                 'account': account,
                 'monthly_income': {'account_currency': monthly_income_total, 'main_currency': monthly_income},
                 'monthly_expenses': {'account_currency': monthly_expense_total, 'main_currency': monthly_expense},
@@ -212,7 +251,23 @@ class AccountListView(GeneralListView):
                 'mc_bal': mc_bal
             })
 
+        return result
+    
+    def get_context_data(self, **kwargs: Any):
+        context = super().get_context_data(**kwargs)
+        exchange_rates = ExchangeRate.objects.filter(active=True).values('currency1', 'currency2', 'exchange_rate')
+
+        object_list = self.get_object_list(context['object_list'], exchange_rates)
+        
         context['object_list'] = object_list
+
+        previous_search = self.request.session.get('previous_search')
+        if previous_search:
+            context['filter'] = self.filter_class(previous_search)
+        
+        if(self.request.GET != {}):
+            self.request.session['previous_search'] = self.request.GET
+        
         return context
     
     def post(self, request):
@@ -229,6 +284,31 @@ class AccountListView(GeneralListView):
 
             messages.warning(request, "The account has been deleted successfully.")
             return redirect("/accounts")
+
+class AccountSumaryTableView(AccountListView):
+    template_name = 'partials/accounts/summary.html'
+    paginate_by = None
+
+    def get_context_data(self, **kwargs: Any):
+        qs = self.get_queryset().qs
+        context = {}
+        exchange_rates = ExchangeRate.objects.filter(active=True).values('currency1', 'currency2', 'exchange_rate')
+        
+        object_list = self.get_object_list(qs, exchange_rates)
+
+        total_income = sum([item['monthly_income']['main_currency'] for item in object_list])
+        total_expense = sum([item['monthly_expenses']['main_currency'] for item in object_list])
+        total_balance = sum([item['mc_bal'] for item in object_list])
+        total_assigned = sum([item['assigned']['main_currency'] for item in object_list])
+        total_not_assigned = sum([item['not_assigned']['main_currency'] for item in object_list])
+
+        context['total_in'] = total_income
+        context['total_out'] = total_expense
+        context['total_balance'] = total_balance
+        context['total_assigned'] = total_assigned
+        context['total_not_assigned'] = total_not_assigned
+
+        return context
 
 class AccountCreation(LoginRequiredMixin, FormView):
     form_class = AccountForm
@@ -739,7 +819,13 @@ def logout_view(request):
 
 def graph_by_accounts(request):
     accounts = AccountFilter(request.GET, queryset=Account.objects.filter(visible=True, owner=request.user).select_related('currency')).qs.annotate(total=F('current_balance')).values('name', 'currency', 'total')
-    accounts = convert_each(accounts, request.user.main_currency.pk)
+    accounts = sorted(
+        convert_each(
+            accounts, request.user.main_currency.pk
+        ), 
+        key=lambda x: x['total'], 
+        reverse=True
+    )
 
     return JsonResponse(accounts, safe=False)
 
