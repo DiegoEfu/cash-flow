@@ -107,7 +107,8 @@ class WelcomeView(View):
     def get(self, request, *args, **kwargs):
         context = self.get_context_data(request)
         get_new_exchange_rate()  # Ideally change this to a cron job, but it's a paid feature in PythonAnywhere so I'm leaving it as it is for now
-        self.update_balances(request)
+        if(request.user.is_authenticated):
+            self.update_balances(request)
         return render(request, self.template_name, context=context)
 
 class LoginView(LoginView):
