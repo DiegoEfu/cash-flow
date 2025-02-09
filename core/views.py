@@ -859,3 +859,23 @@ def daily_balance_graph(request, pk):
     balances.reverse()
 
     return JsonResponse(balances, safe=False)
+
+def tag_graph_by_account(request, pk):
+    account = Account.objects.get(pk=pk)
+    
+    balances = []
+    total_assigned = 0
+    money_tags = MoneyTag.objects.filter(account=account).values('tag__name', 'amount') 
+    for tag in money_tags:
+        balance = tag['amount']
+        name = tag['tag__name']
+        if balance > 0:
+            balances.append({'tag': name, 'balance': balance})
+
+    available_money = account.current_balance - sum([tag['amount'] for tag in money_tags])
+    if available_money > 0:
+        balances.append({'tag': "AVAILABLE", 'balance': available_money})
+
+    balances.sort(key=lambda x: x['balance'], reverse=True)
+
+    return JsonResponse(balances, safe=False)
