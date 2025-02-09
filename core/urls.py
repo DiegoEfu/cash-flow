@@ -29,6 +29,7 @@ urlpatterns = [
 
     # GRAPH VIEWS
     path('accounts/graph/', graph_by_accounts, name="account_graph_view"),
+    path('transactions/graph/<str:pk>/', daily_balance_graph, name="tag_graph_view"),
 
     # SUMMARY TABLE VIEWS
     path('accounts/summary-table/', AccountSumaryTableView.as_view(), name="account_summary_table"),
