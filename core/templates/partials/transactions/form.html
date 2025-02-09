@@ -11,7 +11,11 @@
         <h1 class="text-center text-4xl xl:text-4xl">Make a New Transaction</h1>
         {% endif %}
 
-        <h1 class="text-success text-center">Current Balance: {{account.currency.code}} {{account.current_balance}}</h1>
+        <h1 class="text-success text-center">Current Balance: {{account.currency.code}} <span id="current_balance">{{account.current_balance}}</span></h1>
+        {% if form.instance %}
+        <input type="hidden" name="previous-amount" value="{{form.instance.amount}}" />
+        <input type="hidden" name="previous-type" value="{{form.instance.transaction_type}}" />
+        {% endif %}
     </div>
     <div class="flex justify-center">
     </div>
@@ -44,6 +48,7 @@
         <div class="me-3">
             <label for="id_amount" class="form-label">Amount ({{account.currency.code}}):</label>
             {% render_field form.amount class="input input-bordered w-full" min="0.01" step="0.01" placeholder="Must be greater than or equal to 0.01" %}
+            <small class="text-xs">Final Balance:  <b class="text-error">{{account.currency.code}}  <span id="final_balance">{{account.current_balance}}</span></b></small>
         </div>
         {% if not form.instance.account %}
         <div>
@@ -84,4 +89,35 @@ uploadField.onchange = function() {
        this.value = "";
     }
 };
+
+const balanceField = document.getElementById("id_current_balance");
+const amountField = document.getElementById("id_amount");
+const typeField = document.getElementById("id_transaction_type");
+
+function updateFinalBalance() {
+    const currentBalance = parseFloat(document.getElementById("current_balance").textContent);
+    const previousAmount = parseFloat(document.getElementsByName("previous-amount")[0].value);
+    const previousType = document.getElementsByName("previous-type")[0].value;
+    const amount = parseFloat(amountField.value);
+
+    if (amount && typeField.value) {
+        let newBalance = currentBalance;
+        if (!isNaN(previousAmount) && previousType) {
+            if (previousType == '+') {
+                newBalance -= previousAmount;
+            } else {
+                newBalance += previousAmount;
+            }
+        }
+        newBalance += (typeField.value == '+' ? amount : -amount);
+
+        document.getElementById("final_balance").textContent = `${newBalance.toFixed(2)}`;
+    } else {
+        document.getElementById("final_balance").textContent = `${currentBalance.toFixed(2)}`;
+    }
+}
+
+amountField.onkeyup = updateFinalBalance;
+amountField.onchange = updateFinalBalance;
+typeField.onchange = updateFinalBalance;
 </script>
