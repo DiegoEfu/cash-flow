@@ -2,8 +2,12 @@
 {% load widget_tweaks %}
 {% load static %}
 
+{% block head %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.2.1/dist/chart.umd.min.js"></script>
+{% endblock %}
+
 {% block content %}
-<div class="p-8">
+<div class="p-1">
     <div class="grid xl:grid-cols-3 xs:grid-cols-1">
         <div class="flex justify-center items-center p-2">
             <a href="{% url 'account_list' %}" class="btn">Go back</a>
@@ -19,7 +23,7 @@
             <a hx-get="{% url 'tag_assignment' pk=account.pk %}" hx-target="main" class="btn btn-secondary">Assign Tags</a>
         </div>
     </div>
-
+    
     <div class="divider"></div>
 
     {% if messages %}
@@ -69,12 +73,7 @@
                 <label for="id_hold">On hold:</label> <br>
                 {% render_field filter.form.hold class="select select-bordered w-full" %}
               </div>
-
-              <div class="me-4">
-                <label for="id_hold">Internal:</label> <br>
-                {% render_field filter.form.internal class="select select-bordered w-full" %}
-              </div>
-
+              
               <div class="me-4">
                 <label for="id_hold">Tag:</label> <br>
                 {% render_field filter.form.tag class="select select-bordered w-full" %}
@@ -88,6 +87,20 @@
               <input type="submit" hidden>
             </div>
           </form>       
+        </div>
+    </div>
+    <div class="collapse bg-gray-900 mb-3">
+        <input type="checkbox" />
+        <div class="collapse-title text-xl font-medium">Graphs</div>
+        <div class="collapse-content overflow-y-auto max-h-96">
+            <div class="p-5 xs:flex-col sm:xflex-col md:flex justify-center items-center" style="min-width: max-content;">
+                <div class="md:w-1/2">
+                    <canvas id="transaction-graph"></canvas>
+                </div>
+                <div class="md:w-1/2">
+                    <canvas id="tag-graph"></canvas>
+                </div>
+            </div>
         </div>
     </div>
     <div class="collapse bg-gray-900 mb-3">
@@ -160,9 +173,103 @@
     <div id="loading-bars" class="htmx-indicator indicator-style">
       <span class="loading loading-bars loading-lg htmx-indicator"></span>
     </div>
-
-    
+    <input type="hidden" name="account" id="account" value="{{account.id}}">
 </div>
 
 <script src="{% static 'js/block-screen.js' %}"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const ctx = document.getElementById('transaction-graph').getContext('2d');
+    const account = document.getElementById('account').value;   
+
+    fetch(`/transactions/graph/${account}/`)
+        .then(response => response.json())
+        .then(data => {
+            const chart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: data.map(item => item.date), // Assuming the JSON response has a 'dates' array with the dates in each object
+                    datasets: [{
+                        label: 'Historic Balance of the last 30 days',
+                        data: data.map(item => item.balance), // Assuming the JSON response has a 'values' array
+                        borderColor: 'rgba(75, 192, 192, 1)',
+                        borderWidth: 2,
+                        fill: false,
+                        pointRadius: 4,
+                        pointHoverRadius: 6
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        x: {
+                            display: true,
+                            title: {
+                                display: true,
+                                text: 'Date'
+                            }
+                        },
+                        y: {
+                            display: true,
+                            title: {
+                                display: true,
+                                text: 'Balance'
+                            },
+                            suggestedMin: Math.min(...data.map(item => item.balance)) - 10,
+                            suggestedMax: Math.max(...data.map(item => item.balance)) + 10
+                        }
+                    }
+                }
+            });
+        })
+        .catch(error => console.error('Error fetching data:', error));
+
+    const ctxTag = document.getElementById('tag-graph').getContext('2d');
+
+    fetch(`/account/tag/graph/${account}/`)
+        .then(response => response.json())
+        .then(data => {
+            const chartTag = new Chart(ctxTag, {
+                type: 'pie',
+                data: {
+                    labels: data.map(item => item.tag), // Assuming the JSON response has a 'tags' array with the tag names in each object
+                    datasets: [{
+                        data: data.map(item => item.balance), // Assuming the JSON response has an 'amount' array with the amounts in each object
+                        backgroundColor: [
+                            'rgba(255, 99, 132, 0.2)',
+                            'rgba(54, 162, 235, 0.2)',
+                            'rgba(255, 206, 86, 0.2)',
+                            'rgba(75, 192, 192, 0.2)',
+                            'rgba(153, 102, 255, 0.2)',
+                            'rgba(255, 159, 64, 0.2)'
+                        ],
+                        borderColor: [
+                            'rgba(255, 99, 132, 1)',
+                            'rgba(54, 162, 235, 1)',
+                            'rgba(255, 206, 86, 1)',
+                            'rgba(75, 192, 192, 1)',
+                            'rgba(153, 102, 255, 1)',
+                            'rgba(255, 159, 64, 1)'
+                        ],
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                        },
+                        title: {
+                            display: true,
+                            text: 'Money Distribution by Tag'
+                        }
+                    }
+                }
+            });
+        })
+        .catch(error => console.error('Error fetching data:', error));
+});
+
+</script>
 {% endblock %}

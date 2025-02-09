@@ -107,7 +107,8 @@ class WelcomeView(View):
     def get(self, request, *args, **kwargs):
         context = self.get_context_data(request)
         get_new_exchange_rate()  # Ideally change this to a cron job, but it's a paid feature in PythonAnywhere so I'm leaving it as it is for now
-        self.update_balances(request)
+        if(request.user.is_authenticated):
+            self.update_balances(request)
         return render(request, self.template_name, context=context)
 
 class LoginView(LoginView):
@@ -834,3 +835,47 @@ def graph_by_tags(request):
     accounts = convert_each(accounts, request.user.main_currency.pk)
 
     return JsonResponse(accounts, safe=False)
+
+def daily_balance_graph(request, pk):
+    account = Account.objects.get(pk=pk)
+    today = datetime.date.today()
+
+    balances = []    
+    total_difference = 0
+    current_balance = account.current_balance
+    for n in range(30):
+        day = today - datetime.timedelta(days=n)
+        current_balance += total_difference
+        balances.append({
+            'date': day,
+            'balance': current_balance
+        })
+
+        total_difference = sum(
+            -amount if transaction_type == '+' else +amount 
+            for amount, transaction_type in 
+            account.transaction_from_account.filter(date__day=day.day, date__month=day.month, date__year=day.year).values_list('amount', 'transaction_type')
+        )
+    balances.reverse()
+
+    return JsonResponse(balances, safe=False)
+
+def tag_graph_by_account(request, pk):
+    account = Account.objects.get(pk=pk)
+    
+    balances = []
+    total_assigned = 0
+    money_tags = MoneyTag.objects.filter(account=account).values('tag__name', 'amount') 
+    for tag in money_tags:
+        balance = tag['amount']
+        name = tag['tag__name']
+        if balance > 0:
+            balances.append({'tag': name, 'balance': balance})
+
+    available_money = account.current_balance - sum([tag['amount'] for tag in money_tags])
+    if available_money > 0:
+        balances.append({'tag': "AVAILABLE", 'balance': available_money})
+
+    balances.sort(key=lambda x: x['balance'], reverse=True)
+
+    return JsonResponse(balances, safe=False)
