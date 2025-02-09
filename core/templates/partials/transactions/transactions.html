@@ -17,6 +17,26 @@
             <h3 id="balance" class="text-center text-success text-2xl xl:text-2xl">
                 <span data-tip="{{request.user.main_currency}} {{mc_account_balance}}" class="tooltip tooltip-success">{{account.currency.code}} {{account.current_balance}}</span>
             </h3>
+            <div class="grid text-sm md:grid-cols-3 xs:grid-cols-1">
+                <div>
+                    <h5 class="text-center">Start Balance:</h5>
+                    <h5 class="text-center text-success">
+                        <span data-tip="{{request.user.main_currency}} {{previous_balance_mc}}" class="tooltip tooltip-success">{{account.currency.code}} {{previous_balance}}</span>
+                    </h5>
+                </div>
+                <div>
+                    <h5 class="text-center">Assigned Money:</h5>
+                    <h5 class="text-center text-success">
+                        <span data-tip="{{request.user.main_currency}} {{assigned_mc}}" class="tooltip tooltip-success">{{account.currency.code}} {{assigned}}</span>
+                    </h5>
+                </div>
+                <div>
+                    <h5 class="text-center">Available Money:</h5>
+                    <h5 class="text-center text-error">
+                        <span data-tip="{{request.user.main_currency}} {{not_assigned_mc}}" class="tooltip tooltip-error">{{account.currency.code}} {{not_assigned}}</span>
+                    </h5>
+                </div>
+            </div>
         </div>
         <div class="flex justify-center items-center flex-col p-2">
             <a hx-get="{% url 'transaction_creation' pk=account.pk %}" hx-target="main" class="btn mb-2 btn-success">+ New Transaction</a>

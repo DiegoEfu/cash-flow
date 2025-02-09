@@ -407,6 +407,24 @@ class TransactionListView(GeneralListView):
                 'transaction': transaction,
             } for transaction in context['object_list']]
         
+        previous_month = datetime.datetime.now().month - 1 if datetime.datetime.now().month > 1 else 12
+        year = datetime.datetime.now().year if previous_month != 12 else datetime.datetime.now().year - 1
+        previous_balance = HistoricBalance.objects.filter(account=account, month=previous_month, year=year).values('balance').first()
+        if previous_balance is None:
+            previous_balance = 0
+        else:
+            previous_balance = previous_balance['balance']
+
+        context['previous_balance'] = previous_balance
+        context['previous_balance_mc'] = convert_all([{'total': previous_balance, 'currency': account.currency.pk}], self.request.user.main_currency.currency.pk, exchange_rates)
+        
+        assigned_total = account.accounts_money_tags.aggregate(total=Sum('amount'))['total'] or 0
+        context['assigned'] = assigned_total
+        context['assigned_mc'] = convert_all([{'total': assigned_total, 'currency': account.currency.pk}], self.request.user.main_currency.currency.pk, exchange_rates)
+        
+        not_assigned_total = account.current_balance - assigned_total
+        context['not_assigned'] = not_assigned_total
+        context['not_assigned_mc'] = convert_all([{'total': not_assigned_total, 'currency': account.currency.pk}], self.request.user.main_currency.currency.pk, exchange_rates)
         self.update_tags(account)
 
         return context
