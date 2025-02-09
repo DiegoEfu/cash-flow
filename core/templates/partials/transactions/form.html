@@ -117,6 +117,17 @@ function updateFinalBalance() {
     }
 }
 
+amountField.addEventListener('keyup', function(e) {
+    // Remove any non-numeric characters
+    this.value = this.value.replace(/[.,e]/g, '');
+
+    // Format as a bank amount by dividing by 100
+    if (this.value) {
+        const numericValue = parseFloat(this.value) / 100;
+        this.value = numericValue.toFixed(2);
+    }
+});
+
 amountField.onkeyup = updateFinalBalance;
 amountField.onchange = updateFinalBalance;
 typeField.onchange = updateFinalBalance;
