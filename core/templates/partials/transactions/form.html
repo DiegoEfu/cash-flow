@@ -1,4 +1,5 @@
 {% load widget_tweaks %}
+{% load static %}
  
 <div class="grid grid-cols-3">
     <div class="flex justify-center">
@@ -80,55 +81,4 @@
     </div>
 </form>
 
-<script>
-const uploadField = document.getElementById("id_voucher");
-
-uploadField.onchange = function() {
-    if(this.files[0].size > 0.5*1024*1024) {
-       alert("File should not exceed 0.5 MiB!");
-       this.value = "";
-    }
-};
-
-const balanceField = document.getElementById("id_current_balance");
-const amountField = document.getElementById("id_amount");
-const typeField = document.getElementById("id_transaction_type");
-
-function updateFinalBalance() {
-    const currentBalance = parseFloat(document.getElementById("current_balance").textContent);
-    const previousAmount = parseFloat(document.getElementsByName("previous-amount")[0].value);
-    const previousType = document.getElementsByName("previous-type")[0].value;
-    const amount = parseFloat(amountField.value);
-
-    if (amount && typeField.value) {
-        let newBalance = currentBalance;
-        if (!isNaN(previousAmount) && previousType) {
-            if (previousType == '+') {
-                newBalance -= previousAmount;
-            } else {
-                newBalance += previousAmount;
-            }
-        }
-        newBalance += (typeField.value == '+' ? amount : -amount);
-
-        document.getElementById("final_balance").textContent = `${newBalance.toFixed(2)}`;
-    } else {
-        document.getElementById("final_balance").textContent = `${currentBalance.toFixed(2)}`;
-    }
-}
-
-amountField.addEventListener('keyup', function(e) {
-    // Remove any non-numeric characters
-    this.value = this.value.replace(/[.,e]/g, '');
-
-    // Format as a bank amount by dividing by 100
-    if (this.value) {
-        const numericValue = parseFloat(this.value) / 100;
-        this.value = numericValue.toFixed(2);
-    }
-});
-
-amountField.onkeyup = updateFinalBalance;
-amountField.onchange = updateFinalBalance;
-typeField.onchange = updateFinalBalance;
-</script>
+<script src="{% static 'js/form.js' %}"></script>
