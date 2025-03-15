@@ -1,6 +1,6 @@
 from typing import Any
 from django.db.models.query import QuerySet
-from django.db.models import Sum, F, Prefetch, Case, When
+from django.db.models import Sum, F, Prefetch, Case, When, Q
 from django.db import transaction
 from django.http import HttpRequest, HttpResponse, HttpResponseForbidden, JsonResponse
 from django.shortcuts import render, redirect
@@ -443,7 +443,6 @@ class TransactionCreation(FormView):
 
             if not form.instance.hold:
                 amount = form.instance.amount if form.instance.transaction_type == '+' else -form.instance.amount
-                previous_balance = account.current_balance
                 account.current_balance += amount
                 account.save()
 
@@ -454,7 +453,9 @@ class TransactionCreation(FormView):
                         tag.amount += amount
                         tag.save()
                     else:
-                        money_tags = MoneyTag.objects.filter(tag=tag.tag, amount__gt=0).order_by(
+                        money_tags = MoneyTag.objects.filter(tag=tag.tag).filter(
+                            Q(account=account) | Q(amount__gt=0)
+                        ).order_by(
                             Case(
                                 When(account=account, then=0),
                                 default=1
@@ -462,19 +463,58 @@ class TransactionCreation(FormView):
                         )
 
                         amount = abs(amount)
+                        accounts = []
+                        print(money_tags)
                         for money_tag in money_tags:
                             converted_amount = convert_each([{'total': amount, 'currency': account.currency.pk}], money_tag.account.currency.pk)[0]['total']
                             subtracted_amount = min(money_tag.amount, converted_amount)
                             money_tag.amount -= subtracted_amount
                             money_tag.save()
+                            if(account.pk != money_tag.account.pk): 
+                                accounts.append(money_tag.account)
                             amount -= convert_each([{'total': subtracted_amount, 'currency': money_tag.account.currency.pk}], account.currency.pk)[0]['total']
                             
                             if(amount > 0):
-                                unassigned_money = previous_balance - account.accounts_money_tags.aggregate(total=Sum('amount'))['total']
-                                amount -= unassigned_money if amount >= unassigned_money else amount
+                                current_tags_total = MoneyTag.objects.filter(account=account).aggregate(total=Sum('amount'))['total'] or 0
+                                unassigned_money = max(0, money_tag.account.current_balance - current_tags_total)
+                                amount -= min(amount, unassigned_money)
+
+                            if amount and money_tag.account.pk == account.pk: # If money was not enough to be subtracted from the current account
+                                tags_to_subtract_from = []
+                                ref_amount = amount
+                                for mt in account.accounts_money_tags.all():
+                                    if ref_amount > 0:
+                                        subtracted_amount = min(mt.amount, ref_amount)
+                                        tags_to_subtract_from.append({'tag': mt.tag, 'amount': subtracted_amount})
+                                        mt.amount -= subtracted_amount
+                                        mt.save()
+                                        print(f"Subtracting {subtracted_amount} from tag {mt.tag}")
+                                        ref_amount -= subtracted_amount
+                                    else:
+                                        break
                             
-                            if(amount == 0):
+                            if(amount <= 0):
                                 break
+
+                         # This bit is for when the money was not enough to be subtracted from the current account, and needs to be compensated into other accounts
+                        if(len(tags_to_subtract_from) > 0):                        
+                            for account in accounts:
+                                availability = account.current_balance
+                                availability -= MoneyTag.objects.filter(account=account).aggregate(total=Sum('amount'))['total'] or 0
+
+                                if(availability > 0):
+                                    for i,tag in enumerate(tags_to_subtract_from):
+                                        converted_tag_amount = convert_each([{'total': tag['amount'], 'currency': tag['tag'].money_tags.get(account=account).account.currency.pk}], account.currency.pk)[0]['total']
+                                        if converted_tag_amount > 0: # Currency: current account currency
+                                            exchange_rate = tag['amount'] / converted_tag_amount
+                                            mt = MoneyTag.objects.get(tag=tag['tag'], account=account)
+                                            compensation = min(availability, converted_tag_amount)
+                                            mt.amount += compensation
+                                            tags_to_subtract_from[i]['amount'] -= compensation * exchange_rate
+                                            availability -= compensation
+                                            mt.save()
+
+                                            print(f"Adding {compensation} to tag {tag['tag']} on account {account} to compensate for lack of money")
 
                 historic_balance, created = HistoricBalance.objects.get_or_create(
                     account=account,
@@ -482,11 +522,8 @@ class TransactionCreation(FormView):
                     year=form.instance.date.year,
                     defaults={'balance': account.current_balance}
                 )
-
-                if created:
-                    historic_balance.balance = account.current_balance
-                else:
-                    historic_balance.balance += amount
+                historic_balance.balance = account.current_balance
+                
                 historic_balance.save()
 
             messages.success(self.request, "The Transaction has been made successfully.")            
