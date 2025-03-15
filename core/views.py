@@ -469,9 +469,10 @@ class TransactionCreation(FormView):
                             money_tag.save()
                             amount -= convert_each([{'total': subtracted_amount, 'currency': money_tag.account.currency.pk}], account.currency.pk)[0]['total']
                             
-                            if(amount > 0):
-                                unassigned_money = previous_balance - account.accounts_money_tags.aggregate(total=Sum('amount'))['total']
-                                amount -= unassigned_money if amount >= unassigned_money else amount
+                            if(amount > 0 and money_tag.account.pk == account.pk):
+                                current_tags_total = MoneyTag.objects.filter(account=account).aggregate(total=Sum('amount'))['total'] or 0
+                                unassigned_money = max(0, money_tag.account.current_balance - current_tags_total)
+                                amount -= min(amount, unassigned_money)
                             
                             if(amount == 0):
                                 break
