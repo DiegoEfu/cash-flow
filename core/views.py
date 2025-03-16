@@ -461,8 +461,8 @@ class TransactionCreation(FormView):
                     year=form.instance.date.year,
                     defaults={'balance': account.current_balance}
                 )
-                historic_balance.balance = account.current_balance
                 
+                historic_balance.balance = account.current_balance
                 historic_balance.save()
 
             messages.success(self.request, "The Transaction has been made successfully.")            
@@ -590,10 +590,7 @@ class TransactionUpdate(TransactionCreation):
                     defaults={'balance': account.current_balance}
                 )
 
-                if created:
-                    historic_balance.balance = account.current_balance
-                else:
-                    historic_balance.balance += amount - (transaction_instance.amount if transaction_instance.transaction_type == '+' else -transaction_instance.amount)
+                historic_balance.balance = account.current_balance
                 historic_balance.save()
 
             form.save()

@@ -112,6 +112,7 @@ class Transaction(models.Model):
     money_tag = models.ForeignKey(MoneyTag, on_delete=models.PROTECT, null=True, blank=True)
     voucher = models.FileField(blank=True, null=True, validators=[FileExtensionValidator(allowed_extensions=['pdf','jpg','png'])], upload_to="vouchers/")
     tag = models.ForeignKey(Tag, on_delete=models.PROTECT, null=True, blank=True)
+    user = models.ForeignKey(get_user_model(), on_delete=models.PROTECT, null=True)
 
     objects = TransactionQuerySet.as_manager()
 
