@@ -48,7 +48,7 @@ class TransactionForm(forms.ModelForm):
 
     class Meta:
         model = Transaction
-        exclude = ('id', 'from_account', 'exchange_rate')
+        exclude = ('id', 'from_account', 'exchange_rate', 'user')
 
 class TagForm(forms.ModelForm):
     class Meta:

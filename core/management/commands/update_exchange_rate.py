@@ -1,12 +1,35 @@
 from django.core.management.base import BaseCommand
-from core.models import ExchangeRate, Currency
+from core.models import ExchangeRate, Currency, Account, Transaction
+from django.contrib.auth import get_user_model
 from django.db import transaction
 
 from bs4 import BeautifulSoup
 import requests
 import urllib3
+import datetime
 
 class Command(BaseCommand):
+
+    def get_current_balance(self):
+        User = get_user_model()
+        users = User.objects.prefetch_related('main_currency__currency').filter(main_currency__isnull=False)
+        totals = {}
+        for user in users:
+            main_currency = user.main_currency
+            if not main_currency:
+                continue
+            accounts = Account.objects.filter(owner=user).prefetch_related('currency')
+            total_balance = 0
+            for account in accounts:
+                currency = account.currency
+                exchange_rate = ExchangeRate.objects.filter(currency1=currency, currency2=main_currency.currency, active=True).first()
+                if exchange_rate:
+                    total_balance += account.current_balance * exchange_rate.exchange_rate
+            
+            totals[user] = total_balance
+        
+        return totals
+
     def handle(self, *args, **options):
         # Desactiva advertencia por poblemas de SSL en la página del BCV
         urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning) 
@@ -65,6 +88,8 @@ class Command(BaseCommand):
         
         fecha = separar_fecha(soup.find('span', class_='date-display-single').text)
 
+        previous_balances = self.get_current_balance()
+        
         currencies = Currency.objects.in_bulk([1, 2, 3])
         dolar = currencies.get(1)
         euro = currencies.get(2)
@@ -83,3 +108,19 @@ class Command(BaseCommand):
             for currency1, currency2, rate in exchange_rate_pairs:
                 ExchangeRate.objects.filter(currency1=currency1, currency2=currency2, active=True).update(active=False)
                 ExchangeRate.objects.create(currency1=currency1, currency2=currency2, exchange_rate=rate, date=fecha)
+
+        with transaction.atomic():
+            new_balances = self.get_current_balance()
+
+            for user, balance in new_balances.items():
+                difference = balance - previous_balances[user]
+                if difference == 0:
+                    Transaction.objects.create(
+                        user=user,
+                        amount=abs(difference),
+                        description='Automatic Reconciliation of Exchange Rates Values',
+                        account=None,
+                        transaction_type='+',
+                        date=datetime.datetime.combine(datetime.date.today(), datetime.time.max),
+                    )
+                    print(f'User {user} had a balance of {previous_balances[user]:.2f} and now has {balance:.2f}, a difference of {difference:.2f}')
