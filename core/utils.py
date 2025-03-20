@@ -1,12 +1,13 @@
 from django.db import transaction
 from core.models import Currency, ExchangeRate, HistoricBalance
 from bs4 import BeautifulSoup
+import decimal
 import datetime
 import requests
 import urllib3
 
 def convert(amount, exchange_rate):
-    return round(amount / exchange_rate, 2)
+    return round(decimal.Decimal(amount) / decimal.Decimal(exchange_rate), 2)
 
 def convert_all(amounts, main_currency_pk, exchange_rates = None):
     acc = 0
@@ -24,7 +25,7 @@ def convert_all(amounts, main_currency_pk, exchange_rates = None):
             if not exchange_rate:
                 exchange_rate = 1/next((rate['exchange_rate'] for rate in exchange_rates if \
                                       rate['currency1'] == main_currency_pk and rate['currency2'] == amount['currency']
-                                    ), None)
+                                    ), 1)
             
             acc += convert(amount['total'], exchange_rate)
         else:

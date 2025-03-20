@@ -10,6 +10,8 @@ from django.contrib.auth.views import LoginView
 from django.views.generic import FormView, ListView
 from django.contrib import messages
 from django.views.generic import View
+from django.forms.models import model_to_dict
+
 from .utils import find_transaction_fitting_exchange_rate, convert_all, convert_each, calculate_percentage, get_new_exchange_rate
 
 from decimal import Decimal
@@ -394,15 +396,18 @@ class TransactionListView(GeneralListView):
         context = super().get_context_data(**kwargs)
         account = Account.objects.filter(pk=self.kwargs['pk']).select_related('currency').first()
         exchange_rates = ExchangeRate.objects.filter(active=True).values('currency1', 'currency2', 'exchange_rate')
+        main_pk = self.request.user.main_currency.currency.pk
         
         context['account'] = account
-        context['mc_account_balance'] = convert_all([{'total': account.current_balance, 'currency': account.currency.pk}], self.request.user.main_currency.currency.pk, exchange_rates)
+        context['mc_account_balance'] = convert_all([{'total': account.current_balance, 'currency': account.currency.pk}], main_pk, exchange_rates)
         context['object_list'] = [{
-                'mc_amount': convert_all([
-                    {
-                        'total': transaction.amount, 
-                        'currency': account.currency.pk,
-                    }],  self.request.user.main_currency.currency.pk, exchange_rates), 
+                'mc_amount': convert_each([{
+                'total': transaction.amount, 
+                'currency': transaction.from_account.currency.pk if transaction.from_account else main_pk
+            }], main_pk, [model_to_dict(transaction.exchange_rate)])[0]['total'] if transaction.exchange_rate and transaction.from_account else convert_all([{
+                'total': transaction.amount, 
+                'currency': transaction.from_account.currency.pk if transaction.from_account else main_pk
+            }], main_pk, exchange_rates), 
                 'fixed_pk': str(transaction.pk).replace('-', ''),
                 'transaction': transaction,
             } for transaction in context['object_list']]
@@ -416,15 +421,15 @@ class TransactionListView(GeneralListView):
             previous_balance = previous_balance['balance']
 
         context['previous_balance'] = previous_balance
-        context['previous_balance_mc'] = convert_all([{'total': previous_balance, 'currency': account.currency.pk}], self.request.user.main_currency.currency.pk, exchange_rates)
+        context['previous_balance_mc'] = convert_all([{'total': previous_balance, 'currency': account.currency.pk}], main_pk, exchange_rates)
         
         assigned_total = account.accounts_money_tags.aggregate(total=Sum('amount'))['total'] or 0
         context['assigned'] = assigned_total
-        context['assigned_mc'] = convert_all([{'total': assigned_total, 'currency': account.currency.pk}], self.request.user.main_currency.currency.pk, exchange_rates)
+        context['assigned_mc'] = convert_all([{'total': assigned_total, 'currency': account.currency.pk}], main_pk, exchange_rates)
         
         not_assigned_total = account.current_balance - assigned_total
         context['not_assigned'] = not_assigned_total
-        context['not_assigned_mc'] = convert_all([{'total': not_assigned_total, 'currency': account.currency.pk}], self.request.user.main_currency.currency.pk, exchange_rates)
+        context['not_assigned_mc'] = convert_all([{'total': not_assigned_total, 'currency': account.currency.pk}], main_pk, exchange_rates)
         self.update_tags(account)
 
         return context
@@ -556,6 +561,7 @@ class TransactionUpdate(TransactionCreation):
             transaction_instance = Transaction.objects.get(pk=self.kwargs['pk'])
             form = self.form_class(form.data, form.files, instance=transaction_instance)
             account = transaction_instance.from_account
+            form.instance.exchange_rate = find_transaction_fitting_exchange_rate(account.currency, self.request.user.main_currency.currency, form.instance.date)
 
             if not transaction_instance.hold: # If the transaction is not on hold, we need to update the balance
                 amount = transaction_instance.amount if transaction_instance.transaction_type == '+' else -transaction_instance.amount
@@ -656,7 +662,7 @@ class GeneralTransactionListView(GeneralListView):
             self.request.GET,
             queryset=self.model.objects.select_related(
                 'from_account', 'from_account__currency', 'tag', 'exchange_rate'
-            ).filter(from_account__owner=self.request.user)
+            ).filter(Q(from_account__owner=self.request.user) | Q(user=self.request.user))
         )
     
     def get_context_data(self, **kwargs: Any) -> dict[str, Any]:
@@ -666,7 +672,15 @@ class GeneralTransactionListView(GeneralListView):
         main_currency = self.request.user.main_currency.currency
 
         exchange_rates = ExchangeRate.objects.filter(active=True).values('currency1', 'currency2', 'exchange_rate')
-        context['object_list'] = [{'mc_amount': convert_all([{'total': transaction.amount, 'currency': transaction.from_account.currency.pk}], main_currency.pk, exchange_rates), 'transaction': transaction} for transaction in context['object_list']]
+        context['object_list'] = [{
+            'mc_amount': convert_each([{
+                'total': transaction.amount, 
+                'currency': transaction.from_account.currency.pk if transaction.from_account else transaction.user.main_currency.currency.pk
+            }], main_currency.pk, [model_to_dict(transaction.exchange_rate)])[0]['total'] if transaction.exchange_rate and transaction.from_account else convert_all([{
+                'total': transaction.amount, 
+                'currency': transaction.from_account.currency.pk if transaction.from_account else transaction.user.main_currency.currency.pk
+            }], main_currency.pk, exchange_rates), 
+            'transaction': transaction} for transaction in context['object_list']]
         context['current_balance']  = round(convert_all(amounts_balance, main_currency.pk), 2)
         context['main_currency']  = main_currency.code
         return context
