@@ -22,9 +22,11 @@ class Command(BaseCommand):
             total_balance = 0
             for account in accounts:
                 currency = account.currency
-                exchange_rate = ExchangeRate.objects.filter(currency1=currency, currency2=main_currency.currency, active=True).first()
+                exchange_rate = ExchangeRate.objects.filter(currency1=main_currency.currency, currency2=currency, active=True).last()
+                exchange_rate = exchange_rate.exchange_rate if exchange_rate else 1
+                print(f'{main_currency.currency} -> {currency} = {exchange_rate if exchange_rate else "N/A"}')
                 if exchange_rate:
-                    total_balance += account.current_balance * exchange_rate.exchange_rate
+                    total_balance += account.current_balance * exchange_rate
             
             totals[user] = total_balance
         
@@ -83,10 +85,10 @@ class Command(BaseCommand):
                 return round(float(currency_div.find('strong').text.replace(',', '.')), 6)
             return None
 
-        valor_dolar = get_currency_value(soup, 'dolar')
-        valor_euro = get_currency_value(soup, 'euro')
+        valor_dolar = 76.88
+        valor_euro = 90.81
         
-        fecha = separar_fecha(soup.find('span', class_='date-display-single').text)
+        fecha = '2025-03-25'
 
         previous_balances = self.get_current_balance()
         
@@ -114,12 +116,12 @@ class Command(BaseCommand):
 
             for user, balance in new_balances.items():
                 difference = balance - previous_balances[user]
-                if difference == 0:
+                if difference != 0:
                     Transaction.objects.create(
                         user=user,
                         amount=abs(difference),
                         description='Automatic Reconciliation of Exchange Rates Values',
-                        account=None,
+                        from_account=None,
                         transaction_type='+',
                         date=datetime.datetime.combine(datetime.date.today(), datetime.time.max),
                     )
