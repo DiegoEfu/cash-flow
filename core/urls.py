@@ -34,4 +34,7 @@ urlpatterns = [
 
     # SUMMARY TABLE VIEWS
     path('accounts/summary-table/', AccountSumaryTableView.as_view(), name="account_summary_table"),
+
+    # USER MANAGEMENT VIEWS
+    path('user/change-password/', ChangePasswordView.as_view(), name="change_password"),
 ]

@@ -4,6 +4,8 @@ from django.db.models import Sum, F, Prefetch, Case, When, Q
 from django.db import transaction
 from django.http import HttpRequest, HttpResponse, HttpResponseForbidden, JsonResponse
 from django.shortcuts import render, redirect
+from django.urls import reverse
+
 from django.contrib.auth import logout
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.views import LoginView
@@ -957,3 +959,33 @@ def tag_graph_by_account(request, pk):
     balances.sort(key=lambda x: x['balance'], reverse=True)
 
     return JsonResponse(balances, safe=False)
+
+# Password Views
+
+class ChangePasswordView(LoginRequiredMixin, FormView):
+    template_name = 'partials/user_management/change_password.html'
+    form_class = ChangePasswordForm
+
+    def get(self, request):
+        form = self.get_form()
+        return render(request, self.template_name, {'form': form})
+
+    def form_valid(self, form):
+        user = self.request.user
+        if user.check_password(form.cleaned_data['current_password']):
+            user.set_password(form.cleaned_data['new_password'])
+            user.save()
+            messages.success(self.request, 'Password changed successfully! Now log in again')
+            
+            response = HttpResponse(status=201)
+            response['HX-Location'] = reverse('login')
+            return response
+        else:
+            messages.error(self.request, 'The current password you introduced is not correct.')
+            return self.form_invalid(form)
+
+    def form_invalid(self, form):
+        if form.cleaned_data['new_password'] != form.cleaned_data['repeat_password']:
+            messages.error(self.request, 'The new passwords do not match.')
+    
+        return render(self.request, self.template_name, {'form': form})
