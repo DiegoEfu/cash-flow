@@ -143,6 +143,7 @@ class SignUpView(FormView):
             res = super().form_valid(form)
 
             form.instance.is_active = True
+            form.instance.username = form.instance.email
             form.save()
 
             MainCurrency.objects.create(user=form.instance, currency=Currency.objects.get(pk=self.request.POST['main_currency']))
