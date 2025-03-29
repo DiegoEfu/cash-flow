@@ -184,7 +184,7 @@ class AccountListView(GeneralListView):
             'accounts_money_tags', 'transaction_from_account'
         ).select_related('currency')
 
-        search_params = self.request.session.get('previous_search') or self.request.GET
+        search_params = self.request.GET or self.request.session.get('previous_search')
         self.request.session['previous_search'] = search_params
         return self.filter_class(search_params, queryset=queryset)
     
@@ -275,6 +275,8 @@ class AccountListView(GeneralListView):
         
         if(self.request.GET != {}):
             self.request.session['previous_search'] = self.request.GET
+
+        print(context['object_list'])
         
         return context
     
