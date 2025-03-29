@@ -37,7 +37,9 @@ class WelcomeView(View):
             amounts_balance = Account.objects.filter(owner=request.user, visible=True).annotate(total=Sum('current_balance')).values('currency', 'total')
             
             amounts = Transaction.objects.select_related('from_account__currency').filter(
-                hold=False, internal=False, date__month=datetime.date.today().month, date__year=datetime.date.today().year
+                hold=False, internal=False, date__month=datetime.date.today().month, date__year=datetime.date.today().year,
+                from_account__owner=request.user
+            ).exclude(from_account__visible=False).values('from_account', 'transaction_type', 'opening'
             ).annotate(total=Sum('amount'), currency=F('from_account__currency')
             ).values('total', 'transaction_type', 'opening', 'currency')
             
@@ -58,7 +60,7 @@ class WelcomeView(View):
             else:
                 balance_last_month = 0
             
-            transactions = Transaction.objects.select_related('from_account__currency').filter(hold=False, date__year=year, date__month=previous_month, internal=False) \
+            transactions = Transaction.objects.select_related('from_account__currency').filter(hold=False, from_account__owner=request.user, date__year=year, date__month=previous_month, internal=False) \
                 .annotate(total=Sum('amount'), currency=F('from_account__currency')) \
                 .values('total', 'currency', 'transaction_type', 'opening')
             
