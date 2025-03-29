@@ -117,7 +117,7 @@ class Transaction(models.Model):
     objects = TransactionQuerySet.as_manager()
 
     def __str__(self) -> str:
-        return f"Transaction ({self.transaction_type}) of {self.from_account.currency.code} {self.amount} on {self.date} from account {self.from_account} owned by {self.from_account.owner}."
+        return f"Transaction ({self.transaction_type}) of {self.from_account.currency.code if self.from_account else self.user.main_currency.currency.code} {self.amount} on {self.date} from account {self.from_account} owned by {self.from_account.owner}."
     
     class Meta:
         ordering = ("-date",)

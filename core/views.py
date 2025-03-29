@@ -677,6 +677,11 @@ class GeneralTransactionListView(GeneralListView):
 
         amounts_balance = Account.objects.filter(owner=self.request.user, visible=True).annotate(total=Sum('current_balance')).values('currency','total')
         main_currency = self.request.user.main_currency.currency
+        
+        if not self.request.GET.get('date_from'):
+            context['filter'] = self.filter_class({
+                'date_from': datetime.datetime.now() - datetime.timedelta(days=30),
+            })
 
         exchange_rates = ExchangeRate.objects.filter(active=True).values('currency1', 'currency2', 'exchange_rate')
         context['object_list'] = [{
@@ -689,6 +694,13 @@ class GeneralTransactionListView(GeneralListView):
             }], main_currency.pk, exchange_rates), 
             'transaction': transaction} for transaction in context['object_list']]
         context['current_balance']  = round(convert_all(amounts_balance, main_currency.pk), 2)
+        
+        qs = self.get_queryset().qs
+        transactions = qs.values('from_account__currency').annotate(total=Sum('amount')).values('total', 'from_account__currency', 'transaction_type', 'hold')
+        context['total_in'] = round(convert_all([{'total': transaction['total'], 'currency': transaction['from_account__currency']} for transaction in transactions.filter(transaction_type='+', hold=False)], main_currency.pk, exchange_rates), 2)
+        context['total_out'] = round(convert_all([{'total': transaction['total'], 'currency': transaction['from_account__currency']} for transaction in transactions.filter(transaction_type='-', hold=False)], main_currency.pk, exchange_rates), 2)
+        context['total_hold'] = round(convert_all([{'total': transaction['total'], 'currency': transaction['from_account__currency']} for transaction in transactions.filter(hold=True)], main_currency.pk, exchange_rates), 2)
+        
         context['main_currency']  = main_currency.code
         return context
 
