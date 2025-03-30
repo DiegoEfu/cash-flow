@@ -65,47 +65,43 @@
     </div>
 
     <div class="table-wrapper">
-        <table class="table table-xs w-full text-center" style="position:sticky;top:0;">
-            <thead>
-                <tr class="bg-gray-900 text-white">
+        <div class="table-wrapper" style="overflow-y: auto; max-height: 500px;">
+        <table class="table table-xs w-full text-center">
+            <thead class="sticky top-0 bg-gray-900 text-white z-10">
+                <tr>
                     <td>Account</td>
                     <th>Balance ({{request.user.main_currency}})</th>
                     <th>IN ({{request.user.main_currency}})</th>
                     <th>OUT ({{request.user.main_currency}})</th>
                 </tr>
             </thead>
+            <tbody id="items">
+                {% for balances in object_list %}
+                <tr>
+                    <td>{{balances.obj.account.name}} - {{balances.obj.month}}/{{balances.obj.year}}</td>
+                    <td><span class="tooltip" data-tip="{{balances.obj.account.currency.code}} {{balances.obj.balance}}">{{balances.balance}}</span></td>
+                    <td><span class="tooltip text-success" data-tip="{{balances.obj.account.currency.code}} {{balances.obj.balance}}">{{balances.total_in}}</span></td>
+                    <td><span class="tooltip text-error" data-tip="{{balances.obj.account.currency.code}} {{balances.obj.balance}}">{{balances.total_out}}</span></td>
+                </tr>
+                {% empty %}
+                <tr class="table-primary">
+                    <td colspan="4" class="text-center">The data for this period is not available.</td>
+                </tr>
+                {% endfor %}
+                {% if object_list %}
+                <tr class="bg-gray-900 text-white">
+                    <td class="text-right font-bold">Total:</td>
+                    <td class="text-center font-bold">{{totals.total_balance}}</td>
+                    <td class="text-center font-bold text-success">{{totals.total_in}}</td>
+                    <td class="text-center font-bold text-error">{{totals.total_out}}</td>
+                </tr>
+                <tr class="bg-gray-900 text-white">
+                    <td colspan="2" class="text-right font-bold">Total CashFlow:</td>
+                    <td colspan="2" class="text-center font-bold {% if total_cash_flow < 0 %} text-error {% elif total_cash_flow > 0 %} text-success {% endif %}">{{total_cash_flow}}</td>
+                </tr>
+                {% endif %}
+            </tbody>
         </table>
-        <div style="max-height: 70vh; overflow-y: auto;">
-            <table class="table table-xs w-full text-center">
-                <tbody id="items">
-                    {% for balances in object_list %}
-                    <tr>
-                        <td>{{balances.obj.account.name}} - {{balances.obj.month}}/{{balances.obj.year}}</td>
-                        <td><span class="tooltip" data-tip="{{balances.obj.account.currency.code}} {{balances.obj.balance}}">{{balances.balance}}</span></td>
-                        <td><span class="tooltip text-success" data-tip="{{balances.obj.account.currency.code}} {{balances.obj.balance}}">{{balances.total_in}}</span></td>
-                        <td><span class="tooltip text-error" data-tip="{{balances.obj.account.currency.code}} {{balances.obj.balance}}">{{balances.total_out}}</span></td>
-                    </tr>
-                    {% empty %}                     
-                    <tr class="table-primary">
-                        <td colspan="4" class="text-center">The data for this period is not available.</td>
-                    </tr>
-                    {% endfor %}
-                    {% if object_list %}
-                    <tr class="bg-gray-900 text-white">
-                        <td class="text-right font-bold">Total:</td>
-                        <td class="text-center font-bold">{{totals.total_balance}}</td>
-                        <td class="text-center font-bold text-success">{{totals.total_in}}</td>
-                        <td class="text-center font-bold text-error">{{totals.total_out}}</td>
-                    </tr>
-                    <tr class="bg-gray-900 text-white">
-                        <td colspan="2" class="text-right font-bold">Total CashFlow:</td>
-                        <td colspan="2" class="text-center font-bold 
-                        {% if total_cash_flow < 0 %} text-error {% elif total_cash_flow > 0 %} text-success {% endif %}">{{total_cash_flow}}</td>
-                    </tr>
-                    {% endif %}
-
-                </tbody>
-            </table>
         </div>
     </div>
 
