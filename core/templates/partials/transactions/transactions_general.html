@@ -5,7 +5,7 @@
 {% block content %}
 <div class="p-8">
     <div class="grid xl:grid-cols-5 xs:grid-cols-1">
-        <div class="flex justify-center items-center p-2">
+        <div class="flex justify-center items-center p-2 col-span-1">
             <a href="{% url 'welcome_view' %}" class="btn">Go back</a>
         </div>        
         <div class="p-1 col-span-3">
@@ -32,7 +32,8 @@
                 </div>
             </div>
         </div>
-        <div class="flex justify-center items-center flex-col p-2">
+        <div class="flex justify-center items-center flex-col p-2 col-span-1">
+          <a href="{% url 'historic_balance_list' %}" class="btn btn-primary">Historic Balance List</a>
         </div>
     </div>
 

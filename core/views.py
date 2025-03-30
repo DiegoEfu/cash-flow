@@ -1,6 +1,8 @@
 from typing import Any
 from django.db.models.query import QuerySet
-from django.db.models import Sum, F, Prefetch, Case, When, Q
+from django.db.models import Sum, F, Prefetch, Case, When, Q, Value
+from django.db.models.functions import Coalesce
+from django.db.models import DecimalField
 from django.db import transaction
 from django.http import HttpRequest, HttpResponse, HttpResponseForbidden, JsonResponse
 from django.shortcuts import render, redirect
@@ -76,7 +78,37 @@ class WelcomeView(View):
             percentage_income = calculate_percentage(total_income, income_last_month)
             percentage_expense = calculate_percentage(total_expense, expense_last_month)
 
-            return {
+        visible_accounts_count = Account.objects.filter(owner=request.user, visible=True).count()
+        current_historic_balances_count = HistoricBalance.objects.filter(
+            account__owner=request.user, 
+            account__visible=True,
+            month=previous_month, 
+            year=year
+        ).count()
+
+        if visible_accounts_count != current_historic_balances_count:
+            with transaction.atomic():
+                existing_account_ids = HistoricBalance.objects.filter(
+                    account__owner=request.user,
+                    account__visible=True,
+                    month=datetime.date.today().month,
+                    year=datetime.date.today().year
+                ).values_list('account_id', flat=True)
+                
+                missing_accounts = Account.objects.filter(
+                    owner=request.user, 
+                    visible=True
+                ).exclude(id__in=existing_account_ids)
+                
+                for account in missing_accounts:
+                    HistoricBalance.objects.create(
+                        account=account,
+                        balance=account.current_balance,
+                        month=datetime.date.today().month,
+                        year=datetime.date.today().year
+                    )
+
+        return {
                 'balance': round(total_balance, 2),
                 'current_month_income': round(total_income, 2),
                 'current_month_expense': round(total_expense, 2),
@@ -86,9 +118,7 @@ class WelcomeView(View):
                 'percentage_balance': percentage_balance,
                 'percentage_income': percentage_income,
                 'percentage_expense': percentage_expense
-            }
-        else:
-            return {}
+        }
 
     def update_balances(self, request, *args, **kwargs):
         current_month = datetime.date.today().month
@@ -1003,3 +1033,110 @@ class ChangePasswordView(LoginRequiredMixin, FormView):
             messages.error(self.request, 'The new passwords do not match.')
     
         return render(self.request, self.template_name, {'form': form})
+
+class HistoricBalanceListView(GeneralListView):
+    filter_class = HistoricBalanceFilter
+    model = HistoricBalance
+    template_name = 'partials/accounts/historic-balance.html'
+    paginate_by = 100
+
+    def get_queryset(self):
+        current_year = datetime.date.today().year
+        current_month = datetime.date.today().month
+        
+        query_dict = self.request.GET.copy()
+        
+        if 'year' not in query_dict:
+            query_dict['year'] = str(current_year)
+        if 'month' not in query_dict:
+            query_dict['month'] = str(current_month)
+        
+        return self.filter_class(
+            query_dict,
+            request=self.request,
+            queryset=self.model.objects.select_related('account').filter(account__owner=self.request.user)
+        )
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+
+        if self.request.GET.get('year')  and self.request.GET.get('month') :
+            exchange_rates = ExchangeRate.objects.filter(
+                date__year=int(self.request.GET.get('year', datetime.date.today().year)),
+                date__month=int(self.request.GET.get('month', datetime.date.today().month))
+            ).order_by(
+                'currency1', 'currency2', '-date'
+            ).values('currency1', 'currency2', 'exchange_rate')
+
+            unique_exchange_rates = {}
+            for rate in exchange_rates:
+                key = (rate['currency1'], rate['currency2'])
+                if key not in unique_exchange_rates:
+                    unique_exchange_rates[key] = rate
+
+            exchange_rates = list(unique_exchange_rates.values())
+        else:
+            exchange_rates = ExchangeRate.objects.filter(active=True).order_by(
+                'currency1', 'currency2', '-date'
+            ).values('currency1', 'currency2', 'exchange_rate')
+        
+        context['object_list'] = context['object_list'].annotate(
+            total_in=Coalesce(Sum('account__transaction_from_account__amount', output_field=DecimalField(), filter=Q(account__transaction_from_account__transaction_type='+', account__transaction_from_account__date__year=F('year'), account__transaction_from_account__date__month=F('month'), account__transaction_from_account__hold=False)), Value(Decimal(0))),
+            total_out=Coalesce(Sum('account__transaction_from_account__amount', output_field=DecimalField(), filter=Q(account__transaction_from_account__transaction_type='-', account__transaction_from_account__date__year=F('year'), account__transaction_from_account__date__month=F('month'), account__transaction_from_account__hold=False)), Value(Decimal(0))),
+            total_internal_in=Coalesce(Sum('account__transaction_from_account__amount', output_field=DecimalField(), filter=Q(account__transaction_from_account__transaction_type='+', account__transaction_from_account__date__year=F('year'), account__transaction_from_account__date__month=F('month'), account__transaction_from_account__hold=False, account__transaction_from_account__from_account__owner=F('account__owner'))), Value(Decimal(0))),
+            total_internal_out=Coalesce(Sum('account__transaction_from_account__amount', output_field=DecimalField(), filter=Q(account__transaction_from_account__transaction_type='-', account__transaction_from_account__date__year=F('year'), account__transaction_from_account__date__month=F('month'), account__transaction_from_account__hold=False, account__transaction_from_account__from_account__owner=F('account__owner'))), Value(Decimal(0))),
+            total_external_in=Coalesce(Sum('account__transaction_from_account__amount', output_field=DecimalField(), filter=Q(account__transaction_from_account__transaction_type='+', account__transaction_from_account__date__year=F('year'), account__transaction_from_account__date__month=F('month'), account__transaction_from_account__hold=False, account__transaction_from_account__from_account__owner__isnull=True)), Value(Decimal(0))),
+            total_external_out=Coalesce(Sum('account__transaction_from_account__amount', output_field=DecimalField(), filter=Q(account__transaction_from_account__transaction_type='-', account__transaction_from_account__date__year=F('year'), account__transaction_from_account__date__month=F('month'), account__transaction_from_account__hold=False, account__transaction_from_account__from_account__owner__isnull=True)), Value(Decimal(0)))
+        )
+
+        context['filter'] = self.filter_class(
+            self.request.GET if self.request.GET else {
+                'year': str(datetime.date.today().year),
+                'month': str(datetime.date.today().month)
+            },
+            request=self.request
+        )
+
+        context['object_list'] = [
+            {
+                'balance': convert_all(
+                    [{'total': obj.balance, 'currency': obj.account.currency.pk}],
+                    self.request.user.main_currency.currency.pk, exchange_rates
+                ),
+                'total_in': convert_all(
+                    [{'total': obj.total_in, 'currency': obj.account.currency.pk}],
+                    self.request.user.main_currency.currency.pk, exchange_rates
+                ),
+                'total_out': convert_all(
+                    [{'total': obj.total_out, 'currency': obj.account.currency.pk}],
+                    self.request.user.main_currency.currency.pk, exchange_rates
+                ),
+                'total_internal_in': convert_all(
+                    [{'total': obj.total_internal_in, 'currency': obj.account.currency.pk}],
+                    self.request.user.main_currency.currency.pk, exchange_rates
+                ),
+                'total_internal_out': convert_all(
+                    [{'total': obj.total_internal_out, 'currency': obj.account.currency.pk}],
+                    self.request.user.main_currency.currency.pk, exchange_rates
+                ),
+                'total_external_in': convert_all(
+                    [{'total': obj.total_external_in, 'currency': obj.account.currency.pk}],
+                    self.request.user.main_currency.currency.pk, exchange_rates
+                ),
+                'total_external_out': convert_all(
+                    [{'total': obj.total_external_out, 'currency': obj.account.currency.pk}],
+                    self.request.user.main_currency.currency.pk, exchange_rates
+                ),
+                'obj': obj
+            } for obj in context['object_list']
+        ]
+
+        context['totals'] = {
+            'total_balance': sum(obj['balance'] for obj in context['object_list']),
+            'total_in': sum(obj['total_in'] for obj in context['object_list']),
+            'total_out': sum(obj['total_out'] for obj in context['object_list'])
+        }
+
+        context['total_cash_flow'] = context['totals']['total_in'] - context['totals']['total_out']
+
+        return context
