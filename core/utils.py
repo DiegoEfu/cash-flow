@@ -57,6 +57,28 @@ def convert_each(amounts, main_currency_pk, exchange_rates = None):
 
     return new_amounts
 
+def convert_transactions(transactions, main_currency_pk, exchange_rates = None):
+    if not exchange_rates:
+        exchange_rates = ExchangeRate.objects.filter(active=True) \
+            .select_related('currency1', 'currency2').values('exchange_rate', 'currency1', 'currency2')
+    
+    new_transactions = []
+    for transaction in transactions:
+        new_transactions.append(transaction)
+        if transaction['from_account__currency'] != main_currency_pk:
+            exchange_rate = find_transaction_fitting_exchange_rate(
+                transaction['from_account__currency'], main_currency_pk, transaction['date']
+            )
+            if not exchange_rate:
+                exchange_rate = 1 / find_transaction_fitting_exchange_rate(
+                    main_currency_pk, transaction['from_account__currency'], transaction['date']
+                )
+            
+            new_transactions[-1]['mc_amount'] = convert(transaction['amount'], exchange_rate)
+            del new_transactions[-1]['from_account__currency']
+    
+    return new_transactions
+
 def calculate_percentage(current, comparison):
     try:
         percentage = round((current - comparison) /comparison * 100, 2)

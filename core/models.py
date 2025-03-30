@@ -1,7 +1,6 @@
 from django.db import models
-from django.core.validators import MinValueValidator
+from django.core.validators import MinValueValidator, MaxValueValidator
 from django.contrib.auth import get_user_model
-from finances.settings import MEDIA_ROOT
 
 from .mixins import StrAsNameMixin
 from .managers import *
@@ -50,7 +49,7 @@ class ExchangeRate(models.Model):
 class Account(StrAsNameMixin, models.Model):
     id = models.UUIDField(default=uuid.uuid4, primary_key=True)
     currency = models.ForeignKey(Currency, on_delete=models.PROTECT)
-    owner = models.ForeignKey(get_user_model(), on_delete=models.PROTECT, null=True)
+    owner = models.ForeignKey(get_user_model(), on_delete=models.PROTECT, null=True, related_name="accounts")
     name = models.CharField(max_length=50)
     description = models.CharField(max_length = 100)
     opening_time = models.DateTimeField(auto_now=True)
@@ -123,11 +122,26 @@ class Transaction(models.Model):
         ordering = ("-date",)
 
 class HistoricBalance(StrAsNameMixin, models.Model):
+    MONTHS = (
+        (1,"January"),
+        (2,"February"),
+        (3,"March"),
+        (4,"April"),
+        (5,"May"),
+        (6,"June"),
+        (7,"July"),
+        (8,"August"),
+        (9,"September"),
+        (10,"October"),
+        (11,"November"),
+        (12,"December")
+    )
+
     id = models.UUIDField(default=uuid.uuid4, primary_key=True)
     balance = models.DecimalField(max_digits=15, decimal_places=2)
-    month = models.PositiveSmallIntegerField()
+    month = models.PositiveSmallIntegerField(choices=MONTHS, validators=[MinValueValidator(1), MaxValueValidator(12)])
     year = models.PositiveSmallIntegerField()
     account = models.ForeignKey(Account, on_delete=models.PROTECT, related_name="account_historic_balance")
 
     class Meta:
-        ordering = ("-year","-month")
+        ordering = ("-year","-month","account__name")

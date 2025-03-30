@@ -132,10 +132,10 @@
         </div>
     </div>
 
-    <div class="table-wrapper">
+    <div class="table-wrapper" style="overflow-y: auto; max-height: 500px;">
         <table class="table table-xs w-full text-center">
-            <thead>
-                <tr class="bg-gray-900">
+            <thead class="sticky top-0 bg-gray-900 z-10">
+                <tr>
                     <td>ID</td>
                     <th>Date</th>
                     <th>Description</th>
@@ -180,11 +180,11 @@
                 </tr>
                 {% empty %}                     
                 <tr class="table-primary">
-                    <td colspan="7" class="text-center">No transactions found.</td>
+                    <td colspan="8" class="text-center">No transactions found.</td>
                 </tr>
                 {% endfor %}
                 {% if page_obj.has_next %}
-                <tr hx-trigger="revealed" hx-indicator="#loading-bars" hx-target="this" hx-swap="outerHTML" hx-select="#items > tr" hx-get="{% url 'transactions_list' pk=account.pk %}?page={{page_obj.next_page_number }}" hx-include=".input, .select"></tr>
+                <tr hx-trigger="intersect once" hx-indicator="#loading-bars" hx-target="this" hx-swap="outerHTML" hx-select="#items > tr" hx-get="{% url 'transactions_list' pk=account.pk %}?page={{page_obj.next_page_number }}" hx-include=".input, .select"></tr>
                 {% endif %}
             </tbody>
         </table>        
