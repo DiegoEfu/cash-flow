@@ -11,20 +11,26 @@
         <div class="p-1 col-span-3">
             <h1 class="text-center text-4xl xl:text-4xl">TOTAL TRANSACTIONS </h1>
             <h3 id="balance" class="text-center text-success text-2xl xl:text-2xl">Current Balance: {{main_currency}} {{current_balance}}</h3>
-            <div class="grid xl:grid-cols-3 xs:grid-cols-1 gap-4">
-                <div class="card bg-base-100 shadow-xl">
+            <div class="w-full mx-auto grid xl:grid-cols-3 xs:grid-cols-1 gap-4">
+                <div class="card w-full bg-base-100 shadow-xl">
                     <div class="card-body">
                         <h2 class="card-title text-success text-sm">Total Income <br></h2>
                         <p class="text-base font-bold totals" id="total_in" hx-swap-oob="true">{{main_currency}} {{total_in}}</p>
                     </div>
                 </div>
-                <div class="card bg-base-100 shadow-xl">
+                <div class="card w-full bg-base-100 shadow-xl">
                     <div class="card-body">
                         <h2 class="card-title text-error text-sm">Total Expenses <br> </h2>
                         <p class="text-base font-bold totals" id="total_out" hx-swap-oob="true">{{main_currency}} {{total_out}}</p>
                     </div>
                 </div>
-                <div class="card bg-base-100 shadow-xl">
+                <div class="card w-full bg-base-100 shadow-xl">
+                    <div class="card-body">
+                        <h2 class="card-title text-info text-sm">Total Cash Flow <br></h2>
+                        <p class="text-base font-bold totals" id="total_cash_flow" hx-swap-oob="true">{{main_currency}} {{total_cash_flow}}</p>
+                    </div>
+                </div>
+                <div class="card w-full bg-base-100 shadow-xl">
                     <div class="card-body">
                         <h2 class="card-title text-warning text-sm">Total On Hold <br></h2>
                         <p class="text-base font-bold totals" id="total_hold" hx-swap-oob="true">{{main_currency}} {{total_hold}}</p>
@@ -40,7 +46,7 @@
     <div class="divider"></div>
 
     <div class="collapse bg-gray-900 mb-3">
-      <input type="checkbox" />
+      <input type="checkbox" checked />
       <div class="collapse-title text-xl font-medium">Filters</div>
         <div class="collapse-content">
           <form hx-get="{% url 'general_transactions_list' %}" hx-select="#items, .totals" hx-target="#items" hx-swap="outerHTML" hx-indicator="#loading-bars" hx-trigger="submit, change, keyup delay:1s">
@@ -85,6 +91,11 @@
                 {% render_field filter.form.id__icontains class="input input-bordered w-full" %}
               </div>
 
+              <div class="me-4">
+                <label for="id_reference__icontains">Reference contains:</label> <br>
+                {% render_field filter.form.reference__icontains class="input input-bordered w-full" %}
+              </div>
+
               <input type="submit" hidden>
             </div>
           </form>       
@@ -98,51 +109,53 @@
     </div>
 
     <div class="table-wrapper">
-        <table class="table table-xs w-full text-center" >
-            <thead>
-                <tr class="bg-gray-900">
-                    <th>ID</th>
-                    <th>Date</th>
-                    <th>Account</th>
-                    <th>Description</th>
-                    <th>Type</th>
-                    <th>Origin</th>
-                    <th>Amount ({{main_currency}})</th>
-                    <th>Reference</th>
-                </tr>
+        <div style="height: calc(100vh - 12rem); overflow-y: scroll;">
+          <table class="table table-xs w-full text-center" >
+            <thead class="sticky top-0 z-10" style="background-color: #1A202C;">
+              <tr class="bg-gray-900">
+                <th>ID</th>
+                <th>Date</th>
+                <th>Account</th>
+                <th>Description</th>
+                <th>Type</th>
+                <th>Origin</th>
+                <th>Amount ({{main_currency}})</th>
+                <th>Reference</th>
+              </tr>
             </thead>
             <tbody id="items">
-                {% for transaction in object_list %}
-                <tr>
-                    <td>{{transaction.transaction.pk}}</td>
-                    <td>{{transaction.transaction.date}} {% if transaction.transaction.hold %} <span class="badge badge-warning">(On Hold)</span> {%endif%}</td>
-                    <td>{{transaction.transaction.from_account}}</td>
-                    <td  data-tip="{{transaction.transaction.tag|default:''}}" class="{% if transaction.transaction.tag %}tooltip{% endif %}">{{transaction.transaction.description|default:'-'}}</td>
-                    <td><span class="badge badge-{% if transaction.transaction.transaction_type == '+' %}success{% else %}error{% endif %}">{% if transaction.transaction.transaction_type == '+' %}INCOME{% else %}EXPENSE{% endif %}</span> </td>
-                    <td>
-                        {% if transaction.transaction.internal %}
-                        <span class="badge badge-info tooltip tooltip-bottom" data-tip="Internal Operation - Not accountable">Internal</span>
-                        {% else %}
-                        <span class="badge badge-warning tooltip tooltip-bottom" data-tip="External Operation - Accountable">External</span>
-                        {% endif %}  
-                    </td>
-                    <td>
-                      <span class="tooltip" data-tip="{{transaction.transaction.from_account.currency.code|default:main_currency}} {{transaction.transaction.amount}}">
-                        {% if transaction.transaction.transaction_type == '-' %}-{%endif%}{{transaction.mc_amount}}
-                      </span>
-                    </td>
-                    <td>{{transaction.transaction.reference|default:'-'}}</td>
-                </tr>
-                {% empty %}                     
-                <tr class="table-primary">
-                    <td colspan="7" class="text-center">No transactions found.</td>
-                </tr>
-                {% endfor %}
-                {% if page_obj.has_next %}
-                <tr hx-indicator="#loading-bars" hx-trigger="revealed" hx-target="this" hx-swap="outerHTML" hx-select="#items > tr" hx-get="{% url 'general_transactions_list' %}?page={{page_obj.next_page_number }}" hx-include=".input, .select"></tr>
-                {% endif %}
+              {% for transaction in object_list %}
+              <tr>
+                <td>{{transaction.transaction.pk}}</td>
+                <td>{{transaction.transaction.date}} {% if transaction.transaction.hold %} <span class="badge badge-warning">(On Hold)</span> {%endif%}</td>
+                <td>{{transaction.transaction.from_account}}</td>
+                <td  data-tip="{{transaction.transaction.tag|default:''}}" class="{% if transaction.transaction.tag %}tooltip{% endif %}">{{transaction.transaction.description|default:'-'}}</td>
+                <td><span class="badge badge-{% if transaction.transaction.transaction_type == '+' %}success{% else %}error{% endif %}">{% if transaction.transaction.transaction_type == '+' %}INCOME{% else %}EXPENSE{% endif %}</span> </td>
+                <td>
+                  {% if transaction.transaction.internal %}
+                  <span class="badge badge-info tooltip tooltip-bottom" data-tip="Internal Operation - Not accountable">Internal</span>
+                  {% else %}
+                  <span class="badge badge-warning tooltip tooltip-bottom" data-tip="External Operation - Accountable">External</span>
+                  {% endif %}
+                </td>
+                <td class="xs:w-auto sm:w-auto md:w-auto">
+                  <span class="tooltip" data-tip="{{transaction.transaction.from_account.currency.code|default:main_currency}} {{transaction.transaction.amount}}">
+                    {% if transaction.transaction.transaction_type == '-' %}-{%endif%}{{transaction.mc_amount}}
+                  </span>
+                </td>
+                <td class="xs:w-auto sm:w-auto md:w-auto">{{transaction.transaction.reference|default:'-'}}</td>
+              </tr>
+              {% empty %}
+              <tr class="table-primary">
+                  <td colspan="8" class="text-center">No transactions found.</td>
+              </tr>
+              {% endfor %}
+              {% if page_obj.has_next %}
+              <tr hx-indicator="#loading-bars" hx-trigger="intersect once" hx-target="this" hx-swap="outerHTML" hx-select="#items > tr" hx-get="{% url 'general_transactions_list' %}?page={{page_obj.next_page_number }}" hx-include=".input, .select"></tr>
+              {% endif %}
             </tbody>
-        </table>        
+          </table>
+        </div>
     </div>
 
     <div id="loading-bars" class="htmx-indicator indicator-style">
