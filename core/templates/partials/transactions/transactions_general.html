@@ -4,13 +4,33 @@
 
 {% block content %}
 <div class="p-8">
-    <div class="grid xl:grid-cols-3 xs:grid-cols-1">
+    <div class="grid xl:grid-cols-5 xs:grid-cols-1">
         <div class="flex justify-center items-center p-2">
             <a href="{% url 'welcome_view' %}" class="btn">Go back</a>
         </div>        
-        <div class="p-2">
-            <h1 class="text-center text-4xl xl:text-4xl">TOTAL TRANSACTIONS</h1>
+        <div class="p-1 col-span-3">
+            <h1 class="text-center text-4xl xl:text-4xl">TOTAL TRANSACTIONS </h1>
             <h3 id="balance" class="text-center text-success text-2xl xl:text-2xl">Current Balance: {{main_currency}} {{current_balance}}</h3>
+            <div class="grid xl:grid-cols-3 xs:grid-cols-1 gap-4">
+                <div class="card bg-base-100 shadow-xl">
+                    <div class="card-body">
+                        <h2 class="card-title text-success text-sm">Total Income <br></h2>
+                        <p class="text-base font-bold totals" id="total_in" hx-swap-oob="true">{{main_currency}} {{total_in}}</p>
+                    </div>
+                </div>
+                <div class="card bg-base-100 shadow-xl">
+                    <div class="card-body">
+                        <h2 class="card-title text-error text-sm">Total Expenses <br> </h2>
+                        <p class="text-base font-bold totals" id="total_out" hx-swap-oob="true">{{main_currency}} {{total_out}}</p>
+                    </div>
+                </div>
+                <div class="card bg-base-100 shadow-xl">
+                    <div class="card-body">
+                        <h2 class="card-title text-warning text-sm">Total On Hold <br></h2>
+                        <p class="text-base font-bold totals" id="total_hold" hx-swap-oob="true">{{main_currency}} {{total_hold}}</p>
+                    </div>
+                </div>
+            </div>
         </div>
         <div class="flex justify-center items-center flex-col p-2">
         </div>
@@ -22,7 +42,7 @@
       <input type="checkbox" />
       <div class="collapse-title text-xl font-medium">Filters</div>
         <div class="collapse-content">
-          <form hx-get="{% url 'general_transactions_list' %}" hx-select="#items" hx-target="#items" hx-swap="outerHTML" hx-indicator="#loading-bars" hx-trigger="submit, change, keyup delay:1s">
+          <form hx-get="{% url 'general_transactions_list' %}" hx-select="#items, .totals" hx-target="#items" hx-swap="outerHTML" hx-indicator="#loading-bars" hx-trigger="submit, change, keyup delay:1s">
             <div class="grid lg:grid-cols-3 md:grid-cols-1 sm:grid-cols-1 xs:grid-cols-1">
               <div class="me-4">
                 <label for="id_date_from">From Date:</label> <br>
@@ -106,7 +126,7 @@
                         {% endif %}  
                     </td>
                     <td>
-                      <span class="tooltip" data-tip="{{transaction.transaction.from_account.currency.code}} {{transaction.transaction.amount}}">
+                      <span class="tooltip" data-tip="{{transaction.transaction.from_account.currency.code|default:main_currency}} {{transaction.transaction.amount}}">
                         {% if transaction.transaction.transaction_type == '-' %}-{%endif%}{{transaction.mc_amount}}
                       </span>
                     </td>

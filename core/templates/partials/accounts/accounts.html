@@ -66,6 +66,16 @@
         </div>
     </div>
 
+    <div class="collapse bg-gray-900">
+      <input type="checkbox" />
+      <div class="collapse-title text-xl font-medium">Reports</div>
+      <div class="collapse-content">
+        <a href="{% url 'index_report' %}" class="btn btn-primary">Generate Cash Flow by Month (PDF)</a>
+        <a href="#" class="btn btn-warning">Generate Cash Flow by Year (PDF)</a>
+        <a href="#" class="btn btn-secondary">Generic Account List with Current Totals (PDF)</a>
+      </div>
+    </div>
+
     <div id="items" class="grid grid-cols-1 m-2">
         {% for account in object_list %}
         <div class="stats shadow mb-3 border">
@@ -131,15 +141,6 @@
 
     <div id="loading-bars" class="htmx-indicator indicator-style">
       <span class="loading loading-bars loading-lg htmx-indicator"></span>
-    </div>
-
-    <div tabindex="0" class="collapse border-gray-900 bg-gray-900 border">
-        <div class="collapse-title text-xl font-medium">Reports</div>
-        <div class="collapse-content">
-          <a href="#" class="btn btn-primary">Generate Cash Flow by Month (PDF)</a>
-          <a href="#" class="btn btn-warning">Generate Cash Flow by Year (PDF)</a>
-          <a href="#" class="btn btn-secondary">Generic Account List with Current Totals (PDF)</a>
-        </div>
     </div>
 </div>
 

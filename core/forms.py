@@ -60,4 +60,32 @@ class MoneyTagForm(forms.ModelForm):
         model = MoneyTag
         exclude = ('account','tag')
 
+class ChangePasswordForm(forms.Form):
+    current_password = forms.CharField(
+        widget=forms.PasswordInput,
+        label="Current Password",
+        min_length=8
+    )
+    new_password = forms.CharField(
+        widget=forms.PasswordInput,
+        label="New Password",
+        min_length=8
+    )
+    repeat_password = forms.CharField(
+        widget=forms.PasswordInput,
+        label="Repeat New Password",
+        min_length=8
+    )
+
+    def clean(self):
+        cleaned_data = super().clean()
+        new_password = cleaned_data.get('new_password')
+        repeat_password = cleaned_data.get('repeat_password')
+
+        if new_password != repeat_password:
+            raise forms.ValidationError("The new passwords must match.")
+
+        return cleaned_data
+
+
 money_tag_formset = forms.modelformset_factory(MoneyTag, form=MoneyTagForm)

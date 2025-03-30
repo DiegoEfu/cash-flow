@@ -4,6 +4,8 @@ from django.db.models import Sum, F, Prefetch, Case, When, Q
 from django.db import transaction
 from django.http import HttpRequest, HttpResponse, HttpResponseForbidden, JsonResponse
 from django.shortcuts import render, redirect
+from django.urls import reverse
+
 from django.contrib.auth import logout
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.views import LoginView
@@ -182,7 +184,7 @@ class AccountListView(GeneralListView):
             'accounts_money_tags', 'transaction_from_account'
         ).select_related('currency')
 
-        search_params = self.request.session.get('previous_search') or self.request.GET
+        search_params = self.request.GET or self.request.session.get('previous_search')
         self.request.session['previous_search'] = search_params
         return self.filter_class(search_params, queryset=queryset)
     
@@ -273,6 +275,8 @@ class AccountListView(GeneralListView):
         
         if(self.request.GET != {}):
             self.request.session['previous_search'] = self.request.GET
+
+        print(context['object_list'])
         
         return context
     
@@ -673,6 +677,11 @@ class GeneralTransactionListView(GeneralListView):
 
         amounts_balance = Account.objects.filter(owner=self.request.user, visible=True).annotate(total=Sum('current_balance')).values('currency','total')
         main_currency = self.request.user.main_currency.currency
+        
+        if not self.request.GET.get('date_from'):
+            context['filter'] = self.filter_class({
+                'date_from': datetime.datetime.now() - datetime.timedelta(days=30),
+            })
 
         exchange_rates = ExchangeRate.objects.filter(active=True).values('currency1', 'currency2', 'exchange_rate')
         context['object_list'] = [{
@@ -685,6 +694,13 @@ class GeneralTransactionListView(GeneralListView):
             }], main_currency.pk, exchange_rates), 
             'transaction': transaction} for transaction in context['object_list']]
         context['current_balance']  = round(convert_all(amounts_balance, main_currency.pk), 2)
+        
+        qs = self.get_queryset().qs
+        transactions = qs.values('from_account__currency').annotate(total=Sum('amount')).values('total', 'from_account__currency', 'transaction_type', 'hold')
+        context['total_in'] = round(convert_all([{'total': transaction['total'], 'currency': transaction['from_account__currency']} for transaction in transactions.filter(transaction_type='+', hold=False)], main_currency.pk, exchange_rates), 2)
+        context['total_out'] = round(convert_all([{'total': transaction['total'], 'currency': transaction['from_account__currency']} for transaction in transactions.filter(transaction_type='-', hold=False)], main_currency.pk, exchange_rates), 2)
+        context['total_hold'] = round(convert_all([{'total': transaction['total'], 'currency': transaction['from_account__currency']} for transaction in transactions.filter(hold=True)], main_currency.pk, exchange_rates), 2)
+        
         context['main_currency']  = main_currency.code
         return context
 
@@ -957,3 +973,33 @@ def tag_graph_by_account(request, pk):
     balances.sort(key=lambda x: x['balance'], reverse=True)
 
     return JsonResponse(balances, safe=False)
+
+# Password Views
+
+class ChangePasswordView(LoginRequiredMixin, FormView):
+    template_name = 'partials/user_management/change_password.html'
+    form_class = ChangePasswordForm
+
+    def get(self, request):
+        form = self.get_form()
+        return render(request, self.template_name, {'form': form})
+
+    def form_valid(self, form):
+        user = self.request.user
+        if user.check_password(form.cleaned_data['current_password']):
+            user.set_password(form.cleaned_data['new_password'])
+            user.save()
+            messages.success(self.request, 'Password changed successfully! Now log in again')
+            
+            response = HttpResponse(status=201)
+            response['HX-Location'] = reverse('login')
+            return response
+        else:
+            messages.error(self.request, 'The current password you introduced is not correct.')
+            return self.form_invalid(form)
+
+    def form_invalid(self, form):
+        if form.cleaned_data['new_password'] != form.cleaned_data['repeat_password']:
+            messages.error(self.request, 'The new passwords do not match.')
+    
+        return render(self.request, self.template_name, {'form': form})
