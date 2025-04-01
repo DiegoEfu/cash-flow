@@ -129,17 +129,17 @@
                 <td>{{transaction.transaction.pk}}</td>
                 <td>{{transaction.transaction.date}} {% if transaction.transaction.hold %} <span class="badge badge-warning">(On Hold)</span> {%endif%}</td>
                 <td>{{transaction.transaction.from_account}}</td>
-                <td  data-tip="{{transaction.transaction.tag|default:''}}" class="{% if transaction.transaction.tag %}tooltip{% endif %}">{{transaction.transaction.description|default:'-'}}</td>
+                <td  data-tip="{{transaction.transaction.tag|default:''}}" class="{% if transaction.transaction.tag %}tooltip tooltip-left{% endif %}">{{transaction.transaction.description|default:'-'}}</td>
                 <td><span class="badge badge-{% if transaction.transaction.transaction_type == '+' %}success{% else %}error{% endif %}">{% if transaction.transaction.transaction_type == '+' %}INCOME{% else %}EXPENSE{% endif %}</span> </td>
                 <td>
                   {% if transaction.transaction.internal %}
-                  <span class="badge badge-info tooltip tooltip-bottom" data-tip="Internal Operation - Not accountable">Internal</span>
+                  <span class="badge badge-info tooltip tooltip-left" data-tip="Internal Operation - Not accountable">Internal</span>
                   {% else %}
-                  <span class="badge badge-warning tooltip tooltip-bottom" data-tip="External Operation - Accountable">External</span>
+                  <span class="badge badge-warning tooltip tooltip-left" data-tip="External Operation - Accountable">External</span>
                   {% endif %}
                 </td>
                 <td class="xs:w-auto sm:w-auto md:w-auto">
-                  <span class="tooltip" data-tip="{{transaction.transaction.from_account.currency.code|default:main_currency}} {{transaction.transaction.amount}}">
+                  <span class="tooltip tooltip-left" data-tip="{{transaction.transaction.from_account.currency.code|default:main_currency}} {{transaction.transaction.amount}}">
                     {% if transaction.transaction.transaction_type == '-' %}-{%endif%}{{transaction.mc_amount}}
                   </span>
                 </td>
