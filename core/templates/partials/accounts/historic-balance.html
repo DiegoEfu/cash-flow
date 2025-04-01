@@ -65,9 +65,9 @@
     </div>
 
     <div class="table-wrapper">
-        <div class="table-wrapper" style="overflow-y: auto; max-height: 500px;">
+        <div class="table-wrapper">
         <table class="table table-xs w-full text-center">
-            <thead class="sticky top-0 bg-gray-900 text-white z-10">
+            <thead>
                 <tr>
                     <td>Account</td>
                     <th>Balance ({{request.user.main_currency}})</th>
@@ -79,9 +79,9 @@
                 {% for balances in object_list %}
                 <tr>
                     <td>{{balances.obj.account.name}} - {{balances.obj.month}}/{{balances.obj.year}}</td>
-                    <td><span class="tooltip" data-tip="{{balances.obj.account.currency.code}} {{balances.obj.balance}}">{{balances.balance}}</span></td>
-                    <td><span class="tooltip text-success" data-tip="{{balances.obj.account.currency.code}} {{balances.obj.balance}}">{{balances.total_in}}</span></td>
-                    <td><span class="tooltip text-error" data-tip="{{balances.obj.account.currency.code}} {{balances.obj.balance}}">{{balances.total_out}}</span></td>
+                    <td><span class="tooltip tooltip-left" data-tip="{{balances.obj.account.currency.code}} {{balances.obj.balance}}">{{balances.balance}}</span></td>
+                    <td><span class="tooltip tooltip-left text-success" data-tip="{{balances.obj.account.currency.code}} {{balances.obj.total_in}}">{{balances.total_in}}</span></td>
+                    <td><span class="tooltip tooltip-left text-error" data-tip="{{balances.obj.account.currency.code}} {{balances.obj.total_out}}">{{balances.total_out}}</span></td>
                 </tr>
                 {% empty %}
                 <tr class="table-primary">

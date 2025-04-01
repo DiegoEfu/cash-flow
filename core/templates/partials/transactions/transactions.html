@@ -27,13 +27,13 @@
                 <div>
                     <h5 class="text-center">Assigned Money:</h5>
                     <h5 class="text-center text-success">
-                        <span data-tip="{{request.user.main_currency}} {{assigned_mc}}" id="assigned" hx-swap-oob="true" class="tooltip tooltip-success">{{account.currency.code}} {{assigned}}</span>
+                        <span data-tip="{{request.user.main_currency}} {{assigned_mc}}" id="assigned" class="tooltip tooltip-success">{{account.currency.code}} {{assigned}}</span>
                     </h5>
                 </div>
                 <div>
                     <h5 class="text-center">Available Money:</h5>
                     <h5 class="text-center text-error">
-                        <span data-tip="{{request.user.main_currency}} {{not_assigned_mc}}" id="not_assigned" hx-swap-oob="true" class="tooltip tooltip-error">{{account.currency.code}} {{not_assigned}}</span>
+                        <span data-tip="{{request.user.main_currency}} {{not_assigned_mc}}" id="not_assigned" class="tooltip tooltip-error">{{account.currency.code}} {{not_assigned}}</span>
                     </h5>
                 </div>
             </div>
@@ -151,7 +151,7 @@
                 <tr>
                     <td>{{transaction.transaction.pk}}</td>
                     <td>{{transaction.transaction.date}} {% if transaction.transaction.hold %} <span class="badge badge-warning">(On Hold)</span> {%endif%}</td>
-                    <td data-tip="{{transaction.transaction.tag|default:''}}" class="{% if transaction.transaction.tag %}tooltip{% endif %}">{{transaction.transaction.description|default:'-'}}</td>
+                    <td data-tip="{{transaction.transaction.tag|default:''}}" class="{% if transaction.transaction.tag %}tooltip tooltip-left{% endif %}">{{transaction.transaction.description|default:'-'}}</td>
                     <td>
                       <span class="badge badge-{% if transaction.transaction.transaction_type == '+' %}success{% else %}error{% endif %}">
                         {% if transaction.transaction.transaction_type == '+' %}INCOME{% else %}EXPENSE{% endif %}
@@ -159,13 +159,13 @@
                     </td>
                     <td>
                       {% if transaction.transaction.internal %}
-                      <span class="badge badge-info tooltip tooltip-bottom" data-tip="Internal Operation - Not accountable">Internal</span>
+                      <span class="badge badge-info tooltip tooltip-left" data-tip="Internal Operation - Not accountable">Internal</span>
                       {% else %}
-                      <span class="badge badge-warning tooltip tooltip-bottom" data-tip="External Operation - Accountable">External</span>
+                      <span class="badge badge-warning tooltip tooltip-left" data-tip="External Operation - Accountable">External</span>
                       {% endif %}  
                     </td>
                     <td>
-                      <span class="tooltip tooltip-success" data-tip="{{request.user.main_currency.currency.code}} {{transaction.mc_amount}}" {% if transaction.transaction.previous_value %}class="tooltip tooltip-warning tooltip-bottom" data-tip="Value at Time of Transaction: {{request.user.main_currency.currency.code}} {{transaction.transaction.previous_value|floatformat:2}}"{%endif%}>
+                      <span class="tooltip tooltip-left tooltip-success" data-tip="{{request.user.main_currency.currency.code}} {{transaction.mc_amount}}" {% if transaction.transaction.previous_value %}class="tooltip tooltip-warning tooltip-bottom" data-tip="Value at Time of Transaction: {{request.user.main_currency.currency.code}} {{transaction.transaction.previous_value|floatformat:2}}"{%endif%}>
                         {% if transaction.transaction.transaction_type == '-' %}-{%endif%}{{transaction.transaction.amount}}
                       </span>  
                     </td>
