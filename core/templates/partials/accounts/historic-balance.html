@@ -83,12 +83,13 @@
                     <td><span class="tooltip tooltip-left text-success" data-tip="{{balances.obj.account.currency.code}} {{balances.obj.total_in}}">{{balances.total_in}}</span></td>
                     <td><span class="tooltip tooltip-left text-error" data-tip="{{balances.obj.account.currency.code}} {{balances.obj.total_out}}">{{balances.total_out}}</span></td>
                 </tr>
-                {% empty %}
-                <tr class="table-primary">
-                    <td colspan="4" class="text-center">The data for this period is not available.</td>
-                </tr>
                 {% endfor %}
-                {% if object_list %}
+                <tr>
+                  <td>Monthly Exchange Differences</td>
+                  <td>N/A</td>
+                  <td><span class="tooltip tooltip-left text-success" data-tip="{{request.user.main_currency.code}} {{exchange_diffs.total_in}}">{{exchange_diffs.total_in|default:0.00}}</span></td>
+                  <td><span class="tooltip tooltip-left text-error" data-tip="{{request.user.main_currency.code}} {{exchange_diffs.total_out}}">{{exchange_diffs.total_out|default:0.00}}</span></td>
+              </tr>
                 <tr class="bg-gray-900 text-white">
                     <td class="text-right font-bold">Total:</td>
                     <td class="text-center font-bold">{{totals.total_balance}}</td>
@@ -99,7 +100,6 @@
                     <td colspan="2" class="text-right font-bold">Total CashFlow:</td>
                     <td colspan="2" class="text-center font-bold {% if total_cash_flow < 0 %} text-error {% elif total_cash_flow > 0 %} text-success {% endif %}">{{total_cash_flow}}</td>
                 </tr>
-                {% endif %}
             </tbody>
         </table>
         </div>
