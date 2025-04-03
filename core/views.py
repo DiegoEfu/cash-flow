@@ -78,47 +78,47 @@ class WelcomeView(View):
             percentage_income = calculate_percentage(total_income, income_last_month)
             percentage_expense = calculate_percentage(total_expense, expense_last_month)
 
-        visible_accounts_count = Account.objects.filter(owner=request.user, visible=True).count()
-        current_historic_balances_count = HistoricBalance.objects.filter(
-            account__owner=request.user, 
-            account__visible=True,
-            month=previous_month, 
-            year=year
-        ).count()
+            visible_accounts_count = Account.objects.filter(owner=request.user, visible=True).count()
+            current_historic_balances_count = HistoricBalance.objects.filter(
+                account__owner=request.user, 
+                account__visible=True,
+                month=previous_month, 
+                year=year
+            ).count()
 
-        if visible_accounts_count != current_historic_balances_count:
-            with transaction.atomic():
-                existing_account_ids = HistoricBalance.objects.filter(
-                    account__owner=request.user,
-                    account__visible=True,
-                    month=datetime.date.today().month,
-                    year=datetime.date.today().year
-                ).values_list('account_id', flat=True)
-                
-                missing_accounts = Account.objects.filter(
-                    owner=request.user, 
-                    visible=True
-                ).exclude(id__in=existing_account_ids)
-                
-                for account in missing_accounts:
-                    HistoricBalance.objects.create(
-                        account=account,
-                        balance=account.current_balance,
+            if visible_accounts_count != current_historic_balances_count:
+                with transaction.atomic():
+                    existing_account_ids = HistoricBalance.objects.filter(
+                        account__owner=request.user,
+                        account__visible=True,
                         month=datetime.date.today().month,
                         year=datetime.date.today().year
-                    )
+                    ).values_list('account_id', flat=True)
+                    
+                    missing_accounts = Account.objects.filter(
+                        owner=request.user, 
+                        visible=True
+                    ).exclude(id__in=existing_account_ids)
+                    
+                    for account in missing_accounts:
+                        HistoricBalance.objects.create(
+                            account=account,
+                            balance=account.current_balance,
+                            month=datetime.date.today().month,
+                            year=datetime.date.today().year
+                        )
 
-        return {
-                'balance': round(total_balance, 2),
-                'current_month_income': round(total_income, 2),
-                'current_month_expense': round(total_expense, 2),
-                'balance_last_month': round(balance_last_month, 2),
-                'income_last_month': round(income_last_month, 2),
-                'expense_last_month': round(expense_last_month, 2),
-                'percentage_balance': percentage_balance,
-                'percentage_income': percentage_income,
-                'percentage_expense': percentage_expense
-        }
+            return {
+                    'balance': round(total_balance, 2),
+                    'current_month_income': round(total_income, 2),
+                    'current_month_expense': round(total_expense, 2),
+                    'balance_last_month': round(balance_last_month, 2),
+                    'income_last_month': round(income_last_month, 2),
+                    'expense_last_month': round(expense_last_month, 2),
+                    'percentage_balance': percentage_balance,
+                    'percentage_income': percentage_income,
+                    'percentage_expense': percentage_expense
+            }
 
     def update_balances(self, request, *args, **kwargs):
         current_month = datetime.date.today().month
@@ -142,9 +142,11 @@ class WelcomeView(View):
 
     def get(self, request, *args, **kwargs):
         context = self.get_context_data(request)
-        get_new_exchange_rate()  # Ideally change this to a cron job, but it's a paid feature in PythonAnywhere so I'm leaving it as it is for now
+        
         if(request.user.is_authenticated):
+            get_new_exchange_rate()  # Ideally change this to a cron job, but it's a paid feature in PythonAnywhere so I'm leaving it as it is for now
             self.update_balances(request)
+            
         return render(request, self.template_name, context=context)
 
 class LoginView(LoginView):
@@ -1132,11 +1134,39 @@ class HistoricBalanceListView(GeneralListView):
             } for obj in context['object_list']
         ]
 
+        # add the sum of all the expenses and income of the transactions that do not have an account
+        # please assume these are in main currency
+        transactions_without_account = Transaction.objects.filter(
+            user=self.request.user,
+            from_account__isnull=True,
+            date__year=int(self.request.GET.get('year', datetime.date.today().year)),
+            date__month=int(self.request.GET.get('month', datetime.date.today().month))
+        ).aggregate(
+            total_in=Sum(
+                Case(
+                    When(transaction_type='+', then='amount'),
+                    default=Decimal(0.00)
+                ),
+                output_field=DecimalField()
+            ),
+            total_out=Sum(
+                Case(
+                    When(transaction_type='-', then='amount'),
+                    default=Decimal(0.00)
+                ),
+                output_field=DecimalField()
+            )
+        )
+
         context['totals'] = {
             'total_balance': sum(obj['balance'] for obj in context['object_list']),
             'total_in': sum(obj['total_in'] for obj in context['object_list']),
             'total_out': sum(obj['total_out'] for obj in context['object_list'])
         }
+
+        context['totals']['total_in'] += transactions_without_account['total_in'] or 0
+        context['totals']['total_out'] += transactions_without_account['total_out'] or 0
+        context['exchange_diffs'] = transactions_without_account 
 
         context['total_cash_flow'] = context['totals']['total_in'] - context['totals']['total_out']
 
