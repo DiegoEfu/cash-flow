@@ -16,7 +16,7 @@ from django.contrib import messages
 from django.views.generic import View
 from django.forms.models import model_to_dict
 
-from .utils import find_transaction_fitting_exchange_rate, convert_all, convert_each, calculate_percentage, get_new_exchange_rate
+from .utils import find_transaction_fitting_exchange_rate, convert_all, convert_each, convert_all_transactions_amounts_to_main_currency_precisely, calculate_percentage, get_new_exchange_rate
 
 from decimal import Decimal
 import datetime
@@ -45,14 +45,14 @@ class WelcomeView(View):
                 from_account__owner=request.user
             ).exclude(from_account__visible=False).values('from_account', 'transaction_type', 'opening'
             ).annotate(total=Sum('amount'), currency=F('from_account__currency')
-            ).values('total', 'transaction_type', 'opening', 'currency')
+            ).values('total', 'exchange_rate', 'amount', 'currency', 'transaction_type', 'opening', 'date', 'from_account__currency')
             
             amounts_income = [transaction for transaction in amounts if transaction['transaction_type'] == '+' and not transaction['opening']]
             amounts_expense = [transaction for transaction in amounts if transaction['transaction_type'] == '-']
 
             total_balance = convert_all(amounts_balance, request.user.main_currency.pk, exchange_rates)
-            total_income = convert_all(amounts_income, request.user.main_currency.pk, exchange_rates)
-            total_expense = convert_all(amounts_expense, request.user.main_currency.pk, exchange_rates)
+            total_income = convert_all_transactions_amounts_to_main_currency_precisely(amounts_income, request.user.main_currency.pk)
+            total_expense = convert_all_transactions_amounts_to_main_currency_precisely(amounts_expense, request.user.main_currency.pk)
 
             previous_month = datetime.date.today().month - 1 if datetime.date.today().month > 1 else 12
             year = datetime.date.today().year if previous_month != 12 else datetime.date.today().year - 1
@@ -66,13 +66,13 @@ class WelcomeView(View):
             
             transactions = Transaction.objects.select_related('from_account__currency').filter(hold=False, from_account__owner=request.user, date__year=year, date__month=previous_month, internal=False) \
                 .annotate(total=Sum('amount'), currency=F('from_account__currency')) \
-                .values('total', 'currency', 'transaction_type', 'opening')
+                .values('total', 'exchange_rate', 'amount', 'currency', 'transaction_type', 'opening', 'date', 'from_account__currency')
             
             incomes_last_month = [transaction for transaction in transactions if transaction['transaction_type'] == '+' and not transaction['opening']]
-            income_last_month = convert_all(incomes_last_month, request.user.main_currency.pk, exchange_rates)
+            income_last_month = convert_all_transactions_amounts_to_main_currency_precisely(incomes_last_month, request.user.main_currency.pk)
 
             expenses_last_month = [transaction for transaction in transactions if transaction['transaction_type'] == '-']
-            expense_last_month = convert_all(expenses_last_month, request.user.main_currency.pk, exchange_rates)
+            expense_last_month = convert_all_transactions_amounts_to_main_currency_precisely(expenses_last_month, request.user.main_currency.pk)
 
             percentage_balance = calculate_percentage(total_balance, balance_last_month)
             percentage_income = calculate_percentage(total_income, income_last_month)

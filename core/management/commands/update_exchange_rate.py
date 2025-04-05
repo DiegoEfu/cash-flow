@@ -96,12 +96,12 @@ class Command(BaseCommand):
         previous_balances = self.get_current_balance()
         
         currencies = Currency.objects.all()
-        dolar = currencies.get(1)
-        euro = currencies.get(2)
-        ves = currencies.get(3)
-        yuan = currencies.get(4)
-        lira = currencies.get(5)
-        rublo = currencies.get(6)
+        dolar = currencies.get(pk=1)
+        euro = currencies.get(pk=2)
+        ves = currencies.get(pk=3)
+        yuan = currencies.get(pk=4)
+        lira = currencies.get(pk=5)
+        rublo = currencies.get(pk=6)
 
         with transaction.atomic():
             exchange_rate_pairs = [
