@@ -307,8 +307,6 @@ class AccountListView(GeneralListView):
         
         if(self.request.GET != {}):
             self.request.session['previous_search'] = self.request.GET
-
-        print(context['object_list'])
         
         return context
     
@@ -1063,7 +1061,7 @@ class HistoricBalanceListView(GeneralListView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
 
-        if self.request.GET.get('year')  and self.request.GET.get('month') :
+        if self.request.GET.get('year') and self.request.GET.get('month') :
             exchange_rates = ExchangeRate.objects.filter(
                 date__year=int(self.request.GET.get('year', datetime.date.today().year)),
                 date__month=int(self.request.GET.get('month', datetime.date.today().month))
@@ -1086,10 +1084,10 @@ class HistoricBalanceListView(GeneralListView):
         context['object_list'] = context['object_list'].annotate(
             total_in=Coalesce(Sum('account__transaction_from_account__amount', output_field=DecimalField(), filter=Q(account__transaction_from_account__transaction_type='+', account__transaction_from_account__date__year=F('year'), account__transaction_from_account__date__month=F('month'), account__transaction_from_account__hold=False)), Value(Decimal(0))),
             total_out=Coalesce(Sum('account__transaction_from_account__amount', output_field=DecimalField(), filter=Q(account__transaction_from_account__transaction_type='-', account__transaction_from_account__date__year=F('year'), account__transaction_from_account__date__month=F('month'), account__transaction_from_account__hold=False)), Value(Decimal(0))),
-            total_internal_in=Coalesce(Sum('account__transaction_from_account__amount', output_field=DecimalField(), filter=Q(account__transaction_from_account__transaction_type='+', account__transaction_from_account__date__year=F('year'), account__transaction_from_account__date__month=F('month'), account__transaction_from_account__hold=False, account__transaction_from_account__from_account__owner=F('account__owner'))), Value(Decimal(0))),
-            total_internal_out=Coalesce(Sum('account__transaction_from_account__amount', output_field=DecimalField(), filter=Q(account__transaction_from_account__transaction_type='-', account__transaction_from_account__date__year=F('year'), account__transaction_from_account__date__month=F('month'), account__transaction_from_account__hold=False, account__transaction_from_account__from_account__owner=F('account__owner'))), Value(Decimal(0))),
-            total_external_in=Coalesce(Sum('account__transaction_from_account__amount', output_field=DecimalField(), filter=Q(account__transaction_from_account__transaction_type='+', account__transaction_from_account__date__year=F('year'), account__transaction_from_account__date__month=F('month'), account__transaction_from_account__hold=False, account__transaction_from_account__from_account__owner__isnull=True)), Value(Decimal(0))),
-            total_external_out=Coalesce(Sum('account__transaction_from_account__amount', output_field=DecimalField(), filter=Q(account__transaction_from_account__transaction_type='-', account__transaction_from_account__date__year=F('year'), account__transaction_from_account__date__month=F('month'), account__transaction_from_account__hold=False, account__transaction_from_account__from_account__owner__isnull=True)), Value(Decimal(0)))
+            total_internal_in=Coalesce(Sum('account__transaction_from_account__amount', output_field=DecimalField(), filter=Q(account__transaction_from_account__transaction_type='+', account__transaction_from_account__internal=True, account__transaction_from_account__date__year=F('year'), account__transaction_from_account__date__month=F('month'), account__transaction_from_account__hold=False, account__transaction_from_account__from_account__owner=F('account__owner'))), Value(Decimal(0))),
+            total_internal_out=Coalesce(Sum('account__transaction_from_account__amount', output_field=DecimalField(), filter=Q(account__transaction_from_account__transaction_type='-', account__transaction_from_account__internal=True, account__transaction_from_account__date__year=F('year'), account__transaction_from_account__date__month=F('month'), account__transaction_from_account__hold=False, account__transaction_from_account__from_account__owner=F('account__owner'))), Value(Decimal(0))),
+            total_external_in=F('total_in') - F('total_internal_in'),
+            total_external_out=F('total_out') - F('total_internal_out')
         )
 
         context['filter'] = self.filter_class(
@@ -1161,11 +1159,17 @@ class HistoricBalanceListView(GeneralListView):
         context['totals'] = {
             'total_balance': sum(obj['balance'] for obj in context['object_list']),
             'total_in': sum(obj['total_in'] for obj in context['object_list']),
-            'total_out': sum(obj['total_out'] for obj in context['object_list'])
+            'total_out': sum(obj['total_out'] for obj in context['object_list']),
+            'total_internal_in': sum(obj['total_internal_in'] for obj in context['object_list']),
+            'total_internal_out': sum(obj['total_internal_out'] for obj in context['object_list']),
+            'total_external_in': sum(obj['total_external_in'] for obj in context['object_list']),
+            'total_external_out': sum(obj['total_external_out'] for obj in context['object_list'])
         }
 
         context['totals']['total_in'] += transactions_without_account['total_in'] or 0
         context['totals']['total_out'] += transactions_without_account['total_out'] or 0
+        context['totals']['total_external_in'] += transactions_without_account['total_in'] or 0
+        context['totals']['total_external_out'] += transactions_without_account['total_out'] or 0
         context['exchange_diffs'] = transactions_without_account 
 
         context['total_cash_flow'] = context['totals']['total_in'] - context['totals']['total_out']
