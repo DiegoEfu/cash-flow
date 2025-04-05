@@ -87,24 +87,54 @@ class Command(BaseCommand):
 
         valor_dolar = 76.88
         valor_euro = 90.81
+        valor_yuan = None
+        valor_lira = None
+        valor_rublo = None
         
         fecha = '2025-03-25'
 
         previous_balances = self.get_current_balance()
         
-        currencies = Currency.objects.in_bulk([1, 2, 3])
+        currencies = Currency.objects.all()
         dolar = currencies.get(1)
         euro = currencies.get(2)
         ves = currencies.get(3)
+        yuan = currencies.get(4)
+        lira = currencies.get(5)
+        rublo = currencies.get(6)
 
         with transaction.atomic():
             exchange_rate_pairs = [
                 (ves, dolar, valor_dolar),
                 (ves, euro, valor_euro),
+                (ves, yuan, valor_yuan),
+                (ves, lira, valor_lira),
+                (ves, rublo, valor_rublo),
                 (dolar, ves, 1 / valor_dolar),
-                (euro, ves, 1 / valor_euro),
                 (dolar, euro, valor_euro / valor_dolar),
+                (dolar, yuan, valor_yuan / valor_dolar),
+                (dolar, lira, valor_lira / valor_dolar),
+                (dolar, rublo, valor_rublo / valor_dolar),
                 (euro, dolar, valor_dolar / valor_euro),
+                (euro, ves, 1 / valor_euro),
+                (euro, yuan, valor_yuan / valor_euro),
+                (euro, lira, valor_lira / valor_euro),
+                (euro, rublo, valor_rublo / valor_euro),
+                (yuan, ves, 1 / valor_yuan),
+                (yuan, dolar, valor_dolar / valor_yuan),
+                (yuan, euro, valor_euro / valor_yuan),
+                (yuan, lira, valor_lira / valor_yuan),
+                (yuan, rublo, valor_rublo / valor_yuan),
+                (lira, ves, 1 / valor_lira),
+                (lira, dolar, valor_dolar / valor_lira),
+                (lira, euro, valor_euro / valor_lira),
+                (lira, yuan, valor_yuan / valor_lira),
+                (lira, rublo, valor_rublo / valor_lira),
+                (rublo, ves, 1 / valor_rublo),
+                (rublo, dolar, valor_dolar / valor_rublo),
+                (rublo, euro, valor_euro / valor_rublo),
+                (rublo, yuan, valor_yuan / valor_rublo),
+                (rublo, lira, valor_lira / valor_rublo),
             ]
 
             for currency1, currency2, rate in exchange_rate_pairs:
