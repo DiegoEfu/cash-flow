@@ -148,25 +148,71 @@ def get_new_exchange_rate():
 
         valor_dolar = get_currency_value(soup, 'dolar')
         valor_euro = get_currency_value(soup, 'euro')
-        
+        valor_yuan = get_currency_value(soup, 'yuan')
+        valor_lira = get_currency_value(soup, 'lira')
+        valor_rublo = get_currency_value(soup, 'rublo')
+
         fecha = separar_fecha(soup.find('span', class_='date-display-single').text)
 
-        currencies = Currency.objects.in_bulk([1, 2, 3])
-        dolar = currencies.get(1)
-        euro = currencies.get(2)
-        ves = currencies.get(3)
+        currencies = Currency.objects.all()
+        dolar = currencies.get(pk=1)
+        euro = currencies.get(pk=2)
+        ves = currencies.get(pk=3)
+        yuan = currencies.get(pk=4)
+        lira = currencies.get(pk=5)
+        rublo = currencies.get(pk=6)
 
         with transaction.atomic():
             exchange_rate_pairs = [
                 (ves, dolar, valor_dolar),
                 (ves, euro, valor_euro),
+                (ves, yuan, valor_yuan),
+                (ves, lira, valor_lira),
+                (ves, rublo, valor_rublo),
                 (dolar, ves, 1 / valor_dolar),
-                (euro, ves, 1 / valor_euro),
                 (dolar, euro, valor_euro / valor_dolar),
+                (dolar, yuan, valor_yuan / valor_dolar),
+                (dolar, lira, valor_lira / valor_dolar),
+                (dolar, rublo, valor_rublo / valor_dolar),
                 (euro, dolar, valor_dolar / valor_euro),
+                (euro, ves, 1 / valor_euro),
+                (euro, yuan, valor_yuan / valor_euro),
+                (euro, lira, valor_lira / valor_euro),
+                (euro, rublo, valor_rublo / valor_euro),
+                (yuan, ves, 1 / valor_yuan),
+                (yuan, dolar, valor_dolar / valor_yuan),
+                (yuan, euro, valor_euro / valor_yuan),
+                (yuan, lira, valor_lira / valor_yuan),
+                (yuan, rublo, valor_rublo / valor_yuan),
+                (lira, ves, 1 / valor_lira),
+                (lira, dolar, valor_dolar / valor_lira),
+                (lira, euro, valor_euro / valor_lira),
+                (lira, yuan, valor_yuan / valor_lira),
+                (lira, rublo, valor_rublo / valor_lira),
+                (rublo, ves, 1 / valor_rublo),
+                (rublo, dolar, valor_dolar / valor_rublo),
+                (rublo, euro, valor_euro / valor_rublo),
+                (rublo, yuan, valor_yuan / valor_rublo),
+                (rublo, lira, valor_lira / valor_rublo),
             ]
             for currency1, currency2, rate in exchange_rate_pairs:
-                print(ExchangeRate.objects.filter(currency1=currency1, currency2=currency2, date__gte=datetime.date.today(), active=True))
                 if not ExchangeRate.objects.filter(currency1=currency1, currency2=currency2, date__gte=datetime.date.today(), active=True).exists():
                     ExchangeRate.objects.filter(currency1=currency1, currency2=currency2, active=True).update(active=False)
                     ExchangeRate.objects.create(currency1=currency1, currency2=currency2, exchange_rate=rate, date=fecha)
+
+def convert_all_transactions_amounts_to_main_currency_precisely(transactions, main_currency):
+    exchange_rates = ExchangeRate.objects.filter(
+        id__in = [transaction['exchange_rate'] for transaction in transactions],
+    ).select_related('currency1', 'currency2').values('exchange_rate', 'currency1', 'currency2')
+
+    total = 0
+    for transaction in transactions:
+        if transaction['from_account__currency'] != main_currency:
+            exchange_rate = next((rate['exchange_rate'] for rate in exchange_rates if rate['currency1'] == transaction['from_account__currency'] and rate['currency2'] == main_currency), None)
+            if not exchange_rate:
+                exchange_rate = 1/next((rate['exchange_rate'] for rate in exchange_rates if rate['currency1'] == main_currency and rate['currency2'] == transaction['from_account__currency']), None)
+            
+            transaction['amount'] = transaction['amount'] / exchange_rate
+        
+        total += transaction['amount']
+    return total

@@ -80,21 +80,49 @@
                 <tr>
                     <td>{{balances.obj.account.name}} - {{balances.obj.month}}/{{balances.obj.year}}</td>
                     <td><span class="tooltip tooltip-left" data-tip="{{balances.obj.account.currency.code}} {{balances.obj.balance}}">{{balances.balance}}</span></td>
-                    <td><span class="tooltip tooltip-left text-success" data-tip="{{balances.obj.account.currency.code}} {{balances.obj.total_in}}">{{balances.total_in}}</span></td>
-                    <td><span class="tooltip tooltip-left text-error" data-tip="{{balances.obj.account.currency.code}} {{balances.obj.total_out}}">{{balances.total_out}}</span></td>
+                    <td>
+                      <span class="tooltip tooltip-right text-info" data-tip="Int.: {{request.user.main_currency}} {{balances.total_internal_in}}">
+                      <span class="tooltip tooltip-bottom text-error" data-tip="Ext.: {{request.user.main_currency}} {{balances.total_external_in}}">
+                      <span class="tooltip tooltip-left text-success" data-tip="{{balances.obj.account.currency.code}} {{balances.obj.total_in}}">
+                        {{balances.total_in}}
+                      </span>
+                      </span>
+                      </span>
+                    </td>
+                    <td>
+                      <span class="tooltip tooltip-left text-warning" data-tip="{{balances.obj.account.currency.code}} {{balances.obj.total_external_out}}">
+                      <span class="tooltip tooltip-right text-info" data-tip="Int.: {{request.user.main_currency}} {{balances.total_internal_out}}">
+                      <span class="tooltip tooltip-bottom text-error" data-tip="Ext.: {{request.user.main_currency}} {{balances.total_external_out}}">
+                        {{balances.total_out}}
+                      </span>
+                      </span> 
+                      </span>
+                    </td>
                 </tr>
                 {% endfor %}
                 <tr>
                   <td>Monthly Exchange Differences</td>
                   <td>N/A</td>
-                  <td><span class="tooltip tooltip-left text-success" data-tip="{{request.user.main_currency.code}} {{exchange_diffs.total_in}}">{{exchange_diffs.total_in|default:0.00}}</span></td>
-                  <td><span class="tooltip tooltip-left text-error" data-tip="{{request.user.main_currency.code}} {{exchange_diffs.total_out}}">{{exchange_diffs.total_out|default:0.00}}</span></td>
+                  <td><span class="tooltip tooltip-left text-success" data-tip="{{request.user.main_currency}} {{exchange_diffs.total_in}}">{{exchange_diffs.total_in|default:0.00}}</span></td>
+                  <td><span class="tooltip tooltip-left text-error" data-tip="{{request.user.main_currency}} {{exchange_diffs.total_out}}">{{exchange_diffs.total_out|default:0.00}}</span></td>
               </tr>
                 <tr class="bg-gray-900 text-white">
                     <td class="text-right font-bold">Total:</td>
                     <td class="text-center font-bold">{{totals.total_balance}}</td>
-                    <td class="text-center font-bold text-success">{{totals.total_in}}</td>
-                    <td class="text-center font-bold text-error">{{totals.total_out}}</td>
+                    <td class="text-center font-bold text-success">
+                      <span class="tooltip tooltip-top text-success" data-tip="Int.: {{request.user.main_currency}} {{totals.total_internal_in}}">
+                      <span class="tooltip tooltip-bottom text-success" data-tip="Ext.: {{request.user.main_currency}} {{totals.total_external_in}}">
+                        {{totals.total_in}}
+                      </span>
+                      </span>
+                    </td>
+                    <td class="text-center font-bold text-error">
+                      <span class="tooltip tooltip-top text-error" data-tip="Int.: {{request.user.main_currency}} {{totals.total_internal_out}}">
+                      <span class="tooltip tooltip-bottom text-error" data-tip="Ext.: {{request.user.main_currency}} {{totals.total_external_out}}">
+                        {{totals.total_out}}
+                      </span>
+                      </span>
+                    </td>
                 </tr>
                 <tr class="bg-gray-900 text-white">
                     <td colspan="2" class="text-right font-bold">Total CashFlow:</td>
