@@ -41,12 +41,14 @@ class WelcomeView(View):
             amounts_balance = Account.objects.filter(owner=request.user, visible=True).annotate(total=Sum('current_balance')).values('currency', 'total')
             
             amounts = Transaction.objects.select_related('from_account__currency').filter(
-                hold=False, internal=False, date__month=datetime.date.today().month, date__year=datetime.date.today().year,
-                from_account__owner=request.user
+                Q(from_account__owner=request.user) | Q(user=request.user),
+                hold=False, internal=False, date__month=datetime.date.today().month, date__year=datetime.date.today().year
             ).exclude(from_account__visible=False).values('from_account', 'transaction_type', 'opening'
             ).annotate(total=Sum('amount'), currency=F('from_account__currency')
-            ).values('total', 'exchange_rate', 'amount', 'currency', 'transaction_type', 'opening', 'date', 'from_account__currency')
-            
+            ).values('total', 'exchange_rate', 'amount', 'currency', 'transaction_type', 'opening', 'date', from_account__currency=Case(
+                When(from_account__currency__isnull=False, then=F('from_account__currency')),
+                When(from_account__currency__isnull=True, then=Value(request.user.main_currency.pk)),
+            ))
             amounts_income = [transaction for transaction in amounts if transaction['transaction_type'] == '+' and not transaction['opening']]
             amounts_expense = [transaction for transaction in amounts if transaction['transaction_type'] == '-']
 
@@ -64,9 +66,12 @@ class WelcomeView(View):
             else:
                 balance_last_month = 0
             
-            transactions = Transaction.objects.select_related('from_account__currency').filter(hold=False, from_account__owner=request.user, date__year=year, date__month=previous_month, internal=False) \
+            transactions = Transaction.objects.select_related('from_account__currency').filter(Q(from_account__owner=request.user) | Q(user=request.user), hold=False, date__year=year, date__month=previous_month, internal=False) \
                 .annotate(total=Sum('amount'), currency=F('from_account__currency')) \
-                .values('total', 'exchange_rate', 'amount', 'currency', 'transaction_type', 'opening', 'date', 'from_account__currency')
+                .values('total', 'exchange_rate', 'amount', 'currency', 'transaction_type', 'opening', 'date', from_account__currency=Case(
+                When(from_account__currency__isnull=False, then=F('from_account__currency')),
+                When(from_account__currency__isnull=True, then=Value(request.user.main_currency.pk)),
+            ))
             
             incomes_last_month = [transaction for transaction in transactions if transaction['transaction_type'] == '+' and not transaction['opening']]
             income_last_month = convert_all_transactions_amounts_to_main_currency_precisely(incomes_last_month, request.user.main_currency.pk)
