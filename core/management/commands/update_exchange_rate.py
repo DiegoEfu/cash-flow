@@ -84,13 +84,6 @@ class Command(BaseCommand):
             if currency_div and currency_div.find('strong'):
                 return round(float(currency_div.find('strong').text.replace(',', '.')), 6)
             return None
-
-        valor_dolar = 76.88
-        valor_euro = 90.81
-        valor_yuan = None
-        valor_lira = None
-        valor_rublo = None
-        valor_paralelo = None
         
         fecha = '2025-03-25'
 
@@ -106,49 +99,24 @@ class Command(BaseCommand):
         paralelo = currencies.get(pk=7)
 
         with transaction.atomic():
-            exchange_rate_pairs = [
-                (ves, dolar, valor_dolar),
-                (ves, euro, valor_euro),
-                (ves, yuan, valor_yuan),
-                (ves, lira, valor_lira),
-                (ves, rublo, valor_rublo),
-                (dolar, ves, 1 / valor_dolar),
-                (dolar, euro, valor_euro / valor_dolar),
-                (dolar, yuan, valor_yuan / valor_dolar),
-                (dolar, lira, valor_lira / valor_dolar),
-                (dolar, rublo, valor_rublo / valor_dolar),
-                (dolar, paralelo, valor_paralelo / valor_dolar),
-                (euro, dolar, valor_dolar / valor_euro),
-                (euro, ves, 1 / valor_euro),
-                (euro, yuan, valor_yuan / valor_euro),
-                (euro, lira, valor_lira / valor_euro),
-                (euro, rublo, valor_rublo / valor_euro),
-                (euro, paralelo, valor_paralelo / valor_euro),
-                (yuan, ves, 1 / valor_yuan),
-                (yuan, dolar, valor_dolar / valor_yuan),
-                (yuan, euro, valor_euro / valor_yuan),
-                (yuan, lira, valor_lira / valor_yuan),
-                (yuan, rublo, valor_rublo / valor_yuan),
-                (yuan, paralelo, valor_paralelo / valor_yuan),
-                (lira, ves, 1 / valor_lira),
-                (lira, dolar, valor_dolar / valor_lira),
-                (lira, euro, valor_euro / valor_lira),
-                (lira, yuan, valor_yuan / valor_lira),
-                (lira, rublo, valor_rublo / valor_lira),
-                (lira, paralelo, valor_paralelo / valor_lira),
-                (rublo, ves, 1 / valor_rublo),
-                (rublo, dolar, valor_dolar / valor_rublo),
-                (rublo, euro, valor_euro / valor_rublo),
-                (rublo, yuan, valor_yuan / valor_rublo),
-                (rublo, lira, valor_lira / valor_rublo),
-                (rublo, paralelo, valor_paralelo / valor_rublo),
-                (paralelo, ves, 1 / valor_paralelo),
-                (paralelo, dolar, valor_dolar / valor_paralelo),
-                (paralelo, euro, valor_euro / valor_paralelo),
-                (paralelo, yuan, valor_yuan / valor_paralelo),
-                (paralelo, lira, valor_lira / valor_paralelo),
-                (paralelo, rublo, valor_rublo / valor_paralelo),
-            ]
+            currencies = [ves, dolar, euro, yuan, lira, rublo, paralelo]
+            valores = {
+                ves: 1, 
+                dolar: 75.88, 
+                euro: 88.55, 
+                yuan: 9.5, 
+                lira: 0.89, 
+                rublo: 0.9, 
+                paralelo: 105
+            }
+
+            exchange_rate_pairs = []
+
+            for currency in currencies:
+                for other_currency in currencies:
+                    if currency == other_currency:
+                        continue
+                    exchange_rate_pairs.append((currency, other_currency, round(valores[currency] / valores[other_currency], 2)))
 
             for currency1, currency2, rate in exchange_rate_pairs:
                 ExchangeRate.objects.filter(currency1=currency1, currency2=currency2, active=True).update(active=False)
