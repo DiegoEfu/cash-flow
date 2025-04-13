@@ -1,0 +1,92 @@
+{% load widget_tweaks %}
+{% load static %}
+ 
+<div class="grid grid-cols-3">
+    <div class="flex justify-center">
+        <a href="{% url 'transactions_list' pk=account.pk %}" class="btn">Go back</a>
+    </div>
+    <div>
+        <h1 class="text-center text-4xl xl:text-4xl">Make a New Transfer</h1>
+
+        <h1 class="text-success text-center">Current Balance: {{account.currency.code}} <span id="current_balance">{{account.current_balance}}</span></h1>
+        {% if form.instance %}
+        <input type="hidden" name="previous-amount" value="{{form.instance.amount}}" />
+        <input type="hidden" name="previous-type" value="{{form.instance.transaction_type}}" />
+        {% endif %}
+    </div>
+    <div class="flex justify-center">
+    </div>
+</div>
+
+<form {% if not edit %} hx-post="{% url 'transaction_creation' pk=account.pk %}" {% else %} hx-post="{% url 'transaction_update' pk=form.instance.pk %}" {% endif %} hx-target="main" hx-select="main" class="grid grid-cols-1" enctype="multipart/form-data">
+    {% csrf_token %}
+    
+    <div class="mb-3 grid md:grid-cols-2 sm:grid-cols-1 xs:grid-cols-1">
+        <div class="me-3">
+            <label for="id_description" class="form-label">Description:</label>
+            {% render_field form.description class="input input-bordered w-full" %}
+        </div>
+
+        <div class="me-3">
+            <label for="id_date" class="form-label">Date:</label>
+            {% render_field form.date class="input input-bordered w-full" type="datetime-local" %}
+        </div>
+    </div>
+    <div class="mb-3 grid md:grid-cols-2 sm:grid-cols-1 xs:grid-cols-1">
+
+        <div class="me-3">
+            <label for="id_amount" class="form-label">Sent Amount ({{account.currency.code}}):</label>
+            {% render_field form.amount class="input input-bordered w-full" min="0.01" step="0.01" placeholder="Must be greater than or equal to 0.01" %}
+            <small class="text-xs">Sender Final Balance:  <b class="text-error">{{account.currency.code}}  <span id="final_balance">{{account.current_balance}}</span></b></small>
+        </div>
+
+        <div>
+            <label for="id_operate_on_tag" class="form-label">Operate on Tag:</label>            
+            {% render_field form.tag class="select select-bordered w-full" %}
+            <small class="text-xs">Current Balance:  <b class="text-success"><span id="currency_to_acc"></span>  <span id="current_balance_to_acc"> - </span></b></small>     
+        </div>
+    </div>
+
+    <div class="mb-3 grid md:grid-cols-3 sm:grid-cols-1 xs:grid-cols-1">
+        <div class="me-3">
+            <label for="id_to_account" class="form-label">To Account:</label>
+            {% render_field form.to_account class="select select-bordered w-full" %}  
+            <small class="text-xs">Current Balance:  <b class="text-success"><span id="currency_to_acc"></span>  <span id="current_balance_to_acc"> - </span></b></small>     
+        </div>
+
+        <div class="me-3">
+            <label for="id_transaction_type" class="form-label">Received Amount:</label>
+            {% render_field form.received_amount class="input input-bordered w-full" disabled="" %}
+            <small class="text-xs">Receiver Final Balance:  <b class="text-error"><span id="currency_to_acc2"></span>  <span id="rec_final_balance"> - </span></b></small>
+        </div>
+
+        <div class="me-3">
+            <label for="id_deduce_from_tag" class="form-label">Deduce Fee From Tag:</label>
+            {% render_field form.deduce_from_tag class="select select-bordered w-full" %}
+            <small class="text-xs">Calculated Fee:  <b class="text-error"><span id="currency_to_acc2"></span>  <span id="rec_final_balance"> - </span></b></small>
+        </div>
+        
+    </div>
+    <div class="grid md:grid-cols-3 sm:grid-cols-1 xs:grid-cols-1">
+        <div class="me-3">
+            <label for="id_reference" class="form-label">Reference:</label>
+            {% render_field form.reference class="input input-bordered w-full" %}
+        </div>
+
+        <div class="mb-3">
+            <label for="id_deduce_fee_from" class="form-label">Deduce Fee From:</label>
+            {% render_field form.deduce_fee_from class="select select-bordered w-full" %}
+        </div>
+        
+        <div class="mb-3 flex justify-center align-items-center">
+            <label for="id_voucher" class="form-label">Voucher:</label> 
+            {% render_field form.voucher type="file" accept=".pdf, .jpg, .png" %}
+        </div>
+    </div>
+    
+    <div class="flex justify-center">
+        <button type="submit" class="btn btn-primary">Register Transfer</button>
+    </div>
+</form>
+
+<script src="{% static 'js/form.js' %}"></script>

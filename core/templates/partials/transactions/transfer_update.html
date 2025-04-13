@@ -1,0 +1,7 @@
+<label for="id_to_account" class="form-label">To Account ({{to_account.currency.code}}):</label>
+<span id="currency_to_acc">{{to_account.currency.code}}</span>  <span id="current_balance_to_acc"> {{to_account.current_balance}} </span>
+
+<input type="text" id="id_received_amount" name="received_amount" value="" class="hidden" />
+<small class="text-xs">Receiver Final Balance: {{to_account.currency.code}} <b class="text-error">{{final_balance_to_acc}}<span id="currency_to_acc2"></span>  <span id="rec_final_balance"> - </span></b></small>
+
+<small class="text-xs">Calculated Fee:  <b class="text-error"><span id="currency_to_acc2">{{to_account.currency.code if deduce_fee_from == 'receiver' else from_account.currency.code}}</span>  <span id="rec_final_balance">{{fee}}</span></b></small>

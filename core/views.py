@@ -1180,3 +1180,60 @@ class HistoricBalanceListView(GeneralListView):
         context['total_cash_flow'] = context['totals']['total_in'] - context['totals']['total_out']
 
         return context
+    
+class TransferCreationView(TransactionCreation):
+    template_name = 'partials/transactions/transfer_form.html'
+    form_class = TransferForm
+
+    def get(self, request, *args, **kwargs):
+        return render(request, self.template_name, {'form': self.get_form(), 'account': Account.objects.get(pk=self.kwargs['pk'])})
+    
+    def post(self, request, *args, **kwargs):
+        try:
+            with transaction.atomic():
+                super().post(request, *args, **kwargs)
+        except Exception as e:
+            messages.error(request, str(e))
+            return redirect("/accounts")
+        
+        return redirect("/transactions", pk=self.kwargs['pk'])
+    
+def transfer_update(request, pk):
+    from_account = Account.objects.get(pk=request.GET.get('from_account'))
+    to_account = Account.objects.get(pk=request.GET.get('to_account'))
+    to_acc_currency = to_account.currency
+
+    sent_money = request.GET.get('amount', 0)
+    converted_sent = convert_all(
+        [{'total': sent_money, 'currency': from_account.currency.pk}],
+        to_account.currency.pk
+    )
+    
+    rec_amount = request.GET.get('received_amount')
+    converted_received = convert_all(
+        [{'total': rec_amount, 'currency': to_acc_currency.pk}],
+        from_account.currency.pk
+    )
+    
+    deduce_fee_from = request.GET.get('deduce_fee_from', 'sender')
+    final_from = from_account.current_balance
+    final_to = to_account.current_balance
+    
+    if deduce_fee_from == 'receiver':        
+        fee = converted_sent - rec_amount
+        final_from -= fee
+    else:        
+        fee = sent_money - converted_received
+        final_to -= fee
+
+    return render(request, 'partials/transactions/transfer_update.html', {
+        'from_account': from_account,
+        'sent_money': sent_money,
+        'to_account': to_account,
+        'to_acc_currency': to_acc_currency,
+        'rec_amount': rec_amount,
+        'deduce_fee_from': deduce_fee_from,
+        'fee': fee,
+        'final_from': final_from,
+        'final_to': final_to
+    })
