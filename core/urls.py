@@ -22,6 +22,7 @@ urlpatterns = [
 
     # TRANSFER VIEWS
     path('transfer/<str:pk>/', TransferCreationView.as_view(), name="transfer_creation"),
+    path('transfer/update/<str:pk>/', transfer_update, name="transfer_update"),
 
     # TAGS VIEWS
     path('tags/', TagListView.as_view(), name="tag_list"),
