@@ -86,6 +86,10 @@ class ChangePasswordForm(forms.Form):
             raise forms.ValidationError("The new passwords must match.")
 
         return cleaned_data
-
+    
+class TransferForm(TransactionForm):
+    to_account = forms.ModelChoiceField(queryset=Account.objects.all(), required=True)
+    received_amount = forms.FloatField(required=True)
+    deduce_from_tag = forms.ModelChoiceField(queryset=Tag.objects.all(), required=True)
 
 money_tag_formset = forms.modelformset_factory(MoneyTag, form=MoneyTagForm)

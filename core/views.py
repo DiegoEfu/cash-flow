@@ -41,12 +41,14 @@ class WelcomeView(View):
             amounts_balance = Account.objects.filter(owner=request.user, visible=True).annotate(total=Sum('current_balance')).values('currency', 'total')
             
             amounts = Transaction.objects.select_related('from_account__currency').filter(
-                hold=False, internal=False, date__month=datetime.date.today().month, date__year=datetime.date.today().year,
-                from_account__owner=request.user
+                Q(from_account__owner=request.user) | Q(user=request.user),
+                hold=False, internal=False, date__month=datetime.date.today().month, date__year=datetime.date.today().year
             ).exclude(from_account__visible=False).values('from_account', 'transaction_type', 'opening'
             ).annotate(total=Sum('amount'), currency=F('from_account__currency')
-            ).values('total', 'exchange_rate', 'amount', 'currency', 'transaction_type', 'opening', 'date', 'from_account__currency')
-            
+            ).values('total', 'exchange_rate', 'amount', 'currency', 'transaction_type', 'opening', 'date', from_account__currency=Case(
+                When(from_account__currency__isnull=False, then=F('from_account__currency')),
+                When(from_account__currency__isnull=True, then=Value(request.user.main_currency.pk)),
+            ))
             amounts_income = [transaction for transaction in amounts if transaction['transaction_type'] == '+' and not transaction['opening']]
             amounts_expense = [transaction for transaction in amounts if transaction['transaction_type'] == '-']
 
@@ -64,9 +66,12 @@ class WelcomeView(View):
             else:
                 balance_last_month = 0
             
-            transactions = Transaction.objects.select_related('from_account__currency').filter(hold=False, from_account__owner=request.user, date__year=year, date__month=previous_month, internal=False) \
+            transactions = Transaction.objects.select_related('from_account__currency').filter(Q(from_account__owner=request.user) | Q(user=request.user), hold=False, date__year=year, date__month=previous_month, internal=False) \
                 .annotate(total=Sum('amount'), currency=F('from_account__currency')) \
-                .values('total', 'exchange_rate', 'amount', 'currency', 'transaction_type', 'opening', 'date', 'from_account__currency')
+                .values('total', 'exchange_rate', 'amount', 'currency', 'transaction_type', 'opening', 'date', from_account__currency=Case(
+                When(from_account__currency__isnull=False, then=F('from_account__currency')),
+                When(from_account__currency__isnull=True, then=Value(request.user.main_currency.pk)),
+            ))
             
             incomes_last_month = [transaction for transaction in transactions if transaction['transaction_type'] == '+' and not transaction['opening']]
             income_last_month = convert_all_transactions_amounts_to_main_currency_precisely(incomes_last_month, request.user.main_currency.pk)
@@ -475,9 +480,9 @@ class TransactionCreation(FormView):
     form_class = TransactionForm
     template_name = 'partials/transactions/form.html'
 
-    def form_valid(self, form: TransactionForm) -> HttpResponse:
+    def form_valid(self, form: TransactionForm, account = None) -> HttpResponse:
         with transaction.atomic():
-            account = Account.objects.get(pk=self.kwargs['pk'])
+            account = Account.objects.get(pk=self.kwargs['pk'] if not account else account)
 
             form.instance.from_account = account
             form.instance.exchange_rate = find_transaction_fitting_exchange_rate(account.currency, self.request.user.main_currency.currency, form.instance.date)
@@ -782,7 +787,7 @@ class TagListView(GeneralListView):
         accounts_money_tags = Account.objects.filter(
             owner=self.request.user, visible=True
         ).prefetch_related('accounts_money_tags').select_related('currency').annotate(
-            total=Sum('accounts_money_tags__amount')
+            total=Coalesce(Sum('accounts_money_tags__amount'), Decimal(0))
         ).order_by('name')
         alt = []
         for account in accounts_money_tags:
@@ -790,6 +795,8 @@ class TagListView(GeneralListView):
                 [{'total': account.total, 'currency': account.currency.pk}, {'total': account.current_balance, 'currency': account.currency.pk}], 
                  self.request.user.main_currency.currency.pk
             )]
+
+            assigned = assigned if assigned != None else 0
 
             alt.append({'account': account,
             'balance': {
@@ -1175,3 +1182,147 @@ class HistoricBalanceListView(GeneralListView):
         context['total_cash_flow'] = context['totals']['total_in'] - context['totals']['total_out']
 
         return context
+    
+class TransferCreationView(TransactionCreation):
+    template_name = 'partials/transactions/transfer_form.html'
+    form_class = TransferForm
+
+    def get(self, request, *args, **kwargs):
+        return render(request, self.template_name, {'form': self.get_form(), 'account': Account.objects.get(pk=self.kwargs['pk'])})
+    
+    def post(self, request, *args, **kwargs):
+        try:
+            with transaction.atomic():
+                from_account = Account.objects.get(pk=self.kwargs['pk']) 
+                to_account = Account.objects.get(pk=request.POST.get('to_account'))
+                base_amount = Decimal(request.POST.get('amount'))
+                received_amount = Decimal(request.POST.get('received_amount'))
+                transformed_received = convert_all(
+                    [{'total': received_amount, 'currency': to_account.currency.pk}],
+                   from_account.currency.pk
+                )
+                fee = round(base_amount - transformed_received, 2)
+                pctg = round(fee / base_amount * 100, 2)
+                date = datetime.datetime.now()
+
+                print("ZXXXXXXXXXX")                
+                receive_transaction = TransactionForm({
+                    'description': request.POST.get('description'),
+                    'reference': request.POST.get('reference'),
+                    'amount': received_amount,
+                    'transaction_type': '+',
+                    'from_account': to_account.pk,
+                    'internal': True,
+                    'hold': False,
+                    'money_tag': MoneyTag.objects.get_or_create(tag__pk=request.POST.get('tag'), account=to_account)[0].pk if request.POST.get('tag') else None,
+                    'date': date,
+                })
+
+                if(receive_transaction.is_valid()):
+                    self.form_valid(receive_transaction, to_account.pk)
+                else:
+                    print("RECEIVE")
+                    print(receive_transaction.errors)
+                    raise Exception("The transference is invalid.")
+                
+                print("AAAAAAAAAAAAAAAAAAAAAA")                
+                send_transaction = TransactionForm({
+                    'description': request.POST.get('description'),
+                    'reference': request.POST.get('reference'),
+                    'amount': transformed_received,
+                    'transaction_type': '-',
+                    'from_account': from_account.pk,
+                    'internal': True,
+                    'hold': False,
+                    'money_tag': MoneyTag.objects.get_or_create(tag__pk=request.POST.get('tag'), account=from_account)[0].pk if request.POST.get('tag') else None,
+                    'voucher': request.POST.get('voucher'),
+                    'date': date,
+                })
+
+                if(send_transaction.is_valid()):
+                    self.form_valid(send_transaction, from_account.pk)
+                else:
+                    print("SEND")
+                    print(send_transaction.errors)
+                    raise Exception("The transference is invalid.")
+                
+                if(fee > 0):
+                    print("FEEEEEEEEEEEEEEEEEEE")
+                    fee_transaction = TransactionForm({
+                        'description': f"Transfer fee {pctg}%", 
+                        'reference': request.POST.get('reference'),
+                        'amount': fee,
+                        'transaction_type': '-',
+                        'from_account': from_account.pk,
+                        'internal': False,
+                        'hold': False,
+                        'money_tag': MoneyTag.objects.get_or_create(tag__pk=request.POST.get('deduce_from_tag'), account=from_account)[0].pk,
+                        'date': date,
+                    })
+
+                    if(fee_transaction.is_valid()):
+                        self.form_valid(fee_transaction, from_account.pk)
+                    else:
+                        print("FEE")
+                        print(fee_transaction.errors)
+                        raise Exception("The transference is invalid.")
+        except Exception as e:
+            print(e)
+            messages.error(request, "An error has occurred while transferring the money.")
+            return render(request, self.template_name, {'form': self.get_form(), 'account': Account.objects.get(pk=self.kwargs['pk'])})
+        
+        storage = messages.get_messages(request)
+        for _ in storage:
+            storage.used = True
+            
+        messages.success(request, "The transfer was successful.")
+        print(f"/transactions/{self.kwargs['pk']}/")
+        return redirect(f"/transactions/{self.kwargs['pk']}/")
+    
+def transfer_update(request, pk):
+    from_account = Account.objects.get(pk=pk)
+
+    to_account = Account.objects.get(pk=request.GET.get('to_account'))
+    to_acc_currency = to_account.currency
+
+    # sent and conversion
+    sent_money = Decimal(request.GET.get('amount', 0))
+    converted_sent = convert_all(
+        [{'total': sent_money, 'currency': from_account.currency.pk}],
+        to_account.currency.pk
+    )
+    
+    # if there is a received in the request, keep it, else assume its 0
+    rec_amount = Decimal(request.GET.get('received_amount', 0))
+
+    if(rec_amount != None and rec_amount != '' and rec_amount != 0): 
+        print(f"Rec amount: {rec_amount}", "\nConverted sent:", converted_sent)
+        discounted_received = converted_sent - rec_amount
+    else:
+        rec_amount = converted_sent
+        discounted_received = 0
+    
+    final_from = from_account.current_balance - sent_money
+    final_to = to_account.current_balance + rec_amount
+
+    fee = 0
+    if(discounted_received):
+        fee = convert_all(
+            [{'total': discounted_received, 'currency': to_account.currency.pk}],
+            from_account.currency.pk
+        )
+
+    effective_exchange_rate = sent_money / rec_amount
+
+    return render(request, 'partials/transactions/transfer_update.html', {
+        'from_account': from_account,
+        'sent_money': sent_money,
+        'to_account': to_account,
+        'to_acc_currency': to_acc_currency,
+        'rec_amount': rec_amount,
+        'fee': fee,
+        'final_from': final_from,
+        'final_to': final_to,
+        'effective_exchange_rate': effective_exchange_rate,
+        'discounted_received': discounted_received
+    })

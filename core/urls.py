@@ -20,6 +20,10 @@ urlpatterns = [
     path('transactions/update/<str:pk>/', TransactionUpdate.as_view(), name="transaction_update"),
     path('transactions/delete/<str:pk>/', TransactionDelete.as_view(), name="transaction_delete"),
 
+    # TRANSFER VIEWS
+    path('transfer/<str:pk>/', TransferCreationView.as_view(), name="transfer_creation"),
+    path('transfer/update/<str:pk>/', transfer_update, name="transfer_update"),
+
     # TAGS VIEWS
     path('tags/', TagListView.as_view(), name="tag_list"),
     path('tags/create/', TagCreation.as_view(), name="tag_creation"),
