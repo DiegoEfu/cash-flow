@@ -66,7 +66,7 @@
         <div class="me-3">
             <label for="id_deduce_from_tag" class="form-label">Deduce Fee From Tag:</label>
             {% render_field form.deduce_from_tag class="select select-bordered w-full" %}
-            <small class="text-xs">Calculated Fee:  <b class="text-error"><span id="currency_to_acc3"></span>  <span id="fee"> - </span></b></small>
+            <small class="text-xs">Calculated Fee:  <b class="text-error">{{account.currency.code}}  <span id="fee"> - </span></b></small>
         </div>
         
     </div>
@@ -74,11 +74,6 @@
         <div class="me-3">
             <label for="id_reference" class="form-label">Reference:</label>
             {% render_field form.reference class="input input-bordered w-full" %}
-        </div>
-
-        <div class="mb-3">
-            <label for="id_deduce_fee_from" class="form-label">Deduce Fee From:</label>
-            {% render_field form.deduce_fee_from class="select select-bordered w-full" %}
         </div>
         
         <div class="mb-3 flex justify-center align-items-center">

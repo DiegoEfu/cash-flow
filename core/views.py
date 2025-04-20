@@ -1203,58 +1203,47 @@ class TransferCreationView(TransactionCreation):
 def transfer_update(request, pk):
     from_account = Account.objects.get(pk=pk)
 
-    print(request.GET)
     to_account = Account.objects.get(pk=request.GET.get('to_account'))
     to_acc_currency = to_account.currency
 
+    # sent and conversion
     sent_money = Decimal(request.GET.get('amount', 0))
     converted_sent = convert_all(
         [{'total': sent_money, 'currency': from_account.currency.pk}],
         to_account.currency.pk
     )
-        
+    
+    # if there is a received in the request, keep it, else assume its 0
     rec_amount = Decimal(request.GET.get('received_amount', 0))
 
-    if(rec_amount != None and rec_amount != '' and rec_amount != 0):
-        converted_received = convert_all(
-            [{'total': rec_amount, 'currency': to_acc_currency.pk}],
-            from_account.currency.pk
-        )
-        discounted_received = rec_amount
+    if(rec_amount != None and rec_amount != '' and rec_amount != 0): 
+        print(f"Rec amount: {rec_amount}", "\nConverted sent:", converted_sent)
+        discounted_received = converted_sent - rec_amount
     else:
-        converted_received = convert_all(
-            [{'total': sent_money, 'currency': from_account.currency.pk}],
-            to_acc_currency.pk
-        )
-        discounted_received = sent_money if not rec_amount else Decimal(rec_amount)
+        rec_amount = converted_sent
+        discounted_received = 0
     
-    deduce_fee_from = request.GET.get('deduce_fee_from', 'sender')
     final_from = from_account.current_balance - sent_money
-    final_to = to_account.current_balance + converted_received if not rec_amount else to_account.current_balance + Decimal(rec_amount)
-    
-    if deduce_fee_from == 'receiver':        
-        fee = converted_sent - discounted_received
-        final_to -= fee
-    else: 
-        print(discounted_received)       
-        discounted_received = convert_all(
+    final_to = to_account.current_balance + rec_amount
+
+    fee = 0
+    if(discounted_received):
+        fee = convert_all(
             [{'total': discounted_received, 'currency': to_account.currency.pk}],
             from_account.currency.pk
         )
-        print(discounted_received)
-        fee = sent_money - discounted_received
-        final_from -= fee
 
-    print(deduce_fee_from)
+    effective_exchange_rate = sent_money / rec_amount
 
     return render(request, 'partials/transactions/transfer_update.html', {
         'from_account': from_account,
         'sent_money': sent_money,
         'to_account': to_account,
         'to_acc_currency': to_acc_currency,
-        'rec_amount': rec_amount if rec_amount else converted_received,
-        'deduce_fee_from': deduce_fee_from,
+        'rec_amount': rec_amount,
         'fee': fee,
         'final_from': final_from,
-        'final_to': final_to
+        'final_to': final_to,
+        'effective_exchange_rate': effective_exchange_rate,
+        'discounted_received': discounted_received
     })
