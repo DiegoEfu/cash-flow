@@ -787,7 +787,7 @@ class TagListView(GeneralListView):
         accounts_money_tags = Account.objects.filter(
             owner=self.request.user, visible=True
         ).prefetch_related('accounts_money_tags').select_related('currency').annotate(
-            total=Sum('accounts_money_tags__amount')
+            total=Coalesce(Sum('accounts_money_tags__amount'), Decimal(0))
         ).order_by('name')
         alt = []
         for account in accounts_money_tags:
@@ -795,6 +795,8 @@ class TagListView(GeneralListView):
                 [{'total': account.total, 'currency': account.currency.pk}, {'total': account.current_balance, 'currency': account.currency.pk}], 
                  self.request.user.main_currency.currency.pk
             )]
+
+            assigned = assigned if assigned != None else 0
 
             alt.append({'account': account,
             'balance': {
@@ -1233,9 +1235,17 @@ def transfer_update(request, pk):
     if deduce_fee_from == 'receiver':        
         fee = converted_sent - discounted_received
         final_to -= fee
-    else:        
+    else: 
+        print(discounted_received)       
+        discounted_received = convert_all(
+            [{'total': discounted_received, 'currency': to_account.currency.pk}],
+            from_account.currency.pk
+        )
+        print(discounted_received)
         fee = sent_money - discounted_received
         final_from -= fee
+
+    print(deduce_fee_from)
 
     return render(request, 'partials/transactions/transfer_update.html', {
         'from_account': from_account,
