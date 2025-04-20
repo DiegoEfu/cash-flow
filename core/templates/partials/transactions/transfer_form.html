@@ -18,13 +18,13 @@
     </div>
 </div>
 
-<form {% if not edit %} hx-post="{% url 'transaction_creation' pk=account.pk %}" {% else %} hx-post="{% url 'transaction_update' pk=form.instance.pk %}" {% endif %} hx-target="main" hx-select="main" class="grid grid-cols-1" enctype="multipart/form-data">
+<form hx-post="{% url 'transfer_creation' pk=account.pk %}" hx-target="main" hx-select="main" class="grid grid-cols-1" enctype="multipart/form-data">
     {% csrf_token %}
     
     <div class="mb-3 grid md:grid-cols-2 sm:grid-cols-1 xs:grid-cols-1">
         <div class="me-3">
             <label for="id_description" class="form-label">Description:</label>
-            {% render_field form.description class="input input-bordered w-full" %}
+            {% render_field form.description class="input input-bordered w-full" required="required" %}
         </div>
 
         <div class="me-3">
