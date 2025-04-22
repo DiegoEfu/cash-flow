@@ -1,8 +1,9 @@
-from typing import Any
 from core.models import *
 from django import forms
 from django.contrib.auth.hashers import make_password 
 from .validators import file_size_validator
+
+import datetime
 
 class UserForm(forms.ModelForm):
     repeat_password = forms.CharField(min_length=8)
@@ -88,8 +89,14 @@ class ChangePasswordForm(forms.Form):
         return cleaned_data
     
 class TransferForm(TransactionForm):
-    to_account = forms.ModelChoiceField(queryset=Account.objects.all(), required=True)
+    def __init__(self, request = None, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['to_account'].choices = Account.objects.filter(owner=request.user, visible=True).exclude(pk=request.GET.get('pk')).values_list('pk', 'name') if request else []
+        self.fields['deduce_from_tag'].choices = Tag.objects.filter(user=request.user).exclude(pk=request.GET.get('pk')).values_list('pk', 'name') if request else []
+        self.fields['date'].initial = datetime.date.today()
+
+    to_account = forms.ChoiceField(required=True)
     received_amount = forms.FloatField(required=True)
-    deduce_from_tag = forms.ModelChoiceField(queryset=Tag.objects.all(), required=True)
+    deduce_from_tag = forms.ChoiceField(required=True)
 
 money_tag_formset = forms.modelformset_factory(MoneyTag, form=MoneyTagForm)

@@ -1187,6 +1187,11 @@ class TransferCreationView(TransactionCreation):
     template_name = 'partials/transactions/transfer_form.html'
     form_class = TransferForm
 
+    def get_form(self, form_class = None):
+        form = self.form_class(self.request, self.request.FILES, prefix=self.prefix)
+        form.initial['date'] = datetime.datetime.now()
+        return form
+
     def get(self, request, *args, **kwargs):
         return render(request, self.template_name, {'form': self.get_form(), 'account': Account.objects.get(pk=self.kwargs['pk'])})
     
