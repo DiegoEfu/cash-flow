@@ -1188,8 +1188,7 @@ class TransferCreationView(TransactionCreation):
     form_class = TransferForm
 
     def get_form(self, form_class = None):
-        form = self.form_class(self.request, self.request.FILES, prefix=self.prefix)
-        form.initial['date'] = datetime.datetime.now()
+        form = self.form_class(self.request)
         return form
 
     def get(self, request, *args, **kwargs):
@@ -1207,6 +1206,12 @@ class TransferCreationView(TransactionCreation):
                    from_account.currency.pk
                 )
                 fee = round(base_amount - transformed_received, 2)
+
+                if(fee < 0):
+                    fee_converted = convert_all(
+                        [{'total': -fee, 'currency': from_account.currency.pk}],
+                        to_account.currency.pk
+                    )
                 pctg = round(fee / base_amount * 100, 2)
                 date = datetime.datetime.now()
 
@@ -1214,7 +1219,7 @@ class TransferCreationView(TransactionCreation):
                 receive_transaction = TransactionForm({
                     'description': request.POST.get('description'),
                     'reference': request.POST.get('reference'),
-                    'amount': received_amount,
+                    'amount': received_amount if fee >= 0 else received_amount - fee_converted,
                     'transaction_type': '+',
                     'from_account': to_account.pk,
                     'internal': True,
@@ -1271,6 +1276,28 @@ class TransferCreationView(TransactionCreation):
                         print("FEE")
                         print(fee_transaction.errors)
                         raise Exception("The transference is invalid.")
+                elif(fee < 0):
+                    print("FEEEEEEEEEEEEEEEEEEE2")
+                    
+                    fee_transaction = TransactionForm({
+                        'description': f"Transfer extra {abs(pctg)}%", 
+                        'reference': request.POST.get('reference'),
+                        'amount': fee_converted,
+                        'transaction_type': '+',
+                        'from_account': to_account.pk,
+                        'internal': False,
+                        'hold': False,
+                        'money_tag': MoneyTag.objects.get_or_create(tag__pk=request.POST.get('deduce_from_tag'), account=from_account)[0].pk,
+                        'date': date,
+                    })
+
+                    if(fee_transaction.is_valid()):
+                        self.form_valid(fee_transaction, to_account.pk)
+                    else:
+                        print("FEE")
+                        print(fee_transaction.errors)
+                        raise Exception("The transference is invalid.")
+                        
         except Exception as e:
             print(e)
             messages.error(request, "An error has occurred while transferring the money.")
@@ -1316,6 +1343,9 @@ def transfer_update(request, pk):
             [{'total': discounted_received, 'currency': to_account.currency.pk}],
             from_account.currency.pk
         )
+
+    if(fee <= 0):
+        fee = 0
 
     effective_exchange_rate = sent_money / rec_amount
 
