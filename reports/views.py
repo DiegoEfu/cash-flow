@@ -3,5 +3,10 @@ from reports.pdf import *
 
 # Create your views here.
 
-def index(request):
-    return generate_report(request)
+def monthly_transaction_report(request):
+    '''
+    Summary:
+        This function generates a PDF report of the monthly transactions.
+    '''
+
+    pass

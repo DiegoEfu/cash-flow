@@ -2,5 +2,5 @@ from django.urls import path, include
 from reports.views import *
 
 urlpatterns = [
-    path('', index, name="index_report"),
+    # TODO: Add the URL patterns for the reports app
 ]

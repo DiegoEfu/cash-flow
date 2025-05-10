@@ -125,11 +125,67 @@
         </div>
     </div>
     <div class="collapse bg-gray-900 mb-3">
+        <input type="checkbox" />
         <div class="collapse-title text-xl font-medium">Reports</div>
         <div class="collapse-content">
-          <a href="#" class="btn btn-primary">Generate Cash Flow by Month (PDF)</a>
+          <label for="month-modal" class="btn btn-primary">Generate Cash Flow by Month (PDF)</label>
+          <input type="checkbox" id="month-modal" class="modal-toggle" />
+          <div class="modal">
+            <div class="modal-box">
+              <h3 class="font-bold text-lg">Select Month and Year</h3>
+              <div class="grid grid-cols-2 gap-4">
+                <div>
+                  <label for="year-select" class="block">Year</label>
+                  <select id="year-select" class="select select-bordered w-full">
+                    <option disabled selected>Select a year</option>
+                    {% for year in years %}
+                    <option>{{ year }}</option>
+                    {% endfor %}
+                  </select>
+                </div>
+                <div>
+                  <label for="month-select" class="block">Month</label>
+                  <select id="month-select" class="select select-bordered w-full">
+                    <option disabled selected>Select a month</option>
+                    <option>January</option>
+                    <option>February</option>
+                    <option>March</option>
+                    <option>April</option>
+                    <option>May</option>
+                    <option>June</option>
+                    <option>July</option>
+                    <option>August</option>
+                    <option>September</option>
+                    <option>October</option>
+                    <option>November</option>
+                    <option>December</option>
+                  </select>
+                </div>
+              </div>
+
+              <h3 class="font-bold text-lg">Select Month</h3>
+              <select class="select select-bordered w-full">
+                <option disabled selected>Select a month</option>
+                <option>January</option>
+                <option>February</option>
+                <option>March</option>
+                <option>April</option>
+                <option>May</option>
+                <option>June</option>
+                <option>July</option>
+                <option>August</option>
+                <option>September</option>
+                <option>October</option>
+                <option>November</option>
+                <option>December</option>
+              </select>
+              <div class="modal-action">
+                <label for="month-modal" class="btn">Close</label>
+              </div>
+            </div>
+          </div>
           <a href="#" class="btn btn-warning">Generate Cash Flow by Year (PDF)</a>
-          <a href="#" class="btn btn-secondary">Generic Account List with Current Totals (PDF)</a>
+          <a href="{% url 'index_report' %}" class="btn btn-secondary">Generic Account List with Current Totals (PDF)</a>
         </div>
     </div>
 
