@@ -2,7 +2,7 @@ from reportlab.platypus import PageBreak, Paragraph, Spacer, SimpleDocTemplate
 from reportlab.platypus import Table, TableStyle
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import A4
-from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.lib.styles import ParagraphStyle
 from reportlab.lib.units import inch
 from reportlab.pdfgen import canvas
 from io import BytesIO
@@ -44,7 +44,7 @@ def generate_report(request, elements, title):
 
         canvas.saveState()
         canvas.setFont('Times-Roman', 10)
-        page_number_text = "Página %d" % (doc.page)
+        page_number_text = "Page %d" % (doc.page)
         canvas.drawCentredString(
             4 * inch,
             0.3 * inch,
@@ -59,7 +59,7 @@ def generate_report(request, elements, title):
         '''
         canvas.saveState()
         canvas.setFont('Times-Roman', 10)
-        page_number_text = "Página %d" % (doc.page)
+        page_number_text = "Page %d" % (doc.page)
         canvas.drawCentredString(
             4 * inch,
             0.3 * inch,
@@ -75,19 +75,7 @@ def generate_report(request, elements, title):
 
     story = [
         Spacer(0, 1 * inch),
-        Table(
-            [
-                [Paragraph('Nombre'), Paragraph('Descripción'), Paragraph('Monto'), Paragraph('Fecha')],
-            ],
-            hAlign='LEFT',
-            style=TableStyle([
-                ('BACKGROUND', (0, 0), (-1, 0), colors.gray),
-                ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
-                ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
-                ('GRID', (0, 0), (-1, -1), 1, colors.black),
-                ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
-            ])
-        )
+        *elements
     ]
 
     doc.build(story, 

@@ -472,6 +472,7 @@ class TransactionListView(GeneralListView):
         not_assigned_total = account.current_balance - assigned_total
         context['not_assigned'] = not_assigned_total
         context['not_assigned_mc'] = convert_all([{'total': not_assigned_total, 'currency': account.currency.pk}], main_pk, exchange_rates)
+        context['years'] = list(range(account.opening_time.year, datetime.datetime.now().year + 1))
         self.update_tags(account)
 
         return context

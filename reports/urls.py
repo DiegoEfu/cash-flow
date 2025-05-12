@@ -1,6 +1,6 @@
-from django.urls import path, include
+from django.urls import path
 from reports.views import *
 
 urlpatterns = [
-    # TODO: Add the URL patterns for the reports app
+   path('monthly_transactions_report/<str:account>/', monthly_transactions_report, name='monthly_transactions_report'),
 ]
