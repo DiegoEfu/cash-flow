@@ -4,14 +4,13 @@ from reportlab.lib import colors
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import ParagraphStyle
 from reportlab.lib.units import inch
-from reportlab.pdfgen import canvas
 from io import BytesIO
 import datetime
 
 from django.http import HttpResponse
 from django.db.models import Sum, Q
 
-from core.models import Transaction, HistoricBalance, Tag
+from core.models import Transaction, HistoricBalance, Tag, MoneyTag, Account
 from core.utils import convert_all, convert_all_transactions_amounts_to_main_currency_precisely, figures_size
 
 def generate_report(request, elements, title):
@@ -410,6 +409,76 @@ def generate_yearly_transactions_report(request, account, year):
             Spacer(1, 5),
             Table(
                 table_summary,
+                style=[
+                    ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+                    ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+                    ('FONTNAME', (0, 0), (-1, -1), 'Helvetica'),
+                    ('FONTSIZE', (0, 0), (-1, -1), 8),
+                    ('LINEBELOW', (0, 0), (-1, 0), 1, colors.black),
+                    ('LINEBELOW', (0, 1), (-1, -1), 0.5, colors.gray),
+                ],
+            ),
+        ]
+    )
+
+def generate_current_tags_report(request):
+    tags = Tag.objects.filter(user=request.user).select_related('user')
+    main_currency = request.user.main_currency.currency
+    table_tags = [
+        ["Tag", f'Total ({main_currency.code})'],
+    ]
+    total_assigned_main_currency = 0
+
+    for tag in tags:
+        total_assigned_by_currency = MoneyTag.objects.filter(tag=tag).values('account__currency').annotate(total=Sum('amount')).order_by('account__currency')
+        total_assigned = []
+        for currency in total_assigned_by_currency:
+            total_assigned.append({
+                'currency': currency['account__currency'],
+                'total': currency['total'],
+            })
+
+        total_assigned = convert_all(
+            total_assigned,
+            main_currency.pk,
+        )
+
+        total_assigned_main_currency += total_assigned
+        
+        table_tags.append([
+            tag.name,
+            f'{total_assigned:,.2f}',
+        ])
+
+    total_balance_main_currency = sum(
+        convert_all(
+            [{'total': account.current_balance, 'currency': account.currency.pk}],
+            main_currency.pk
+        )
+        for account in Account.objects.filter(owner=request.user, visible=True)
+    )
+
+    table_tags.append([
+        'Total Balance (All Accounts)',
+        f'{total_balance_main_currency:,.2f}',
+    ])
+
+    table_tags.append([
+        'Total Assigned Money',
+        f'{total_assigned_main_currency:,.2f}',
+    ])
+
+    table_tags.append([
+        'Total Unassigned Money',
+        f'{total_balance_main_currency - total_assigned_main_currency:,.2f}',
+    ])
+
+    return generate_report(
+        request,
+        title='Current Transactions Report for Tags',
+        elements=[
+            Table(
+                table_tags,
                 style=[
                     ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
                     ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
