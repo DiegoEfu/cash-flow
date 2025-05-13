@@ -212,9 +212,8 @@ def convert_all_transactions_amounts_to_main_currency_precisely(transactions, ma
             if not exchange_rate:
                 exchange_rate = next((rate['exchange_rate'] for rate in exchange_rates if rate['currency1'] == main_currency and rate['currency2'] == transaction['from_account__currency']), None)
                 if not exchange_rate:
-                    print(transaction['date'])
                     exchange_rate = ExchangeRate.objects.filter(
-                        currency1__code=main_currency, 
+                        currency1__pk=main_currency, 
                         currency2__pk=transaction['from_account__currency'],
                         date__gte=transaction['date'].date()
                     ).first().exchange_rate
@@ -224,6 +223,7 @@ def convert_all_transactions_amounts_to_main_currency_precisely(transactions, ma
             transaction['amount'] = transaction['amount'] / exchange_rate
         
         total += transaction['amount']
+    
     return total
 
 def figures_size(amount):
