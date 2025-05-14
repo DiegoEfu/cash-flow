@@ -41,12 +41,11 @@ def yearly_report_general(request):
     '''
 
     year = request.GET.get('year')
-    month = request.GET.get('month')
     
     if not request.user.is_authenticated:
         return HttpResponseForbidden()
 
-    return generate_yearly_transactions_report_all_accounts(request, year, month)
+    return generate_yearly_transactions_report_all_accounts(request, year)
 
 def yearly_transactions_report(request, account):
     '''
