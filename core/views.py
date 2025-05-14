@@ -309,6 +309,11 @@ class AccountListView(GeneralListView):
         previous_search = self.request.session.get('previous_search')
         if previous_search:
             context['filter'] = self.filter_class(previous_search)
+
+        years = []
+        for year in range(self.request.user.date_joined.year, datetime.date.today().year + 1):
+            years.append(year)
+        context['years'] = years
         
         if(self.request.GET != {}):
             self.request.session['previous_search'] = self.request.GET
@@ -718,6 +723,11 @@ class GeneralTransactionListView(GeneralListView):
             context['filter'] = self.filter_class({
                 'date_from': datetime.datetime.now() - datetime.timedelta(days=30),
             })
+
+        years = []
+        for year in range(self.request.user.date_joined.year, datetime.date.today().year + 1):
+            years.append(year)
+        context['years'] = years
 
         exchange_rates = ExchangeRate.objects.filter(active=True).values('currency1', 'currency2', 'exchange_rate')
         context['object_list'] = [{

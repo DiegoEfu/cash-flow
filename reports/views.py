@@ -1,6 +1,6 @@
 from django.http import HttpResponseForbidden
 
-from reports.pdf import generate_monthly_transactions_report, generate_current_tags_report, generate_yearly_transactions_report
+from reports.pdf import *
 from core.models import Account
 
 # Create your views here.
@@ -19,6 +19,34 @@ def monthly_transactions_report(request, account):
         return HttpResponseForbidden()
 
     return generate_monthly_transactions_report(request, account, year, month)
+
+def monthly_report_general(request):
+    '''
+    Summary:
+        This function generates a PDF report of the monthly transactions for all accounts.
+    '''
+
+    year = request.GET.get('year')
+    month = request.GET.get('month')
+    
+    if not request.user.is_authenticated:
+        return HttpResponseForbidden()
+
+    return generate_monthly_transactions_report_all_accounts(request, year, month)
+
+def yearly_report_general(request):
+    '''
+    Summary:
+        This function generates a PDF report of the yearly transactions for all accounts.
+    '''
+
+    year = request.GET.get('year')
+    month = request.GET.get('month')
+    
+    if not request.user.is_authenticated:
+        return HttpResponseForbidden()
+
+    return generate_yearly_transactions_report_all_accounts(request, year, month)
 
 def yearly_transactions_report(request, account):
     '''

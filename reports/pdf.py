@@ -6,6 +6,7 @@ from reportlab.lib.styles import ParagraphStyle
 from reportlab.lib.units import inch
 from io import BytesIO
 import datetime
+import calendar
 
 from django.http import HttpResponse
 from django.db.models import Sum, Q
@@ -13,7 +14,7 @@ from django.db.models import Sum, Q
 from core.models import Transaction, HistoricBalance, Tag, MoneyTag, Account
 from core.utils import convert_all, convert_all_transactions_amounts_to_main_currency_precisely, figures_size
 
-def generate_report(request, elements, title):
+def generate_report(request, elements, title, name='report'):
     def primera_pagina(canvas, doc):
         '''
         Resumen:
@@ -88,7 +89,7 @@ def generate_report(request, elements, title):
           
     response = HttpResponse(content_type='application/pdf')
     fecha = datetime.datetime.now()
-    response['Content-Disposition'] = f'attachment; filename="report_{fecha.year}_{fecha.month}_{fecha.day}_{fecha.hour}_{fecha.minute}.pdf"'
+    response['Content-Disposition'] = f'attachment; filename="{name}_{fecha.year}_{fecha.month}_{fecha.day}_{fecha.hour}_{fecha.minute}.pdf"'
 
     response.write(buff.getvalue())
     buff.close()
@@ -271,6 +272,7 @@ def generate_monthly_transactions_report(request, account, month, year):
                     ('GRID', (0, 0), (-1, -1), 1, '#000000'),
                 ]),
             ],
+            name=f'monthly_transactions_report',
         )
     
 def generate_yearly_transactions_report(request, account, year):
@@ -464,7 +466,8 @@ def generate_yearly_transactions_report(request, account, year):
                     ('LINEBELOW', (0, 1), (-1, -1), 0.5, colors.gray),
                 ],
             ),
-        ]
+        ],
+        name=f'yearly_transactions_report',
     )
 
 def generate_current_tags_report(request):
@@ -534,14 +537,211 @@ def generate_current_tags_report(request):
                     ('LINEBELOW', (0, 1), (-1, -1), 0.5, colors.gray),
                 ],
             ),
-        ]
+        ],
+        name='current_tags_report',
     )
 
-def generate_monthly_transactions_report_all_accounts(request, account, month, year):
+def generate_monthly_transactions_report_all_accounts(request, year, month):
     """
-    Generates a PDF report for all the transactions in a month.
+    Generates a PDF report for all the transactions in a month as a summary.
     """
-    pass
+    total_balance_main_currency = 0
+    total_start_balance = 0
+    main_currency = request.user.main_currency.currency
+    year = int(year)
+    month = int(month)
+    
+    table_accounts = [
+        ['Account', 'Start Balance', f'In Ext.', 'In Int.', 'Out Ext.', 'Out Int.', 'End Balance'],
+    ]
+    table_dict = {}
+    table_tags = {}
+    for account in Account.objects.filter(visible=True, owner=request.user):
+        print(account)
+        table_dict[account] = {
+            'in_ext': 0,
+            'in_int': 0,
+            'out_ext': 0,
+            'out_int': 0,
+        }
+
+        
+        if int(year) >= account.opening_time.year:
+            start_balance = HistoricBalance.objects.filter(
+                year=year if month > 1 else year - 1,
+                month=month - 1 if month > 1 else 12,
+                account=account
+            ).first().balance if HistoricBalance.objects.filter(
+                year=year if month > 1 else year - 1,
+                month=month - 1 if month > 1 else 12,
+                account=account
+            ).exists() else 0
+        elif(account.opening_time.year == int(year) and int(month) >= account.opening_time.month):
+            start_balance = account.start_balance
+        else:
+            start_balance = 0
+
+        start_balance = convert_all_transactions_amounts_to_main_currency_precisely(
+            [{'amount': start_balance, 'from_account__currency': account.currency.pk, 'exchange_rate': None, 'date': datetime.date(int(year), int(month), 1)}], main_currency.pk
+        )
+        total_start_balance += start_balance
+
+        for transaction in Transaction.objects.filter(
+            from_account=account,
+            date__year=year,
+            date__month=month,
+        ):
+            converted_amount = convert_all_transactions_amounts_to_main_currency_precisely(
+                [{'amount': transaction.amount, 'from_account__currency': account.currency.pk, 'exchange_rate': transaction.exchange_rate.pk if transaction.exchange_rate else None, 'date': transaction.date.date()}], main_currency.pk
+            )
+            if transaction.transaction_type == '+':
+                if transaction.internal:
+                    table_dict[account]['in_int'] += converted_amount
+                else:
+                    table_dict[account]['in_ext'] += converted_amount
+            else:
+                if transaction.internal:
+                    table_dict[account]['out_int'] += converted_amount
+                else:
+                    table_dict[account]['out_ext'] += converted_amount
+
+            if(transaction.tag):
+                if transaction.tag.name not in table_tags:
+                    table_tags[transaction.tag.name] = {
+                        'in': 0,
+                        'out': 0
+                    }
+
+                if transaction.transaction_type == '+' and not transaction.internal:
+                    table_tags[transaction.tag.name]['in'] += converted_amount
+                elif transaction.transaction_type == '-' and not transaction.internal:
+                    table_tags[transaction.tag.name]['out'] += converted_amount
+
+        final_balance_record = HistoricBalance.objects.filter(
+            year=year,
+            month=month,
+            account=account
+        ).first().balance if HistoricBalance.objects.filter(
+            year=year,
+            month=month,
+            account=account
+        ).exists() else 0
+        table_dict[account]['final_balance'] = convert_all_transactions_amounts_to_main_currency_precisely(
+            [{'amount': final_balance_record, 'from_account__currency': account.currency.pk, 'exchange_rate': None, 'date': datetime.date(year, month, calendar.monthrange(year, month)[1])}], main_currency.pk
+        )
+
+        total_balance_main_currency += table_dict[account]['final_balance']
+        
+        table_accounts.append([
+            account.name,
+            f'{start_balance:,.2f}',
+            f'{table_dict[account]["in_ext"]:,.2f}',
+            f'{table_dict[account]["in_int"]:,.2f}',
+            f'{table_dict[account]["out_ext"]:,.2f}',
+            f'{table_dict[account]["out_int"]:,.2f}',
+            f'{table_dict[account]["final_balance"]:,.2f}',
+        ])
+
+    exchange_in = 0
+    exchange_out = 0
+    for transaction in Transaction.objects.filter(
+        date__year=year,
+        date__month=month,
+        from_account=None
+    ):
+        if(transaction.transaction_type == '+'):
+            exchange_in += transaction.amount
+        else:
+            exchange_out += transaction.amount
+    
+    table_accounts.append([
+        'EXCHANGE RATE DIFFERENCES',
+        '-',
+        f'{exchange_in:,.2f}',
+        '-',
+        f'{abs(exchange_out):,.2f}',
+        '-',
+        '-',
+    ])
+
+    # second table: tags
+    table_tags_summary = [
+        ['Tag', 'IN', 'OUT'],
+        *([tag, f'{values["in"]:,.2f}', f'{abs(values["out"]):,.2f}'] for tag, values in table_tags.items())
+    ]
+    
+    # third table
+    table_summary = [
+        ['Concept', 'Value'],
+    ]
+    table_summary.append([
+        'Total Start Balance',
+        f'{total_start_balance:,.2f}',
+    ])
+    table_summary.append([
+        'Total Final Balance',
+        f'{total_balance_main_currency:,.2f}',
+    ])
+    table_summary.append([
+        '% of Variation (Balances)',
+        f'{((total_balance_main_currency - total_start_balance) / total_start_balance) * 100:,.2f}%',
+    ])
+    table_summary.append([
+        'Total Ext. Expenses',
+        f'{sum([values["out_ext"] for values in table_dict.values()]):,.2f}',
+    ])
+    table_summary.append([
+        'Total Ext. Income',
+        f'{sum([values["in_ext"] for values in table_dict.values()]):,.2f}',
+    ])
+    table_summary.append([
+        'Total Cash Flow',
+        f'{total_balance_main_currency - total_start_balance:,.2f}',
+    ])
+    
+    return generate_report(
+        request,
+        title=f'Monthly Summary Report for All Accounts - {month}/{year}',
+        elements=[
+            Paragraph(f'All amounts are represented in {main_currency}', style=ParagraphStyle('normal', fontSize=10)),
+            Table(
+                table_accounts,
+                style=[
+                    ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+                    ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+                    ('FONTNAME', (0, 0), (-1, -1), 'Helvetica'),
+                    ('FONTSIZE', (0, 0), (-1, -1), 8),
+                    ('LINEBELOW', (0, 0), (-1, 0), 1, colors.black),
+                    ('LINEBELOW', (0, 1), (-1, -1), 0.5, colors.gray),
+                ],
+            ),
+            Spacer(1, 10),
+            Table(
+                table_tags_summary,
+                style=[
+                    ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+                    ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+                    ('FONTNAME', (0, 0), (-1, -1), 'Helvetica'),
+                    ('FONTSIZE', (0, 0), (-1, -1), 8),
+                    ('LINEBELOW', (0, 0), (-1, 0), 1, colors.black),
+                    ('LINEBELOW', (0, 1), (-1, -1), 0.5, colors.gray),
+                ],
+            ),
+            Spacer(1, 10),
+            Table(
+                table_summary,
+                style=[
+                    ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+                    ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+                    ('FONTNAME', (0, 0), (-1, -1), 'Helvetica'),
+                    ('FONTSIZE', (0, 0), (-1, -1), 8),
+                    ('LINEBELOW', (0, 0), (-1, 0), 1, colors.black),
+                    ('LINEBELOW', (0, 1), (-1, -1), 0.5, colors.gray),
+                ],
+            ),
+        ],
+        name=f'monthly_transactions_report'
+    )
 
 def generate_yearly_transactions_report_all_accounts(request, account, year):
     """

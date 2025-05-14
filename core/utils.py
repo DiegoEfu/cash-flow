@@ -212,12 +212,21 @@ def convert_all_transactions_amounts_to_main_currency_precisely(transactions, ma
             if not exchange_rate:
                 exchange_rate = next((rate['exchange_rate'] for rate in exchange_rates if rate['currency1'] == main_currency and rate['currency2'] == transaction['from_account__currency']), None)
                 if not exchange_rate:
+                    print(f"Exchange rate not found for {transaction['from_account__currency']} to {main_currency} date {transaction['date']}")
                     exchange_rate = ExchangeRate.objects.filter(
+                        currency1__pk=main_currency, 
+                        currency2__pk=transaction['from_account__currency'],
+                        date__lte=transaction['date'].date() if type(transaction['date']) == datetime.datetime else transaction['date'],
+                    ).first().exchange_rate if ExchangeRate.objects.filter(
+                        currency1__pk=main_currency, 
+                        currency2__pk=transaction['from_account__currency'],
+                        date__lte=transaction['date'].date() if type(transaction['date']) == datetime.datetime else transaction['date'],
+                    ).exists() else ExchangeRate.objects.filter(
                         currency1__pk=main_currency, 
                         currency2__pk=transaction['from_account__currency'],
                         date__gte=transaction['date'].date() if type(transaction['date']) == datetime.datetime else transaction['date'],
                     ).first().exchange_rate
-               
+
                 exchange_rate = 1 / exchange_rate
             
             transaction['amount'] = transaction['amount'] / exchange_rate
