@@ -298,6 +298,8 @@ def generate_yearly_transactions_report(request, account, year):
         'avg_balance_mc': 0,
     }
 
+    tag_totals = {}
+
     first_day = transactions.order_by('date').first().date.date()
     last_day = datetime.date.today()
     num_days = (last_day - first_day).days + 1
@@ -339,13 +341,35 @@ def generate_yearly_transactions_report(request, account, year):
                     )
             current_balance += transaction.amount
         
-        print(f"Day {day + 1}: {current_balance}")
+            if transaction.tag:
+                if transaction.transaction_type == '-' and not transaction.internal:
+                    if transaction.tag.name in tag_totals:
+                        tag_totals[transaction.tag.name]['amount'] += transaction.amount
+                        tag_totals[transaction.tag.name]['mc'] += convert_all_transactions_amounts_to_main_currency_precisely(
+                            [{
+                                'amount': transaction.amount,
+                                'from_account__currency': transaction.from_account.currency.pk,
+                                'exchange_rate': transaction.exchange_rate.pk if transaction.exchange_rate else None,
+                                'date': transaction.date
+                            }], main_currency.pk
+                        )
+                    else:
+                        tag_totals[transaction.tag.name] = {
+                            'amount': transaction.amount,
+                            'mc': convert_all_transactions_amounts_to_main_currency_precisely(
+                                [{
+                                    'amount': transaction.amount,
+                                    'from_account__currency': transaction.from_account.currency.pk,
+                                    'exchange_rate': transaction.exchange_rate.pk if transaction.exchange_rate else None,
+                                    'date': transaction.date
+                                }], main_currency.pk
+                            )
+                        }
+
         sums['avg_balance'] += current_balance
         sums['avg_balance_mc'] += convert_all_transactions_amounts_to_main_currency_precisely(
             [{'amount': current_balance, 'from_account__currency': account.currency.pk, 'date': first_day + datetime.timedelta(days=day), 'exchange_rate': None}], main_currency.pk
         )
-
-    print(sums['avg_balance'], sums['avg_balance_mc'])
 
     # Calculate cash flow and average balance
     sums['cash_flow'] = sums['in_int'] + sums['in_ex'] - sums['out_int'] - sums['out_ex']
@@ -389,6 +413,16 @@ def generate_yearly_transactions_report(request, account, year):
         ],
     )
 
+    table_tags = [
+        ['Tag', f'Total Spent ({account.currency.code})', f'Total Spent ({main_currency.code})'],
+    ]
+    for tag, total in tag_totals.items():
+        table_tags.append([
+            tag,
+            f"{abs(total['amount']):,.2f}",
+            f"{abs(total['mc']):,.2f}",
+        ])
+
     table_summary = [
         ["Concept", f'Value ({account.currency.code} / {main_currency.code})'],
         ['Total Internal Income', f'{sums["in_int"]:,.2f} / {abs(sums["in_mc"]):,.2f}'],
@@ -406,6 +440,18 @@ def generate_yearly_transactions_report(request, account, year):
         title=f'Yearly Transactions Report for {account} ({year})',
         elements=[
             table_months,
+            Spacer(1, 5),
+            Table(
+                table_tags,
+                style=[
+                    ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+                    ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+                    ('FONTNAME', (0, 0), (-1, -1), 'Helvetica'),
+                    ('FONTSIZE', (0, 0), (-1, -1), 8),
+                    ('LINEBELOW', (0, 0), (-1, 0), 1, colors.black),
+                    ('LINEBELOW', (0, 1), (-1, -1), 0.5, colors.gray),
+                ],
+            ),
             Spacer(1, 5),
             Table(
                 table_summary,
@@ -490,3 +536,15 @@ def generate_current_tags_report(request):
             ),
         ]
     )
+
+def generate_monthly_transactions_report_all_accounts(request, account, month, year):
+    """
+    Generates a PDF report for all the transactions in a month.
+    """
+    pass
+
+def generate_yearly_transactions_report_all_accounts(request, account, year):
+    """
+    Generates a PDF report for all the transactions in a year.
+    """
+    pass

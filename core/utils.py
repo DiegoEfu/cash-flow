@@ -215,7 +215,7 @@ def convert_all_transactions_amounts_to_main_currency_precisely(transactions, ma
                     exchange_rate = ExchangeRate.objects.filter(
                         currency1__pk=main_currency, 
                         currency2__pk=transaction['from_account__currency'],
-                        date__gte=transaction['date'].date()
+                        date__gte=transaction['date'].date() if type(transaction['date']) == datetime.datetime else transaction['date'],
                     ).first().exchange_rate
                
                 exchange_rate = 1 / exchange_rate
