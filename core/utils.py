@@ -210,9 +210,42 @@ def convert_all_transactions_amounts_to_main_currency_precisely(transactions, ma
         if transaction['from_account__currency'] != main_currency:
             exchange_rate = next((rate['exchange_rate'] for rate in exchange_rates if rate['currency1'] == transaction['from_account__currency'] and rate['currency2'] == main_currency), None)
             if not exchange_rate:
-                exchange_rate = 1/next((rate['exchange_rate'] for rate in exchange_rates if rate['currency1'] == main_currency and rate['currency2'] == transaction['from_account__currency']), None)
+                exchange_rate = next((rate['exchange_rate'] for rate in exchange_rates if rate['currency1'] == main_currency and rate['currency2'] == transaction['from_account__currency']), None)
+                if not exchange_rate:
+                    exchange_rate = ExchangeRate.objects.filter(
+                        currency1__pk=main_currency, 
+                        currency2__pk=transaction['from_account__currency'],
+                        date__lte=transaction['date'].date() if type(transaction['date']) == datetime.datetime else transaction['date'],
+                    ).first().exchange_rate if ExchangeRate.objects.filter(
+                        currency1__pk=main_currency, 
+                        currency2__pk=transaction['from_account__currency'],
+                        date__lte=transaction['date'].date() if type(transaction['date']) == datetime.datetime else transaction['date'],
+                    ).exists() else ExchangeRate.objects.filter(
+                        currency1__pk=main_currency, 
+                        currency2__pk=transaction['from_account__currency'],
+                        date__gte=transaction['date'].date() if type(transaction['date']) == datetime.datetime else transaction['date'],
+                    ).first().exchange_rate
+
+                exchange_rate = 1 / exchange_rate
             
             transaction['amount'] = transaction['amount'] / exchange_rate
         
         total += transaction['amount']
+    
     return total
+
+def figures_size(amount):
+    nfigures = len(str(abs(int(amount)))) if amount >= 1 else 0
+
+    if(amount < 1):
+        amount *= 100
+
+    LOW_MAX = 3.5*10**(nfigures-1) if nfigures > 0 else 35
+    MEDIUM_MAX = 6.5*10**(nfigures-1) if nfigures > 0 else 65
+
+    if((amount <= LOW_MAX)):
+        return f"{nfigures} low figure{'s' if nfigures != 1 else ''}"
+    elif(amount > LOW_MAX and amount <= MEDIUM_MAX):
+        return f"{nfigures} medium figure{'s' if nfigures != 1 else ''}"
+    else:
+        return f"{nfigures} high figure{'s' if nfigures != 1 else ''}"
