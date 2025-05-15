@@ -772,7 +772,7 @@ def generate_yearly_transactions_report_all_accounts(request, year):
         out_int = 0
         exchange_diff = 0
 
-        for account in Account.objects.all():
+        for account in Account.objects.filter(owner=request.user, visible=True):
             start_balance += convert_all_transactions_amounts_to_main_currency_precisely(
                 [{'amount': HistoricBalance.objects.filter(
                     year=year if month > 1 else year - 1,
@@ -926,7 +926,7 @@ def current_balances_report_accounts(request):
     today = datetime.datetime.now()
     year = today.year
     month = today.month
-    accounts = Account.objects.filter(owner=request.user)
+    accounts = Account.objects.filter(owner=request.user, visible=True)
     balances = HistoricBalance.objects.filter(account__in=accounts, year=year, month=month)
     main_currency = request.user.main_currency
     table_accounts = [
