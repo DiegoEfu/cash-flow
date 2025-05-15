@@ -116,7 +116,7 @@ class Command(BaseCommand):
                 for other_currency in currencies:
                     if currency == other_currency:
                         continue
-                    exchange_rate_pairs.append((currency, other_currency, round(valores[currency] / valores[other_currency], 2)))
+                    exchange_rate_pairs.append((currency, other_currency, valores[currency] / valores[other_currency]))
 
             for currency1, currency2, rate in exchange_rate_pairs:
                 ExchangeRate.objects.filter(currency1=currency1, currency2=currency2, active=True).update(active=False)
