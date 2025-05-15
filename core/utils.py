@@ -15,20 +15,23 @@ def convert_all(amounts, main_currency_pk, exchange_rates = None):
     if(not exchange_rates):    
         exchange_rates = ExchangeRate.objects.filter(active=True) \
             .select_related('currency1', 'currency2').values('exchange_rate', 'currency1', 'currency2')
-    
+           
     for amount in amounts:
         if amount['currency'] != main_currency_pk:
             exchange_rate = next((rate['exchange_rate'] for rate in exchange_rates if \
                                   rate['currency1'] == amount['currency'] and rate['currency2'] == main_currency_pk
                                 ), None)
-
+            
             if not exchange_rate:
+                print("B")
                 exchange_rate = 1/next((rate['exchange_rate'] for rate in exchange_rates if \
                                       rate['currency1'] == main_currency_pk and rate['currency2'] == amount['currency']
-                                    ), 1)
+                                    ), None)
             
+            print(exchange_rate)
             acc += convert(amount['total'], exchange_rate)
         else:
+            print("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
             acc += amount['total']
     
     return acc

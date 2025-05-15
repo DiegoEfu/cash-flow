@@ -509,7 +509,7 @@ class TransactionCreation(FormView):
                 if(form.instance.tag):
                     tag = MoneyTag.objects.get(tag=self.request.POST['tag'], account=account)
 
-                    if self.request.POST['transaction_type'] == '+':
+                    if form.data['transaction_type'] == '+':
                         tag.amount += amount
                         tag.save()
                     else:
@@ -1206,7 +1206,9 @@ class TransferCreationView(TransactionCreation):
     form_class = TransferForm
 
     def get_form(self, form_class = None):
-        form = self.form_class(self.request)
+        form = self.form_class(self.request, initial={
+            'date': datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+        })
         return form
 
     def get(self, request, *args, **kwargs):
@@ -1218,22 +1220,21 @@ class TransferCreationView(TransactionCreation):
                 from_account = Account.objects.get(pk=self.kwargs['pk']) 
                 to_account = Account.objects.get(pk=request.POST.get('to_account'))
                 base_amount = Decimal(request.POST.get('amount'))
-                received_amount = Decimal(request.POST.get('received_amount'))
-                transformed_received = convert_all(
-                    [{'total': received_amount, 'currency': to_account.currency.pk}],
-                   from_account.currency.pk
+                base_amount_converted = convert_all(
+                    [{'total': base_amount, 'currency': from_account.currency.pk}],
+                    to_account.currency.pk
                 )
+                received_amount = Decimal(request.POST.get('received_amount', 0))
+                transformed_received =  round(received_amount * base_amount / base_amount_converted, 2)
+                
                 fee = round(base_amount - transformed_received, 2)
 
                 if(fee < 0):
-                    fee_converted = convert_all(
-                        [{'total': -fee, 'currency': from_account.currency.pk}],
-                        to_account.currency.pk
-                    )
+                    fee_converted = (-fee) * base_amount_converted / base_amount
+
                 pctg = round(fee / base_amount * 100, 2)
                 date = datetime.datetime.now()
 
-                print("ZXXXXXXXXXX")                
                 receive_transaction = TransactionForm({
                     'description': request.POST.get('description'),
                     'reference': request.POST.get('reference'),
@@ -1242,27 +1243,24 @@ class TransferCreationView(TransactionCreation):
                     'from_account': to_account.pk,
                     'internal': True,
                     'hold': False,
-                    'money_tag': MoneyTag.objects.get_or_create(tag__pk=request.POST.get('tag'), account=to_account)[0].pk if request.POST.get('tag') else None,
+                    'tag': request.POST.get('tag') if request.POST.get('tag') and request.POST.get('tag') != '' else None,
                     'date': date,
                 })
 
                 if(receive_transaction.is_valid()):
                     self.form_valid(receive_transaction, to_account.pk)
                 else:
-                    print("RECEIVE")
-                    print(receive_transaction.errors)
                     raise Exception("The transference is invalid.")
                 
-                print("AAAAAAAAAAAAAAAAAAAAAA")                
                 send_transaction = TransactionForm({
                     'description': request.POST.get('description'),
                     'reference': request.POST.get('reference'),
-                    'amount': transformed_received,
+                    'amount': transformed_received if fee >= 0 else base_amount,
                     'transaction_type': '-',
                     'from_account': from_account.pk,
                     'internal': True,
                     'hold': False,
-                    'money_tag': MoneyTag.objects.get_or_create(tag__pk=request.POST.get('tag'), account=from_account)[0].pk if request.POST.get('tag') else None,
+                    'tag': request.POST.get('tag') if request.POST.get('tag') and request.POST.get('tag') != '' else None,
                     'voucher': request.POST.get('voucher'),
                     'date': date,
                 })
@@ -1270,12 +1268,11 @@ class TransferCreationView(TransactionCreation):
                 if(send_transaction.is_valid()):
                     self.form_valid(send_transaction, from_account.pk)
                 else:
-                    print("SEND")
-                    print(send_transaction.errors)
                     raise Exception("The transference is invalid.")
                 
+                print(fee)
+                
                 if(fee > 0):
-                    print("FEEEEEEEEEEEEEEEEEEE")
                     fee_transaction = TransactionForm({
                         'description': f"Transfer fee {pctg}%", 
                         'reference': request.POST.get('reference'),
@@ -1284,7 +1281,7 @@ class TransferCreationView(TransactionCreation):
                         'from_account': from_account.pk,
                         'internal': False,
                         'hold': False,
-                        'money_tag': MoneyTag.objects.get_or_create(tag__pk=request.POST.get('deduce_from_tag'), account=from_account)[0].pk,
+                        'tag': request.POST.get('deduce_from_tag'),
                         'date': date,
                     })
 
@@ -1315,11 +1312,10 @@ class TransferCreationView(TransactionCreation):
                         print("FEE")
                         print(fee_transaction.errors)
                         raise Exception("The transference is invalid.")
-                        
         except Exception as e:
-            print(e)
+            print(str(e))
             messages.error(request, "An error has occurred while transferring the money.")
-            return render(request, self.template_name, {'form': self.get_form(), 'account': Account.objects.get(pk=self.kwargs['pk'])})
+            return render(request, self.template_name, {'form': self.get_form(), 'account': Account.objects.get(pk=self.kwargs['pk'])})    
         
         storage = messages.get_messages(request)
         for _ in storage:
