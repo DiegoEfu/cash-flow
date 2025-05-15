@@ -24,7 +24,6 @@ class Command(BaseCommand):
                 currency = account.currency
                 exchange_rate = ExchangeRate.objects.filter(currency1=main_currency.currency, currency2=currency, active=True).last()
                 exchange_rate = exchange_rate.exchange_rate if exchange_rate else 1
-                print(f'{main_currency.currency} -> {currency} = {exchange_rate if exchange_rate else "N/A"}')
                 if exchange_rate:
                     total_balance += account.current_balance * exchange_rate
             
@@ -85,7 +84,7 @@ class Command(BaseCommand):
                 return round(float(currency_div.find('strong').text.replace(',', '.')), 6)
             return None
         
-        fecha = '2025-03-25'
+        fecha = '2025-03-16'
 
         previous_balances = self.get_current_balance()
         
@@ -101,13 +100,13 @@ class Command(BaseCommand):
         with transaction.atomic():
             currencies = [ves, dolar, euro, yuan, lira, rublo, paralelo]
             valores = {
-                ves: 1, 
-                dolar: 75.88, 
-                euro: 88.55, 
-                yuan: 9.5, 
-                lira: 0.89, 
-                rublo: 0.9, 
-                paralelo: 105
+                ves: 1,
+                dolar: 94.32410000,
+                euro: 105.52791659,
+                yuan: 13.08911646,
+                lira: 2.43862592,
+                rublo: 1.17181820,
+                paralelo: 118.02
             }
 
             exchange_rate_pairs = []
@@ -116,7 +115,7 @@ class Command(BaseCommand):
                 for other_currency in currencies:
                     if currency == other_currency:
                         continue
-                    exchange_rate_pairs.append((currency, other_currency, valores[currency] / valores[other_currency]))
+                    exchange_rate_pairs.append((currency, other_currency, valores[other_currency]/valores[currency]))
 
             for currency1, currency2, rate in exchange_rate_pairs:
                 ExchangeRate.objects.filter(currency1=currency1, currency2=currency2, active=True).update(active=False)

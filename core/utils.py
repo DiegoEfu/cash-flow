@@ -23,15 +23,12 @@ def convert_all(amounts, main_currency_pk, exchange_rates = None):
                                 ), None)
             
             if not exchange_rate:
-                print("B")
                 exchange_rate = 1/next((rate['exchange_rate'] for rate in exchange_rates if \
                                       rate['currency1'] == main_currency_pk and rate['currency2'] == amount['currency']
-                                    ), None)
+                                    ), 1)
             
-            print(exchange_rate)
             acc += convert(amount['total'], exchange_rate)
         else:
-            print("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
             acc += amount['total']
     
     return acc
