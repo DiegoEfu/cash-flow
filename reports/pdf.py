@@ -96,7 +96,7 @@ def generate_report(request, elements, title, name='report'):
 
     return response
 
-def generate_monthly_transactions_report(request, account, month, year):
+def generate_monthly_transactions_report(request, account, year, month):
     '''
     Resumen:
         Esta función genera un reporte PDF de las transacciones mensuales.
@@ -341,7 +341,7 @@ def generate_yearly_transactions_report(request, account, year):
                     sums['out_mc_ex'] += convert_all_transactions_amounts_to_main_currency_precisely(
                         [{'amount': transaction.amount, 'from_account__currency': transaction.from_account.currency.pk, 'exchange_rate': transaction.exchange_rate.pk if transaction.exchange_rate else None, 'date': transaction.date.date()}], main_currency.pk
                     )
-            current_balance += transaction.amount
+            current_balance += transaction.amount if transaction.transaction_type == '+' else -transaction.amount
         
             if transaction.tag:
                 if transaction.transaction_type == '-' and not transaction.internal:
@@ -826,9 +826,7 @@ def generate_yearly_transactions_report_all_accounts(request, year):
                             tags[transaction.tag.name] += converted_amount
 
         if(month == 1):
-            print(f'Year: {year} Month: {month} Start Balance: {start_balance}')
             first_start_balance = start_balance
-            print(f'Year: {year} Month: {month} First Start Balance: {first_start_balance}')
 
         for transaction in Transaction.objects.filter(
             date__year=year,
@@ -861,7 +859,6 @@ def generate_yearly_transactions_report_all_accounts(request, year):
     
         sums['cash_flow'] += final_balance - start_balance + exchange_diff
 
-    print(final_balance, first_start_balance)
     sums['final_variation'] = ((final_balance - first_start_balance) / first_start_balance) * 100 if first_start_balance != 0 else 0
 
     return generate_report(

@@ -113,6 +113,10 @@ class WelcomeView(View):
                             year=datetime.date.today().year
                         )
 
+            cashflow = total_income - total_expense
+            cashflow_last_month = income_last_month - expense_last_month
+            percentage_cashflow = calculate_percentage(cashflow, cashflow_last_month)
+
             return {
                     'balance': round(total_balance, 2),
                     'current_month_income': round(total_income, 2),
@@ -120,9 +124,12 @@ class WelcomeView(View):
                     'balance_last_month': round(balance_last_month, 2),
                     'income_last_month': round(income_last_month, 2),
                     'expense_last_month': round(expense_last_month, 2),
+                    'cash_flow': round(cashflow, 2),
+                    'cash_flow_last_month': round(cashflow_last_month, 2),
                     'percentage_balance': percentage_balance,
                     'percentage_income': percentage_income,
-                    'percentage_expense': percentage_expense
+                    'percentage_expense': percentage_expense,
+                    'percentage_cash_flow': percentage_cashflow,
             }
 
     def update_balances(self, request, *args, **kwargs):
