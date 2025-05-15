@@ -9,4 +9,5 @@ urlpatterns = [
    path('yearly_transactions_report/', yearly_report_general, name='yearly_report_general'),
    
    path('tag_report/', tag_report, name='tag_report'),
+   path('balance_report/', current_balances_accounts, name='balance_report'),
 ]

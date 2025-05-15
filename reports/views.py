@@ -71,3 +71,14 @@ def tag_report(request):
         return HttpResponseForbidden()
 
     return generate_current_tags_report(request)
+
+def current_balances_accounts(request):
+    '''
+    Summary:
+        This function generates a PDF report of the current balances of all accounts.
+    '''
+
+    if not request.user.is_authenticated:
+        return HttpResponseForbidden()
+
+    return current_balances_report_accounts(request)

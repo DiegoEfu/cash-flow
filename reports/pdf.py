@@ -921,3 +921,46 @@ def generate_yearly_transactions_report_all_accounts(request, year):
         ],
         name=f'yearly_transactions_report'
     )
+
+def current_balances_report_accounts(request):
+    today = datetime.datetime.now()
+    year = today.year
+    month = today.month
+    accounts = Account.objects.filter(owner=request.user)
+    balances = HistoricBalance.objects.filter(account__in=accounts, year=year, month=month)
+    main_currency = request.user.main_currency
+    table_accounts = [
+        ['Account', 'Balance'],
+        *[[balance.account.name.upper(), f'''{
+            convert_all_transactions_amounts_to_main_currency_precisely(
+                [{"amount": balance.balance, 
+                    "from_account__currency": balance.account.currency.pk,
+                    "exchange_rate": None, "date": datetime.date(year, month, 1)}], 
+                main_currency.pk
+            ):,.2f}'''] for balance in balances]
+    ]
+    total_balance = sum(
+        float(row[1].replace(',', '')) for row in table_accounts[1:]
+        if row[1] != '-'
+    )
+    return generate_report(
+        request,
+        title=f'Current Balances Report for All Accounts - {today.day}-{year}-{month} {today.hour}:{today.minute}',
+        elements=[
+            Paragraph(f'All amounts are represented in {main_currency}', style=ParagraphStyle('normal', fontSize=10)),
+            Spacer(1, 10),
+            Table(
+                [*table_accounts, ['TOTAL', f'{total_balance:,.2f}']],
+                style=[
+                    ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+                    ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+                    ('FONTNAME', (0, 0), (-1, -1), 'Helvetica'),
+                    ('FONTSIZE', (0, 0), (-1, -1), 8),
+                    ('LINEBELOW', (0, 0), (-1, 0), 1, colors.black),
+                    ('LINEBELOW', (0, 1), (-1, -1), 0.5, colors.gray),
+                    ('BACKGROUND', (0, -1), (-1, -1), '#DDDDDD'),
+                ],
+            ),
+        ],
+        name=f'current_balances_report'
+    )
