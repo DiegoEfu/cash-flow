@@ -30,8 +30,8 @@ urlpatterns = [
     path('tags/update/<str:pk>/', TagUpdate.as_view(), name="tag_update"),
     path('tags/delete/<str:pk>/', TagDelete.as_view(), name="tag_delete"),
     path('tags/assignment/<str:pk>/', TagAssignment.as_view(), name="tag_assignment"),
-    path('tags/send-tag-account/<str:account_id>/<str:tag_id>/', set_tag_amount, name="send_tag_account"),
-    path('tags/reassign-tag/<str:account_id>/<str:tag_id>/', reassign_tag, name="reassign_tag"),
+    path('tags/send-tag-account/<str:tag_id>/', set_tag_amount, name="send_tag_account"),
+    path('tags/reassign-tag/<str:tag_id>/', reassign_tag, name="reassign_tag"),
 
     # GRAPH VIEWS
     path('accounts/graph/', graph_by_accounts, name="account_graph_view"),
