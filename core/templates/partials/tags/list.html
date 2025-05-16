@@ -153,6 +153,43 @@
                           </div>
                         </div>
                       </div>
+
+                      <label for="modal_reassign_{{tag.tag.pk}}" class="btn btn-xs">Reassign Tag</label>
+                      <label for="modal_send_funds_{{tag.tag.pk}}" class="btn btn-xs">Send Funds</label>
+
+                      <input type="checkbox" id="modal_reassign_{{tag.tag.pk}}" class="modal-toggle" />
+                      <div class="modal" role="dialog">
+                        <div class="modal-box">
+                          <h3 class="text-lg font-bold">Reassign Tag for {{tag.tag.name}}</h3>
+                          <select class="select select-bordered w-full">
+                            <option disabled selected>Select Tag</option>
+                            {% for tag in object_list %}
+                            <option value="{{account.pk}}">{{tag.tag.name}}</option>
+                            {% endfor %}
+                          </select>
+                          <div class="modal-action">
+                            <label for="modal_reassign_{{tag.tag.pk}}" class="btn">Close</label>
+                            <button type="submit" class="btn btn-primary">Reassign</button>
+                          </div>
+                        </div>
+                      </div>
+
+                      <input type="checkbox" id="modal_send_funds_{{tag.tag.pk}}" class="modal-toggle" />
+                      <div class="modal" role="dialog">
+                        <div class="modal-box">
+                          <h3 class="text-lg font-bold">Send Funds from {{tag.tag.name}}</h3>
+                          <select class="select select-bordered w-full">
+                            <option disabled selected>Select Account</option>
+                            {% for account in accounts %}
+                            <option value="{{account.pk}}">{{account.account}}</option>
+                            {% endfor %}
+                          </select>
+                          <div class="modal-action">
+                            <label for="modal_send_funds_{{tag.tag.pk}}" class="btn">Close</label>
+                            <button type="submit" class="btn btn-primary">Send</button>
+                          </div>
+                        </div>
+                      </div>
                       {% endif %}
                     </td>
                 </tr>

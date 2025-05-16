@@ -1342,7 +1342,6 @@ def transfer_update(request, pk):
     rec_amount = Decimal(request.GET.get('received_amount', 0))
 
     if(rec_amount != None and rec_amount != '' and rec_amount != 0): 
-        print(f"Rec amount: {rec_amount}", "\nConverted sent:", converted_sent)
         discounted_received = converted_sent - rec_amount
     else:
         rec_amount = converted_sent
@@ -1375,3 +1374,58 @@ def transfer_update(request, pk):
         'effective_exchange_rate': effective_exchange_rate,
         'discounted_received': discounted_received
     })
+
+
+def set_tag_amount(request, account_pk, tag_pk):
+  tag = Tag.objects.get(pk=tag_pk)
+  account = Account.objects.get(pk=account_pk).select_related('currency')
+
+  if(account.owner != request.user or tag.user != request.user):
+    return HttpResponseForbidden()
+
+  try:
+    with transaction.atomic():
+        if request.method == 'POST':
+            money_tags = MoneyTag.objects.filter(tag=tag).values_list('account__currency', 'amount')
+
+            total = convert_all(
+                money_tags,
+                account.currency.pk
+            )
+
+            MoneyTag.objects.filter(tag=tag, account=account).update(amount=total)
+            MoneyTag.objects.filter(tag=tag).exclude(account=account).update(amount=0)
+
+            messages.success(request, "The tag amount has been set successfully.")
+            return redirect(f'/tags/')    
+  except Exception as e:
+    print(str(e))
+    messages.error(request, "An error has occurred while setting the tag amount.")
+    return redirect(f'/transactions/{account_pk}/')
+  
+def reassign_tag(request, tag_id, tag2_id):
+    if(request.user != Account.objects.get(pk=request.GET.get('account_id')).owner):
+        return HttpResponseForbidden()
+    
+    try:
+        with transaction.atomic():
+            tag = Tag.objects.get(pk=tag_id)
+            tag2 = Tag.objects.get(pk=tag2_id)
+
+            money_tags1 = MoneyTag.objects.filter(tag=tag).select_related('account')
+            money_tags2 = MoneyTag.objects.filter(tag=tag2).select_related('account')
+
+            for money_tag in money_tags1:
+                money_tag2 = money_tags2.get(account=money_tag.account)
+                money_tag.amount = money_tags2.get(account=money_tag.account).amount
+                money_tag2.amount = 0
+
+                money_tag.save()
+                money_tag2.save()
+
+            messages.success(request, "The tag has been reassigned successfully.")
+    except Exception as e:
+        print(str(e))
+        messages.error(request, "An error has occurred while reassigning the tag.")
+
+    return redirect(f'/tags/')
