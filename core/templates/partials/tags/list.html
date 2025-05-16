@@ -177,6 +177,7 @@
                       <input type="checkbox" id="modal_send_funds_{{tag.tag.pk}}" class="modal-toggle" />
                       <div class="modal" role="dialog">
                         <div class="modal-box">
+                          <form action="{% url 'send_funds' %}" method="get"></form>
                           <h3 class="text-lg font-bold">Send Funds from {{tag.tag.name}}</h3>
                           <select class="select select-bordered w-full">
                             <option disabled selected>Select Account</option>

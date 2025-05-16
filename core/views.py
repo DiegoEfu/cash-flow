@@ -506,8 +506,8 @@ class TransactionCreation(FormView):
                 account.current_balance += amount
                 account.save()
 
-                if(form.instance.tag):
-                    tag = MoneyTag.objects.get(tag=self.request.POST['tag'], account=account)
+                if(form.data['tag']):
+                    tag = MoneyTag.objects.get(tag=form.data['tag'], account=account)
 
                     if form.data['transaction_type'] == '+':
                         tag.amount += amount
@@ -515,7 +515,7 @@ class TransactionCreation(FormView):
                     else:
                         self.update_tags_and_accounts(amount, account, tag)
 
-                historic_balance, created = HistoricBalance.objects.get_or_create(
+                historic_balance, _ = HistoricBalance.objects.get_or_create(
                     account=account,
                     month=form.instance.date.month,
                     year=form.instance.date.year,
@@ -1215,8 +1215,7 @@ class TransferCreationView(TransactionCreation):
         return render(request, self.template_name, {'form': self.get_form(), 'account': Account.objects.get(pk=self.kwargs['pk'])})
     
     def post(self, request, *args, **kwargs):
-        try:
-            with transaction.atomic():
+        with transaction.atomic():
                 from_account = Account.objects.get(pk=self.kwargs['pk']) 
                 to_account = Account.objects.get(pk=request.POST.get('to_account'))
                 base_amount = Decimal(request.POST.get('amount'))
@@ -1270,9 +1269,10 @@ class TransferCreationView(TransactionCreation):
                 else:
                     raise Exception("The transference is invalid.")
                 
-                print(fee)
+                print(request.POST.get('deduce_from_tag'))
                 
                 if(fee > 0):
+                    print("AAAA")
                     fee_transaction = TransactionForm({
                         'description': f"Transfer fee {pctg}%", 
                         'reference': request.POST.get('reference'),
@@ -1302,7 +1302,7 @@ class TransferCreationView(TransactionCreation):
                         'from_account': to_account.pk,
                         'internal': False,
                         'hold': False,
-                        'money_tag': MoneyTag.objects.get_or_create(tag__pk=request.POST.get('deduce_from_tag'), account=from_account)[0].pk,
+                        'tag': request.POST.get('deduce_from_tag'),
                         'date': date,
                     })
 
@@ -1312,10 +1312,6 @@ class TransferCreationView(TransactionCreation):
                         print("FEE")
                         print(fee_transaction.errors)
                         raise Exception("The transference is invalid.")
-        except Exception as e:
-            print(str(e))
-            messages.error(request, "An error has occurred while transferring the money.")
-            return render(request, self.template_name, {'form': self.get_form(), 'account': Account.objects.get(pk=self.kwargs['pk'])})    
         
         storage = messages.get_messages(request)
         for _ in storage:
@@ -1374,7 +1370,6 @@ def transfer_update(request, pk):
         'effective_exchange_rate': effective_exchange_rate,
         'discounted_received': discounted_received
     })
-
 
 def set_tag_amount(request, account_pk, tag_pk):
   tag = Tag.objects.get(pk=tag_pk)
