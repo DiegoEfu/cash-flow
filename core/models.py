@@ -62,7 +62,7 @@ class Account(StrAsNameMixin, models.Model):
 class Tag(StrAsNameMixin, models.Model):
     id = models.UUIDField(default=uuid.uuid4, primary_key=True)
     name = models.CharField(max_length=50, unique=True)
-    user = models.ForeignKey(get_user_model(), on_delete=models.PROTECT)
+    user = models.ForeignKey(get_user_model(), on_delete=models.PROTECT, related_name="tags")
     month_goal = models.DecimalField(max_digits=15, decimal_places=2, default=0.00, blank=True, null=True, validators=[MinValueValidator(0.0)])
 
     class Meta:

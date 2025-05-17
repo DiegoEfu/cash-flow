@@ -113,6 +113,10 @@ class WelcomeView(View):
                             year=datetime.date.today().year
                         )
 
+            with transaction.atomic():
+                for tag in request.user.tags.all():
+                    update_tag_history(tag.pk)
+
             cashflow = total_income - total_expense
             cashflow_last_month = income_last_month - expense_last_month
             percentage_cashflow = calculate_percentage(cashflow, cashflow_last_month)
