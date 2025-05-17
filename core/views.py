@@ -16,7 +16,7 @@ from django.contrib import messages
 from django.views.generic import View
 from django.forms.models import model_to_dict
 
-from .utils import find_transaction_fitting_exchange_rate, convert_all, convert_each, convert_all_transactions_amounts_to_main_currency_precisely, calculate_percentage, get_new_exchange_rate
+from .utils import update_tag_history, find_transaction_fitting_exchange_rate, convert_all, convert_each, convert_all_transactions_amounts_to_main_currency_precisely, calculate_percentage, get_new_exchange_rate
 
 from decimal import Decimal
 import datetime
@@ -112,6 +112,10 @@ class WelcomeView(View):
                             month=datetime.date.today().month,
                             year=datetime.date.today().year
                         )
+
+            with transaction.atomic():
+                for tag in request.user.tags.all():
+                    update_tag_history(tag.pk)
 
             cashflow = total_income - total_expense
             cashflow_last_month = income_last_month - expense_last_month
@@ -515,6 +519,8 @@ class TransactionCreation(FormView):
                     else:
                         self.update_tags_and_accounts(amount, account, tag)
 
+                    update_tag_history(form.data['tag'])
+
                 historic_balance, _ = HistoricBalance.objects.get_or_create(
                     account=account,
                     month=form.instance.date.month,
@@ -850,8 +856,29 @@ class TagListView(GeneralListView):
             
             alt.append({
                 'tag': tag,
-                'total': total
+                'total': total,
+                'spent': round(convert_all_transactions_amounts_to_main_currency_precisely(
+                    tag.transactions.filter(
+                        date__year=datetime.date.today().year, 
+                        date__month=datetime.date.today().month, 
+                        transaction_type='-',
+                        hold=False,
+                        internal=False
+                    ).values(
+                        'amount', 'from_account__currency', 'date', 'exchange_rate'
+                    ), 
+                    self.request.user.main_currency.currency.pk
+                ), 2),
+                'history': TagHistory.objects.filter(tag=tag).order_by('-year', '-month').values('year', 'month', 'amount'),
             })
+
+            previous = TagHistory.objects.filter(
+                tag=tag, 
+                year=datetime.date.today().year if datetime.date.today().month != 1 else datetime.date.today().year - 1,
+                month=datetime.date.today().month - 1 if datetime.date.today().month != 1 else 12
+            ).last().amount
+            alt[-1]['flow'] = total - previous
+            alt[-1]['pctg'] = round(alt[-1]['flow'] / previous * 100, 2) if previous != 0 else 0
         return alt
 
 class TagUpdate(LoginRequiredMixin, FormView):
@@ -1215,7 +1242,8 @@ class TransferCreationView(TransactionCreation):
         return render(request, self.template_name, {'form': self.get_form(), 'account': Account.objects.get(pk=self.kwargs['pk'])})
     
     def post(self, request, *args, **kwargs):
-        with transaction.atomic():
+        try:
+            with transaction.atomic():
                 from_account = Account.objects.get(pk=self.kwargs['pk']) 
                 to_account = Account.objects.get(pk=request.POST.get('to_account'))
                 base_amount = Decimal(request.POST.get('amount'))
@@ -1312,6 +1340,10 @@ class TransferCreationView(TransactionCreation):
                         print("FEE")
                         print(fee_transaction.errors)
                         raise Exception("The transference is invalid.")
+        except Exception as e:
+            print(str(e))
+            messages.error(request, "An error has occurred while transferring the money.")
+            return render(request, self.template_name, {'form': self.get_form(), 'account': Account.objects.get(pk=self.kwargs['pk'])})
         
         storage = messages.get_messages(request)
         for _ in storage:

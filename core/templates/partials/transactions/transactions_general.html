@@ -147,6 +147,31 @@
               </form>
             </div>
           </div>
+
+          <label for="year-modal" class="btn btn-warning">Generate Report by Year (PDF)</label>
+          <input type="checkbox" id="year-modal" class="modal-toggle" />
+          <div class="modal">
+            <div class="modal-box">
+              <form action="{% url 'yearly_report_general' %}" method="get">
+                <h3 class="font-bold text-lg">Select Year</h3>
+                <div class="grid grid-cols-1 gap-4">
+                  <div>
+                    <label for="year-select" class="block">Year</label>
+                    <select id="year-select" name="year" class="select select-bordered w-full" required>
+                      <option value="">Select a year</option>
+                      {% for year in years %}
+                      <option>{{ year }}</option>
+                      {% endfor %}
+                    </select>
+                  </div>
+                  <div class="modal-action">
+                    <button type="submit" class="btn btn-primary">Submit</button>
+                    <label for="year-modal" class="btn">Close</label>
+                  </div>
+                </div>
+              </form>
+            </div>
+          </div>
         </div>
     </div>
 

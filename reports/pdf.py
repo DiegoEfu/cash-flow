@@ -1,5 +1,5 @@
-from reportlab.platypus import PageBreak, Paragraph, Spacer, SimpleDocTemplate
-from reportlab.platypus import Table, TableStyle
+from reportlab.platypus import Paragraph, Spacer, SimpleDocTemplate
+from reportlab.platypus import Table
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import ParagraphStyle
@@ -11,7 +11,7 @@ import calendar
 from django.http import HttpResponse
 from django.db.models import Sum, Q
 
-from core.models import Transaction, HistoricBalance, Tag, MoneyTag, Account
+from core.models import Transaction, HistoricBalance, Tag, MoneyTag, Account, TagHistory
 from core.utils import convert_all, convert_all_transactions_amounts_to_main_currency_precisely, figures_size
 
 def generate_report(request, elements, title, name='report'):
@@ -474,7 +474,7 @@ def generate_current_tags_report(request):
     tags = Tag.objects.filter(user=request.user).select_related('user')
     main_currency = request.user.main_currency.currency
     table_tags = [
-        ["Tag", f'Total ({main_currency.code})'],
+        ["Tag", f'Total ({main_currency.code})', f'Total Spent ({main_currency.code})', f'Cash Flow ({main_currency.code})'],
     ]
     total_assigned_main_currency = 0
 
@@ -487,6 +487,31 @@ def generate_current_tags_report(request):
                 'total': currency['total'],
             })
 
+        total_spent = Transaction.objects.filter(
+            tag=tag,
+            date__year=datetime.datetime.now().year,
+            date__month=datetime.datetime.now().month,
+            from_account__owner=request.user,
+            hold=False,
+            internal=False
+        )
+
+        total_spent = convert_all_transactions_amounts_to_main_currency_precisely(
+            [{
+                'amount': transaction.amount,
+                'from_account__currency': transaction.from_account.currency.pk,
+                'exchange_rate': transaction.exchange_rate.pk if transaction.exchange_rate else None,
+                'date': transaction.date.date()
+            } for transaction in total_spent],
+            main_currency.pk,
+        )
+
+        previous = TagHistory.objects.filter(
+            tag=tag,
+            year=datetime.datetime.now().year - 1 if datetime.datetime.now().month == 1 else datetime.datetime.now().year,
+            month=datetime.datetime.now().month - 1 if datetime.datetime.now().month > 1 else 12,
+        ).first().amount
+
         total_assigned = convert_all(
             total_assigned,
             main_currency.pk,
@@ -497,6 +522,8 @@ def generate_current_tags_report(request):
         table_tags.append([
             tag.name,
             f'{total_assigned:,.2f}',
+            f'{total_spent:,.2f}',
+            f'{total_assigned - previous:,.2f} ({((total_assigned - previous) / previous) * 100 if previous else 0:.2f}%)'
         ])
 
     total_balance_main_currency = sum(
