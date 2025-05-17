@@ -865,6 +865,7 @@ class TagListView(GeneralListView):
                     ), 
                     self.request.user.main_currency.currency.pk
                 ), 2),
+                'history': TagHistory.objects.filter(tag=tag).order_by('-year', '-month').values('year', 'month', 'amount'),
             })
 
             previous = TagHistory.objects.filter(
