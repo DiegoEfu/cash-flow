@@ -1,5 +1,6 @@
 from django.db import transaction
-from core.models import Currency, ExchangeRate, HistoricBalance
+from django.db.models import F
+from core.models import Currency, ExchangeRate, TagHistory, Tag
 from bs4 import BeautifulSoup
 import decimal
 import datetime
@@ -249,3 +250,28 @@ def figures_size(amount):
         return f"{nfigures} medium figure{'s' if nfigures != 1 else ''}"
     else:
         return f"{nfigures} high figure{'s' if nfigures != 1 else ''}"
+
+def update_tag_history(tag):
+    """
+        Updates the history of a tag.
+    """
+    year,month = datetime.datetime.now().year, datetime.datetime.now().month
+    tag = Tag.objects.get(pk=tag)
+    tag_history = TagHistory.objects.filter(tag=tag, year=year, month=month)
+
+    total_assigned = convert_all(
+        tag.money_tags.all().annotate(currency=F('account__currency'), total=F('amount')).values('total', 'currency'),
+        tag.user.main_currency.pk,
+    )
+
+    if tag_history.exists():
+        tag_history = tag_history.first()
+        tag_history.amount = total_assigned
+        tag_history.save()
+    else:
+        TagHistory.objects.create(
+            tag=Tag.objects.get(pk=tag),
+            amount=total_assigned,
+            month=month,
+            year=year,
+        )

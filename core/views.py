@@ -16,7 +16,7 @@ from django.contrib import messages
 from django.views.generic import View
 from django.forms.models import model_to_dict
 
-from .utils import find_transaction_fitting_exchange_rate, convert_all, convert_each, convert_all_transactions_amounts_to_main_currency_precisely, calculate_percentage, get_new_exchange_rate
+from .utils import update_tag_history, find_transaction_fitting_exchange_rate, convert_all, convert_each, convert_all_transactions_amounts_to_main_currency_precisely, calculate_percentage, get_new_exchange_rate
 
 from decimal import Decimal
 import datetime
@@ -514,6 +514,8 @@ class TransactionCreation(FormView):
                         tag.save()
                     else:
                         self.update_tags_and_accounts(amount, account, tag)
+
+                    update_tag_history(form.data['tag'])
 
                 historic_balance, _ = HistoricBalance.objects.get_or_create(
                     account=account,
