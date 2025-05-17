@@ -153,6 +153,49 @@
                           </div>
                         </div>
                       </div>
+
+                      <label for="modal_reassign_{{tag.tag.pk}}" class="btn btn-xs">Reassign Tag</label>
+                      <label for="modal_send_funds_{{tag.tag.pk}}" class="btn btn-xs">Send Funds</label>
+
+                      <input type="checkbox" id="modal_reassign_{{tag.tag.pk}}" class="modal-toggle" />
+                      <div class="modal" role="dialog">
+                        <div class="modal-box">
+                          <form action="{% url 'reassign_tag' tag_id=tag.tag.pk %}" method="post">
+                            {% csrf_token %}
+                            <h3 class="text-lg font-bold">Reassign Tag for {{tag.tag.name}}</h3>
+                            <select name="tag2_id" class="select select-bordered w-full">
+                              <option disabled selected>Select Tag</option>
+                              {% for tag in object_list %}
+                              <option value="{{tag.tag.pk}}">{{tag.tag.name}}</option>
+                              {% endfor %}
+                            </select>
+                            <div class="modal-action">
+                              <label for="modal_reassign_{{tag.tag.pk}}" class="btn">Close</label>
+                              <button type="submit" class="btn btn-primary">Reassign</button>
+                            </div>
+                          </form>
+                        </div>
+                      </div>
+
+                      <input type="checkbox" id="modal_send_funds_{{tag.tag.pk}}" class="modal-toggle" />
+                      <div class="modal" role="dialog">
+                        <div class="modal-box">
+                          <form action="{% url 'send_tag_account' tag_id=tag.tag.pk %}" method="post">
+                            {% csrf_token %}
+                            <h3 class="text-lg font-bold">Send Funds from {{tag.tag.name}}</h3>
+                            <select name="account" class="select select-bordered w-full">
+                              <option disabled selected>To the Account</option>
+                              {% for account in accounts %}
+                              <option value="{{account.account.pk}}">{{account.account}} - {{account.account.currency.code}} {{account.account.current_balance}}</option>
+                              {% endfor %}
+                            </select>
+                            <div class="modal-action">
+                              <label for="modal_send_funds_{{tag.tag.pk}}" class="btn">Close</label>
+                              <button type="submit" class="btn btn-primary">Send</button>
+                            </div>
+                          </form>
+                        </div>
+                      </div>
                       {% endif %}
                     </td>
                 </tr>
