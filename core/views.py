@@ -850,8 +850,28 @@ class TagListView(GeneralListView):
             
             alt.append({
                 'tag': tag,
-                'total': total
+                'total': total,
+                'spent': round(convert_all_transactions_amounts_to_main_currency_precisely(
+                    tag.transactions.filter(
+                        date__year=datetime.date.today().year, 
+                        date__month=datetime.date.today().month, 
+                        transaction_type='-',
+                        hold=False,
+                        internal=False
+                    ).values(
+                        'amount', 'from_account__currency', 'date', 'exchange_rate'
+                    ), 
+                    self.request.user.main_currency.currency.pk
+                ), 2),
             })
+
+            previous = TagHistory.objects.filter(
+                tag=tag, 
+                year=datetime.date.today().year if datetime.date.today().month != 1 else datetime.date.today().year - 1,
+                month=datetime.date.today().month - 1 if datetime.date.today().month != 1 else 12
+            ).last().amount
+            alt[-1]['flow'] = total - previous
+            alt[-1]['pctg'] = round(alt[-1]['flow'] / previous * 100, 2) if previous != 0 else 0
         return alt
 
 class TagUpdate(LoginRequiredMixin, FormView):
@@ -1215,7 +1235,8 @@ class TransferCreationView(TransactionCreation):
         return render(request, self.template_name, {'form': self.get_form(), 'account': Account.objects.get(pk=self.kwargs['pk'])})
     
     def post(self, request, *args, **kwargs):
-        with transaction.atomic():
+        try:
+            with transaction.atomic():
                 from_account = Account.objects.get(pk=self.kwargs['pk']) 
                 to_account = Account.objects.get(pk=request.POST.get('to_account'))
                 base_amount = Decimal(request.POST.get('amount'))
@@ -1312,6 +1333,10 @@ class TransferCreationView(TransactionCreation):
                         print("FEE")
                         print(fee_transaction.errors)
                         raise Exception("The transference is invalid.")
+        except Exception as e:
+            print(str(e))
+            messages.error(request, "An error has occurred while transferring the money.")
+            return render(request, self.template_name, {'form': self.get_form(), 'account': Account.objects.get(pk=self.kwargs['pk'])})
         
         storage = messages.get_messages(request)
         for _ in storage:

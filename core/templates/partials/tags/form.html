@@ -32,6 +32,21 @@
         </div>
         {% endif %}
     </div>
+
+    <div class="mb-3">
+        <label for="id_month_goal" class="form-label">Monthly Goal ({{request.user.main_currency.currency.code}}):</label>
+        {% render_field form.month_goal class="input input-bordered w-full" %}
+
+        {% if form.month_goal.errors %}
+        <div role="alert" class="alert alert-warning">
+            <span>
+                {% for error in form.month_goal.errors %}
+                {{error}}
+                {% endfor %}
+            </span>
+        </div>
+        {% endif %}
+    </div>
     <div class="flex justify-center">
         <button type="submit" class="btn btn-primary">Register Tag</button>
     </div>

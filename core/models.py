@@ -63,11 +63,25 @@ class Tag(StrAsNameMixin, models.Model):
     id = models.UUIDField(default=uuid.uuid4, primary_key=True)
     name = models.CharField(max_length=50, unique=True)
     user = models.ForeignKey(get_user_model(), on_delete=models.PROTECT)
+    month_goal = models.DecimalField(max_digits=15, decimal_places=2, default=0.00, blank=True, null=True, validators=[MinValueValidator(0.0)])
 
     class Meta:
         verbose_name_plural = "Tags"
         ordering = ("name",)
+
+class TagHistory(models.Model):
+    id = models.UUIDField(default=uuid.uuid4, primary_key=True)
+    tag = models.ForeignKey(Tag, on_delete=models.PROTECT, related_name="tag_history")
+    year = models.PositiveSmallIntegerField()
+    month = models.PositiveSmallIntegerField()
+    amount = models.DecimalField(max_digits=15, decimal_places=2, default=0.00, blank=True, null=True, validators=[MinValueValidator(0.0)])
+
+    def __str__(self) -> str:
+        return f"TagHistory ({self.tag}) on {self.date} by {self.user}."
     
+    class Meta:
+        ordering = ("-year", "-month")
+
 class MoneyTag(models.Model):
     id = models.UUIDField(default=uuid.uuid4, primary_key=True)
     amount = models.DecimalField(max_digits=15, decimal_places=2, default=0.00)
@@ -110,7 +124,7 @@ class Transaction(models.Model):
     internal = models.BooleanField(default=False, blank=True)
     money_tag = models.ForeignKey(MoneyTag, on_delete=models.PROTECT, null=True, blank=True)
     voucher = models.FileField(blank=True, null=True, validators=[FileExtensionValidator(allowed_extensions=['pdf','jpg','png'])], upload_to="vouchers/")
-    tag = models.ForeignKey(Tag, on_delete=models.PROTECT, null=True, blank=True)
+    tag = models.ForeignKey(Tag, on_delete=models.PROTECT, null=True, blank=True, related_name="transactions")
     user = models.ForeignKey(get_user_model(), on_delete=models.PROTECT, null=True)
 
     objects = TransactionQuerySet.as_manager()

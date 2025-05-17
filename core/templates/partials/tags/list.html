@@ -112,6 +112,9 @@
                 <tr class="bg-gray-900">
                     <th>Tag</th>
                     <th>Total Money Assigned ({{request.user.main_currency}})</th>
+                    <th>Monthly Goal ({{request.user.main_currency}})</th>
+                    <th>Spent This Month ({{request.user.main_currency}})</th>
+                    <th>Tag Cash Flow ({{request.user.main_currency}})</th>
                     <th>Actions</th>
                 </tr>
             </thead>
@@ -120,6 +123,9 @@
                 <tr>
                     <td>{{tag.tag.name}}</td>
                     <td>{{tag.total|default:'0.00'}}</td>
+                    <td>{{tag.tag.month_goal|default:'0.00'}}</td>
+                    <td>{{tag.spent|default:'0.00'}}</td>
+                    <td>{{tag.flow|default:'0.00'}} ({{tag.pctg|default:'0.00'}}%)</td>                    
                     <td>
                       <a hx-target="main" hx-get="{% url 'tag_update' pk=tag.tag.pk %}" class="text-primary hover:underline">Edit</a>
                       
