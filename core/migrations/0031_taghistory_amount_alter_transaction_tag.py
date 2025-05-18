@@ -12,11 +12,6 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        migrations.AddField(
-            model_name='taghistory',
-            name='amount',
-            field=models.DecimalField(blank=True, decimal_places=2, default=0.0, max_digits=15, null=True, validators=[django.core.validators.MinValueValidator(0.0)]),
-        ),
         migrations.AlterField(
             model_name='transaction',
             name='tag',

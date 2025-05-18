@@ -939,7 +939,7 @@ class TagAssignment(LoginRequiredMixin, View):
                     'total': sum([
                         x['total'] for x in 
                         convert_each(totals.filter(tag=tag).annotate(total=F('amount'), currency=F('account__currency'))
-                                         .values('total', 'currency'), account.currency.pk)
+                                         .values('total', 'currency'), self.request.user.main_currency.currency.pk)
                     ])
                 })
 
@@ -949,6 +949,12 @@ class TagAssignment(LoginRequiredMixin, View):
         context = {}
         context['account'] = Account.objects.select_related('currency').get(pk=self.kwargs['pk'])
         context['forms'] = self.get_forms(context['account'], request)
+        context['exchange_rate'] = ExchangeRate.objects.get(
+            active=True, 
+            currency1=self.request.user.main_currency.currency, 
+            currency2=context['account'].currency
+        ).exchange_rate if context['account'].currency != self.request.user.main_currency.currency else 1
+        
         context['totals'] = {
             'total_account': sum([ x['total'] for x in convert_each(
                 MoneyTag.objects.filter(account=context['account']).annotate(
@@ -956,15 +962,16 @@ class TagAssignment(LoginRequiredMixin, View):
                 ).values('total', 'currency'), 
                 context['account'].currency.pk
             )]),
-            'total_tags': sum([ x['total'] for x in convert_each(
+            'total_tags': round(sum([ x['total'] for x in convert_each(
                     MoneyTag.objects.filter(tag__in=Tag.objects.filter(user=self.request.user)).annotate(
                         total=F('amount'), currency=F('account__currency__pk')
                     ).values('total', 'currency'),
                     context['account'].currency.pk
                 )]
-            )
+            ) * context['exchange_rate'], 2),
         }
-        context['totals']['not_assigned'] = context['account'].current_balance - context['totals']['total_account']
+        context['totals']['not_assigned'] = round(context['account'].current_balance * context['exchange_rate'] - context['totals']['total_account'] * context['exchange_rate'], 2)
+        context['totals']['not_assigned_ac'] = round(context['account'].current_balance - context['totals']['total_account'], 2)
         return context
 
     def get(self, request, *args, **kwargs):

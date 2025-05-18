@@ -13,6 +13,9 @@
 </div>
 
 <input type="hidden" id="account_balance" name="account_balance" value="{{account.current_balance}}">
+<input type="hidden" name="exchange_rate" id="exchange_rate" value="{{exchange_rate}}">
+<input type="hidden" name="account_currency" id="account_currency" value="{{account.currency.code}}">
+<input type="hidden" name="main_currency" id="main_currency" value="{{request.user.main_currency.currency.code}}">
 
 <form hx-post="{% url 'tag_assignment' pk=account.pk %}" hx-target="main" hx-select="main" class="grid grid-cols-1">
     {% csrf_token %}
@@ -26,8 +29,8 @@
                   <th>Tag Name</th>
                   <th>Previous Assigned in the Account ({{account.currency.code}})</th>
                   <th>Money Assigned in Account ({{account.currency.code}})</th>
-                  <th>Current Total Assigned in Tag ({{account.currency.code}})</th>
-                  <th>Total Assigned in Tag after Changes ({{account.currency.code}})</th>
+                  <th>Current Total Assigned in Tag ({{request.user.main_currency.currency.code}})</th>
+                  <th>Total Assigned in Tag after Changes ({{request.user.main_currency.currency.code}})</th>
                 </tr>
               </thead>
               <tbody>
@@ -49,14 +52,14 @@
                 {% endfor %}
                 <tr>
                   <th colspan="2">Totals</th>
-                  <td id="total-assigned-previous">{{totals.total_account}}</td>
-                  <td id="total-assigned-now">{{totals.total_account}}</td>
-                  <td id="total-assigned-tags-before">{{totals.total_tags}}</td>
-                  <td id="total-assigned-tags-after">{{totals.total_tags}}</td>
+                  <td id="total-assigned-previous">{{totals.total_account|default:'0.00'}}</td>
+                  <td id="total-assigned-now">{{totals.total_account|default:'0.00'}}</td>
+                  <td id="total-assigned-tags-before">{{totals.total_tags|default:'0.00'}}</td>
+                  <td id="total-assigned-tags-after">{{totals.total_tags|default:'0.00'}}</td>
                 </tr>
                 <tr>
                   <th colspan="5">Not Assigned in this Account</th>
-                  <td id="not-assigned">{{totals.not_assigned}}</td>
+                  <td id="not-assigned"> {{account.currency.code}} {{totals.not_assigned_ac|default:'0.00'}} / {{request.user.main_currency.currency.code}} {{totals.not_assigned|default:'0.00'}}</td>
                 </tr>
               </tbody>
             </table>
