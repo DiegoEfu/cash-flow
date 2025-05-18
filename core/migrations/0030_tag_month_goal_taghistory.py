@@ -25,6 +25,7 @@ class Migration(migrations.Migration):
                 ('year', models.PositiveSmallIntegerField()),
                 ('month', models.PositiveSmallIntegerField()),
                 ('tag', models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, related_name='tag_history', to='core.tag')),
+                ('amount', models.DecimalField(blank=True, decimal_places=2, default=0.0, max_digits=15, null=True, validators=[django.core.validators.MinValueValidator(0.0)])),
             ],
             options={
                 'ordering': ('-year', '-month'),

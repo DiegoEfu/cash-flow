@@ -48,7 +48,7 @@
 
         <div class="me-3">
             <label for="id_amount" class="form-label">Amount ({{account.currency.code}}):</label>
-            {% render_field form.amount class="input input-bordered w-full" min="0.01" step="0.01" placeholder="Must be greater than or equal to 0.01" %}
+            {% render_field form.amount required="required" class="input input-bordered w-full" min="0.01" step="0.01" placeholder="Must be greater than or equal to 0.01" %}
             <small class="text-xs">Final Balance:  <b class="text-error">{{account.currency.code}}  <span id="final_balance">{{account.current_balance}}</span></b></small>
         </div>
         {% if not form.instance.account %}
