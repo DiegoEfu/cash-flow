@@ -4,7 +4,7 @@
 
 <span id="final_balance" hx-swap-oob="true">{{final_from}}</span>
 
-<input type="number" hx-include="input, select" hx-trigger="keyup changed delay:500ms" hx-get="/transfer/update/{{from_account.pk}}" hx-swap-oob="true" id="id_received_amount" name="received_amount" value="{{rec_amount}}" hx-swap="none" class="input input-bordered w-full" />
+<input required type="number" hx-include="input, select" hx-trigger="keyup changed delay:1000ms" hx-get="/transfer/update/{{from_account.pk}}" hx-swap-oob="true" id="id_received_amount" name="received_amount" value="{{rec_amount}}" hx-swap="none" class="input input-bordered w-full" />
 <b class="text-error">{{final_to}}<span id="currency_to_acc2" hx-swap-oob="true"> {{to_account.currency.code}}</span>  
     <span hx-swap-oob="true" id="rec_final_balance"> {{final_to}} </span></b></small>
 

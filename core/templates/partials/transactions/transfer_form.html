@@ -36,7 +36,7 @@
 
         <div class="me-3">
             <label for="id_amount" class="form-label">Sent Amount ({{account.currency.code}}):</label>
-            <input type="number" name="amount" id="id_amount" value="{{form.amount.value}}" hx-include="input:not(#id_received_amount), select" class="input input-bordered w-full" min="0.01" step="0.01" placeholder="Must be greater than or equal to 0.01" hx-get="/transfer/update/{{account.pk}}" hx-trigger="keyup changed delay:500ms" hx-swap="none">
+            <input required type="number" name="amount" id="id_amount" value="{{form.amount.value}}" hx-include="input:not(#id_received_amount), select" class="input input-bordered w-full" min="0.01" step="0.01" placeholder="Must be greater than or equal to 0.01" hx-get="/transfer/update/{{account.pk}}" hx-trigger="keyup changed delay:1000ms" hx-swap="none">
             <small class="text-xs">Sender Final Balance:  <b class="text-error">{{account.currency.code}}  <span id="final_balance">{{account.current_balance}}</span></b></small>
         </div>
 
@@ -59,7 +59,7 @@
 
         <div class="me-3">
             <label for="id_transaction_type" class="form-label">Received Amount:</label>
-            <input type="number" name="received_amount" id="id_received_amount" value="{{form.received_amount.value}}" hx-include="input, select" class="input input-bordered w-full" min="0.01" step="0.01" placeholder="Must be greater than or equal to 0.01" hx-get="/transfer/update/{{account.pk}}" hx-trigger="keyup changed delay:500ms" hx-swap="none">
+            <input type="number" required name="received_amount" id="id_received_amount" value="{{form.received_amount.value}}" hx-include="input, select" class="input input-bordered w-full" min="0.01" step="0.01" placeholder="Must be greater than or equal to 0.01" hx-get="/transfer/update/{{account.pk}}" hx-trigger="keyup changed delay:1000ms" hx-swap="none">
             <small class="text-xs">Receiver Final Balance:  <b class="text-error"><span id="currency_to_acc2"></span>  <span id="rec_final_balance"> - </span></b></small>
         </div>
 
