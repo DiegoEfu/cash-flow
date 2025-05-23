@@ -1272,7 +1272,7 @@ class TransferCreationView(TransactionCreation):
                 receive_transaction = TransactionForm({
                     'description': request.POST.get('description'),
                     'reference': request.POST.get('reference'),
-                    'amount': received_amount if fee >= 0 else received_amount - fee_converted,
+                    'amount': received_amount if fee >= 0 else round(received_amount - fee_converted, 2),
                     'transaction_type': '+',
                     'from_account': to_account.pk,
                     'internal': True,
@@ -1284,6 +1284,8 @@ class TransferCreationView(TransactionCreation):
                 if(receive_transaction.is_valid()):
                     self.form_valid(receive_transaction, to_account.pk)
                 else:
+                    print("RECEIBE", received_amount if fee >= 0 else round(received_amount - fee_converted, 2))
+                    print(receive_transaction.errors)
                     raise Exception("The transference is invalid.")
                 
                 send_transaction = TransactionForm({
@@ -1302,12 +1304,13 @@ class TransferCreationView(TransactionCreation):
                 if(send_transaction.is_valid()):
                     self.form_valid(send_transaction, from_account.pk)
                 else:
+                    print(send_transaction.errors)
+                    print("SEND")
                     raise Exception("The transference is invalid.")
                 
                 print(request.POST.get('deduce_from_tag'))
                 
                 if(fee > 0):
-                    print("AAAA")
                     fee_transaction = TransactionForm({
                         'description': f"Transfer fee {pctg}%", 
                         'reference': request.POST.get('reference'),
@@ -1326,13 +1329,11 @@ class TransferCreationView(TransactionCreation):
                         print("FEE")
                         print(fee_transaction.errors)
                         raise Exception("The transference is invalid.")
-                elif(fee < 0):
-                    print("FEEEEEEEEEEEEEEEEEEE2")
-                    
+                elif(fee < 0):                   
                     fee_transaction = TransactionForm({
                         'description': f"Transfer extra {abs(pctg)}%", 
                         'reference': request.POST.get('reference'),
-                        'amount': fee_converted,
+                        'amount': round(fee_converted, 2),
                         'transaction_type': '+',
                         'from_account': to_account.pk,
                         'internal': False,
