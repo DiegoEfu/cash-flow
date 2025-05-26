@@ -1,3 +1,10 @@
+"""
+reports/urls.py
+
+This file contains the URL configurations for the reports app.
+The URLs are for generating PDF reports of transactions.
+"""
+
 from django.urls import path
 from reports.views import *
 

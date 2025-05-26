@@ -1,19 +1,64 @@
+/**
+ * @file form.js
+ * @description This file contains the JavaScript code for the totals input fields. It
+ * listens for keyup and change events on the .total class and then
+ * recalculates the total values.
+ *
+ * The total values are the sum of all the values in all the .total fields.
+ *
+ * The total values are displayed in the elements with the class .totals.
+ *
+ * The total values are displayed in the same format as the value in the
+ * input fields.
+ *
+ * The total values are calculated by summing all the values in all the
+ * .total fields and then formatting the result in the same way as the
+ * value in the input fields.
+ */
+
 document.querySelectorAll('.total').forEach(element => {
+    /**
+     * Add event listeners to each element with the class .total
+     * to listen for keyup and change events.
+     */
     element.addEventListener('keyup', totalKeyUp);
     element.addEventListener('change', totalChange);
 });
 
 function totalKeyUp(event) {
+    /**
+     * Function to handle the keyup event on the .total elements
+     * It calls the calculateTotals function to recalculate the total values
+     * @param {Event} event The event that triggered this function
+     */
     calculateTotals(event);
 }
 
 function totalChange(event) {
+    /**
+     * Function to handle the change event on the .total elements
+     * It calls the calculateTotals function to recalculate the total values
+     * @param {Event} event The event that triggered this function
+     */
     calculateTotals(event);
 }
 
 function calculateTotals(event) {
+    /**
+     * Function to calculate the total amount of money assigned to tags
+     * 
+     * It takes the current amounts in the form and calculates the total
+     * amount of money assigned to the tags, both in the account currency
+     * and in the main currency.
+     * 
+     * It also calculates the total amount of money assigned to the tags
+     * in the main currency, taking into account the previous amount assigned
+     * to each tag.
+     * 
+     * @param {Event} event The event that triggered this function
+     */
+
     let totalNow = 0;
-    let totalAllTags = 0;
     let totalAllTagsMC = 0;
 
     const balance = parseFloat(document.getElementById('account_balance').value);
@@ -32,7 +77,6 @@ function calculateTotals(event) {
         totalNow += value;
         const actual = parseFloat(document.getElementById(`total-tag-before-${id}`).innerText);
         const previo = parseFloat(document.getElementById(`previous-${id}`).innerText) * exchangeRate;
-        console.log(`actual: ${actual}, previo: ${previo}, value: ${value}`);
         
         const sum =  actual - previo + valueMC;
 
@@ -51,9 +95,15 @@ function calculateTotals(event) {
     document.getElementById('not-assigned').innerText = `${document.getElementById('account_currency').value} ${notAssigned.toFixed(2)} / ${document.getElementById('main_currency').value} ${notAssignedMC.toFixed(2)}`; ;
 }
 
-document.querySelectorAll('.remove-btn').forEach(button => {
-    console.log(button);
-    
+document.querySelectorAll('.remove-btn').forEach(button => {   
+    /**
+     * Add event listeners to each element with the class .remove-btn
+     * to listen for click events.
+     * 
+     * When a button with the class .remove-btn is clicked, it removes the
+     * closest tr element and then calls the calculateTotals function to
+     * recalculate the total values.
+     */
     button.addEventListener('click', event => {       
         const row = event.target.closest('tr');
         const table = event.target.closest('table');

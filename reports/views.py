@@ -9,6 +9,13 @@ def monthly_transactions_report(request, account):
     '''
     Summary:
         This function generates a PDF report of the monthly transactions.
+
+    Parameters:
+        request: The HTTP request object.
+        account: The ID of the account for which the report is generated.
+
+    Returns:
+        HttpResponse: A PDF response containing the monthly transactions report.
     '''
 
     year = request.GET.get('year')
@@ -24,6 +31,12 @@ def monthly_report_general(request):
     '''
     Summary:
         This function generates a PDF report of the monthly transactions for all accounts.
+
+    Parameters:
+        request: The HTTP request object.
+
+    Returns:
+        HttpResponse: A PDF response containing the monthly transactions report for all accounts.
     '''
 
     year = request.GET.get('year')
@@ -38,6 +51,12 @@ def yearly_report_general(request):
     '''
     Summary:
         This function generates a PDF report of the yearly transactions for all accounts.
+
+    Parameters:
+        request: The HTTP request object.
+
+    Returns:
+        HttpResponse: A PDF response containing the yearly transactions report for all accounts.
     '''
 
     year = request.GET.get('year')
@@ -51,6 +70,13 @@ def yearly_transactions_report(request, account):
     '''
     Summary:
         This function generates a PDF report of the yearly transactions.
+
+    Parameters:
+        request: The HTTP request object.
+        account: The ID of the account for which the report is generated.
+
+    Returns:
+        HttpResponse: A PDF response containing the yearly transactions report.
     '''
 
     year = request.GET.get('year')
@@ -65,6 +91,12 @@ def tag_report(request):
     '''
     Summary:
         This function generates a PDF report of the tag distribution.
+
+    Parameters:
+        request: The HTTP request object.
+
+    Returns:
+        HttpResponse: A PDF response containing the tag distribution report.
     '''
     
     if not request.user.is_authenticated:
@@ -76,6 +108,12 @@ def current_balances_accounts(request):
     '''
     Summary:
         This function generates a PDF report of the current balances of all accounts.
+
+    Parameters:
+        request: The HTTP request object.
+
+    Returns:
+        HttpResponse: A PDF response containing the current balances report.
     '''
 
     if not request.user.is_authenticated:

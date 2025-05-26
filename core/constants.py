@@ -1,1 +1,2 @@
+# Constants for the application
 OPENING_BALANCE_DESCRIPTION = "OPENING BALANCE TRANSACTION"

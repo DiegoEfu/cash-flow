@@ -1,3 +1,12 @@
+"""
+core/utils.py
+
+This file contains utility functions that are used throughout the application.
+It also contains functions used to fetch data from the Internet, such as the
+exchange rate of a currency.
+
+"""
+
 from django.db import transaction
 from django.db.models import F
 from core.models import Currency, ExchangeRate, TagHistory, Tag
@@ -8,9 +17,34 @@ import requests
 import urllib3
 
 def convert(amount, exchange_rate):
+    """
+    Summary:
+        Function that converts a given amount from one currency to another according to a given exchange rate.
+        
+    Parameters:
+        amount (float): The amount to be converted.
+        exchange_rate (float): The exchange rate to be used for the conversion.
+        
+    Returns:
+        float: The converted amount.
+    """
+    
     return round(decimal.Decimal(amount) / decimal.Decimal(exchange_rate), 2)
 
 def convert_all(amounts, main_currency_pk, exchange_rates = None):
+    """
+    Summary:
+        Converts a list of amounts from their respective currencies to a main currency using provided or default exchange rates.
+
+    Parameters:
+        amounts (list of dict): A list of dictionaries where each dictionary contains 'total' and 'currency' keys.
+        main_currency_pk (int): The primary key of the main currency to which all amounts will be converted.
+        exchange_rates (queryset, optional): A queryset of exchange rates with 'exchange_rate', 'currency1', and 'currency2' fields. Defaults to None, in which case active exchange rates are fetched from the database.
+
+    Returns:
+        list of dict: A list of dictionaries with amounts converted to the main currency, each dictionary containing 'total' after conversion.
+    """
+
     acc = 0
 
     if(not exchange_rates):    
@@ -35,6 +69,19 @@ def convert_all(amounts, main_currency_pk, exchange_rates = None):
     return acc
 
 def convert_each(amounts, main_currency_pk, exchange_rates = None):
+    """
+    Summary:
+        Converts a list of amounts from their respective currencies to a main currency using provided or default exchange rates.
+        
+    Parameters:
+        amounts (list of dict): A list of dictionaries where each dictionary contains 'total' and 'currency' keys.
+        main_currency_pk (int): The primary key of the main currency to which all amounts will be converted.
+        exchange_rates (queryset, optional): A queryset of exchange rates with 'exchange_rate', 'currency1', and 'currency2' fields. Defaults to None, in which case active exchange rates are fetched from the database.
+
+    Returns:
+        list of dict: A list of dictionaries with amounts converted to the main currency, each dictionary containing 'total' after conversion.
+    """
+    
     if(not exchange_rates):    
         exchange_rates = ExchangeRate.objects.filter(active=True) \
             .select_related('currency1', 'currency2').values('exchange_rate', 'currency1', 'currency2')
@@ -59,6 +106,18 @@ def convert_each(amounts, main_currency_pk, exchange_rates = None):
     return new_amounts
 
 def convert_transactions(transactions, main_currency_pk, exchange_rates = None):
+    """
+    Summary:
+        Converts all transactions in a list from their respective currencies to a main currency using provided or default exchange rates.
+        
+    Parameters:
+        transactions (list of dict): A list of dictionaries where each dictionary contains a 'from_account__currency' key.
+        main_currency_pk (int): The primary key of the main currency to which all transactions will be converted.
+        exchange_rates (queryset, optional): A queryset of exchange rates with 'exchange_rate', 'currency1', and 'currency2' fields. Defaults to None, in which case active exchange rates are fetched from the database.
+
+    Returns:
+        list of dict: A list of dictionaries with transactions converted to the main currency, each dictionary containing 'total' after conversion.
+    """
     if not exchange_rates:
         exchange_rates = ExchangeRate.objects.filter(active=True) \
             .select_related('currency1', 'currency2').values('exchange_rate', 'currency1', 'currency2')
@@ -81,6 +140,18 @@ def convert_transactions(transactions, main_currency_pk, exchange_rates = None):
     return new_transactions
 
 def calculate_percentage(current, comparison):
+    """
+    Summary:
+        Calculates a percentage difference between two values.
+        
+    Parameters:
+        current (float): The value to which the comparison is being made.
+        comparison (float): The value against which the current is being compared.
+        
+    Returns:
+        float or None: The percentage difference between the two values. If either value is zero, this function will return None.
+    """
+    
     try:
         percentage = round((current - comparison) /comparison * 100, 2)
     except:
@@ -89,13 +160,39 @@ def calculate_percentage(current, comparison):
     return percentage
 
 def find_transaction_fitting_exchange_rate(currency1, currency2, date):
+    """
+    Summary:
+        Finds the exchange rate with the latest date that is earlier than or equal to the given date for a given currency pair.
+        
+    Parameters:
+        currency1 (Currency): The first currency of the currency pair.
+        currency2 (Currency): The second currency of the currency pair.
+        date (datetime.date): The date to compare with the dates of the exchange rates.
+        
+    Returns:
+        ExchangeRate or None: The exchange rate with the latest date that is earlier than or equal to the given date for the given currency pair, or None if no such exchange rate exists or if the two currencies are the same.
+    """
     return ExchangeRate.objects.filter(
         currency1=currency1, currency2=currency2,
         date__lte=date
     ).latest('date') if currency1.pk != currency2.pk else None
 
 def get_new_exchange_rate():
-    # Desactiva advertencia por poblemas de SSL en la página del BCV
+        """
+        Summary:
+            Fetches the new exchange rate from a specified source, handling any SSL warnings, and processes the data to extract relevant information.
+
+        Details:
+            It disables SSL warnings for requests made to the BCV (Banco Central de Venezuela) site and provides utility functions to map month names to numbers and to parse date strings.
+
+        Parameters:
+            None
+
+        Returns:
+            None
+        """
+
+        # Desactiva advertencia por poblemas de SSL en la página del BCV
         urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning) 
 
         def numero_mes(mes):
@@ -202,6 +299,17 @@ def get_new_exchange_rate():
                     ExchangeRate.objects.create(currency1=currency1, currency2=currency2, exchange_rate=rate, date=fecha)
 
 def convert_all_transactions_amounts_to_main_currency_precisely(transactions, main_currency):
+    """
+    Summary:
+        Converts the amounts of all given transactions to the given main currency.
+
+    Parameters:
+        transactions (list of dicts): The transactions to convert. Each transaction must have the keys 'from_account__currency', 'amount', 'exchange_rate'.
+        main_currency (Currency): The currency to convert the amounts to.
+
+    Returns:
+        list of dicts: The transactions with their amounts converted to the main currency. The 'amount' key of each transaction is updated with the converted amount.
+    """
     exchange_rates = ExchangeRate.objects.filter(
         id__in = [transaction['exchange_rate'] for transaction in transactions],
     ).select_related('currency1', 'currency2').values('exchange_rate', 'currency1', 'currency2')
@@ -236,6 +344,16 @@ def convert_all_transactions_amounts_to_main_currency_precisely(transactions, ma
     return total
 
 def figures_size(amount):
+    """
+    Summary:
+        Calculates the size of a given amount in terms of the number of figures it has.
+
+    Parameters:
+        amount (float): The amount to calculate the size of.
+
+    Returns:
+        str: The size of the amount as a string, which can be '1 low figure', '2 low figures', '1 medium figure', '2 medium figures', '1 high figure', '2 high figures', etc.
+    """
     nfigures = len(str(abs(int(amount)))) if amount >= 1 else 0
 
     if(amount < 1):
@@ -252,6 +370,20 @@ def figures_size(amount):
         return f"{nfigures} high figure{'s' if nfigures != 1 else ''}"
 
 def update_tag_history(tag):
+    """
+    Summary:
+        Updates the history of a tag.
+
+    Parameters:
+        tag (Tag or int): The tag to update its history. If it is an integer, it is considered as the primary key of the tag.
+
+    Returns:
+        None
+
+    Description:
+        This function updates the history of a given tag. It checks if there is already a history for the current month and year, and if it does, it updates the amount of the history with the new total assigned of the tag. If it doesn't, it creates a new history with the current month and year and the total assigned of the tag.
+    """
+    
     """
         Updates the history of a tag.
     """
