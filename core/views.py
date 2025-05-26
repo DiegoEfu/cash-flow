@@ -31,9 +31,37 @@ from .constants import *
 from django.views import View
 
 class WelcomeView(View):
+    """
+    Summary:
+    This class is a Django View that handles the welcome page for
+    authenticated users. It will show a summary of the user's current
+    balance, their income and expenses for the current month, and
+    their exchange rates.
+
+    Attributes:
+    template_name (str): The template to render for the welcome page.
+
+    Methods:
+    get_context_data(request)
+    get(request)
+
+    """
     template_name = 'welcome.html'
 
     def get_context_data(self, request):
+        """
+        Summary:
+        This method is used to generate the context data for the welcome page.
+        It will gather the user's accounts, their exchange rates, and the total
+        amount of money they have in each currency.
+
+        Parameters:
+        request - The request object passed to the view.
+
+        Returns:
+        context - A dictionary with the user's accounts, exchange rates, and
+        total balance in each currency.
+        """
         if request.user.is_authenticated:
             exchange_rates = ExchangeRate.objects.filter(active=True) \
                 .select_related('currency1', 'currency2').values('exchange_rate', 'currency1', 'currency2')
@@ -137,6 +165,27 @@ class WelcomeView(View):
             }
 
     def update_balances(self, request, *args, **kwargs):
+        """
+        Updates all the balances of the user and returns a json response with them.
+
+        Parameters:
+        request (HttpRequest): The request that triggered the view.
+
+        Returns:
+        dict: A dictionary with the following keys:
+            - balance (float): The total balance of the user.
+            - current_month_income (float): The total income of the current month of the user.
+            - current_month_expense (float): The total expense of the current month of the user.
+            - balance_last_month (float): The total balance of the last month of the user.
+            - income_last_month (float): The total income of the last month of the user.
+            - expense_last_month (float): The total expense of the last month of the user.
+            - cash_flow (float): The cash flow of the user in the current month.
+            - cash_flow_last_month (float): The cash flow of the user in the last month.
+            - percentage_balance (str): The percentage change of the balance of the user between the last month and the current month.
+            - percentage_income (str): The percentage change of the income of the user between the last month and the current month.
+            - percentage_expense (str): The percentage change of the expense of the user between the last month and the current month.
+            - percentage_cash_flow (str): The percentage change of the cash flow of the user between the last month and the current month.
+        """
         current_month = datetime.date.today().month
         current_year = datetime.date.today().year
         visible_accounts = Account.objects.filter(owner=request.user, visible=True)
@@ -157,6 +206,15 @@ class WelcomeView(View):
                 )
 
     def get(self, request, *args, **kwargs):
+        """
+        Handles GET requests for the home page.
+
+        Parameters:
+        request (HttpRequest): The request that triggered the view.
+
+        Returns:
+        HttpResponse: The rendered home page.
+        """
         context = self.get_context_data(request)
         
         if(request.user.is_authenticated):
@@ -166,18 +224,57 @@ class WelcomeView(View):
         return render(request, self.template_name, context=context)
 
 class LoginView(LoginView):
+    """
+    A custom login view for the application.
+
+    Properties:
+    - template_name (str): The name of the template to use for the login page.
+
+    Methods:
+    - get_success_url (HttpRequest): Returns the URL to redirect to after a successful login.
+    - get (HttpRequest, *args, **kwargs): Handles GET requests for the login page.
+    """
     template_name = 'login.html'
 
     def get_success_url(self) -> str:
+        """
+        Summary:
+        Returns the URL to redirect to after a successful login.
+
+        Returns:
+        str: The URL to redirect to after a successful login.
+        """
+
         return '/'
     
     def get(self, request: HttpRequest, *args: str, **kwargs: Any) -> HttpResponse:
+        """
+        Summary:
+        Handles GET requests for the login page.
+
+        Parameters:
+        request (HttpRequest): The request that triggered the view.
+
+        Returns:
+        HttpResponse: The rendered login page.
+        """
+        
         if(request.user.is_authenticated):
             return redirect('/')
         
         return super().get(request, *args, **kwargs)
     
     def post(self, request: HttpRequest, *args: str, **kwargs: Any) -> HttpResponse:
+        """
+        Summary:
+        Handles POST requests for the login page.
+
+        Parameters:
+        request (HttpRequest): The request that triggered the view.
+
+        Returns:
+        HttpResponse: The rendered login page.
+        """
         response = super().post(request, *args, **kwargs)
 
         if(response.status_code == 200 and not request.user.is_authenticated):
@@ -186,11 +283,34 @@ class LoginView(LoginView):
         return response
     
 class SignUpView(FormView):
+    """
+    Summary:
+    A custom sign up view for the application.
+
+    Properties:
+    - template_name (str): The name of the template to use for the sign up page.
+    - form_class (Form): The form class to use for the sign up page.
+    - success_url (str): The URL to redirect to after a successful sign up.
+
+    Methods:
+    - form_valid (Form): Handles valid form submissions and creates a new user.
+    - get (HttpRequest, *args, **kwargs): Handles GET requests for the sign up page.
+    """
     template_name = 'signup.html'
     form_class = UserForm
     success_url = "/login"
 
     def form_valid(self, form: Any) -> HttpResponse:
+        """
+        Summary:
+        Handles valid form submissions and creates a new user.
+
+        Parameters:
+        form (Form): The form that was submitted.
+
+        Returns:
+        HttpResponse: The response to return to the user.
+        """
         with transaction.atomic():
             res = super().form_valid(form)
 
@@ -205,20 +325,65 @@ class SignUpView(FormView):
         return res
     
     def form_invalid(self, form: Any) -> HttpResponse:
+        """
+        Summary:
+        Handles invalid form submissions and returns the appropriate response.
+
+        Parameters:
+        form (Form): The form that was submitted and found to be invalid.
+
+        Returns:
+        HttpResponse: The response to return to the user, indicating the form was invalid.
+        """
+
         messages.error(self.request, "An error has ocurred while creating your user.")
         return super().form_invalid(form)
 
 class GeneralListView(LoginRequiredMixin, ListView):
+    """
+    Summary:
+    A base class for ListViews that should be used when the items being listed are related to the user.
+
+    Properties:
+    model (Model): The model that should be used to retrieve the list of items.
+    template_name (str): The name of the template that should be used to render the ListView.
+    paginate_by (int): The number of items to show per page.
+
+    Methods:
+    get_context_data(self, **kwargs: Any): Retrieves the context data that should be used to render the ListView, including the list of items and pagination information.
+    """
     model = None  # This attribute must be overridden in the subclass
     template_name = '' # must be overridden by a partial
     paginate_by = 5 # pagination used by default
 
     def get_context_data(self, **kwargs: Any):
+        """
+        Summary:
+        Retrieves the context data that should be used to render the ListView, including the filter class.
+
+        Parameters:
+        kwargs (Any): Additional context data that might be needed.
+
+        Returns:
+        dict: A dictionary containing the context data for rendering the ListView.
+        """
+
         context = super().get_context_data(**kwargs)
         context['filter'] = self.filter_class()
         return context
 
     def paginate_queryset(self, queryset, page_size):
+        """
+        Summary:
+        Paginates the queryset with the given page size.
+
+        Parameters:
+        queryset (QuerySet): The queryset that should be paginated.
+        page_size (int): The number of items to show per page.
+
+        Returns:
+        tuple: A tuple containing the paginated queryset and the pagination information.
+        """
         return super().paginate_queryset(queryset.qs, page_size)
 
 ## ACCOUNT VIEWS

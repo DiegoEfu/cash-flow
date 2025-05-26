@@ -1,4 +1,15 @@
+/**
+ * @file transactions.js
+ * @description This file contains JavaScript functions for handling transactions-related
+ * operations on the frontend. It includes functions for generating graphs using Chart.js,
+ * as well as handling transaction-related events and interactions with the server.
+ */
+
 function graph() {
+    /**
+     * Generates a graph for the transactions of the selected account
+     * using the Chart.js library.
+     */
     const ctx = document.getElementById('transaction-graph').getContext('2d');
     const account = document.getElementById('account').value;   
 
