@@ -1,3 +1,16 @@
+"""
+Email Authentication Backend
+
+This is a custom authentication backend that uses email as the username,
+instead of the default username. This is useful for users who don't want to
+remember a username, and for users who want to use their email address as their
+username.
+
+This backend is a subclass of the Django built-in ModelBackend, and overrides
+the authenticate method to use the email as the username.
+
+"""
+
 from django.contrib.auth import get_user_model
 from django.contrib.auth.backends import ModelBackend
 

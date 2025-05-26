@@ -14,7 +14,21 @@ from django.db.models import Sum, Q
 from core.models import Transaction, HistoricBalance, Tag, MoneyTag, Account, TagHistory
 from core.utils import convert_all, convert_all_transactions_amounts_to_main_currency_precisely, figures_size
 
-def generate_report(request, elements, title, name='report'):
+def generate_report(request, elements, title, name='report') -> HttpResponse:
+    """
+    Summary:
+        This function generates a PDF report by compiling the given elements into a document.
+    
+    Parameters:
+        request (HttpRequest): The request object containing metadata about the request.
+        elements (list): A list of reportlab elements to be added to the PDF.
+        title (str): The title of the PDF document.
+        name (str): The name of the PDF file (default is 'report').
+    
+    Returns:
+        HttpResponse: A Django HTTP response with the generated PDF as an attachment.
+    """
+
     def primera_pagina(canvas, doc):
         '''
         Resumen:
@@ -96,10 +110,19 @@ def generate_report(request, elements, title, name='report'):
 
     return response
 
-def generate_monthly_transactions_report(request, account, year, month):
+def generate_monthly_transactions_report(request, account, year, month) -> HttpResponse:
     '''
-    Resumen:
-        Esta función genera un reporte PDF de las transacciones mensuales.
+    Summary:
+        This function generates a PDF report of the monthly transactions.
+
+    Parameters:
+        request (HttpRequest): The request object containing metadata about the request.
+        account (Account): The account to generate the report for.
+        year (int): The year to generate the report for.
+        month (int): The month to generate the report for.
+
+    Returns:
+        HttpResponse: A Django HTTP response with the generated PDF as an attachment.
     '''
     currency = account.currency.code
     main_currency = request.user.main_currency
@@ -275,9 +298,18 @@ def generate_monthly_transactions_report(request, account, year, month):
             name=f'monthly_transactions_report',
         )
     
-def generate_yearly_transactions_report(request, account, year):
+def generate_yearly_transactions_report(request, account, year) -> HttpResponse:
     """
-    Generates a PDF report for all the transactions in a year.
+    Summary:
+        Generates a PDF report for all the transactions in a year.
+
+    Parameters:
+        request (HttpRequest): The request object containing metadata about the request.
+        account (Account): The account to generate the report for.
+        year (int): The year to generate the report for.
+
+    Returns:
+        HttpResponse: A Django HTTP response with the generated PDF as an attachment.
     """
     transactions = Transaction.objects.filter(
         from_account=account,
@@ -470,7 +502,21 @@ def generate_yearly_transactions_report(request, account, year):
         name=f'yearly_transactions_report',
     )
 
-def generate_current_tags_report(request):
+def generate_current_tags_report(request) -> HttpResponse:
+    """
+    Summary:
+    This function generates a PDF report of the current tags transactions for all accounts.
+    
+    It will show the total money assigned to each tag, the total money spent from each tag, the cash flow for each tag, and the total for all tags and accounts.
+    
+    The report will be generated for the current year and month.
+    
+    Parameters:
+        request (HttpRequest): The request object containing metadata about the request.
+    
+    Returns:
+        HttpResponse: A Django HTTP response with the generated PDF as an attachment.
+    """
     tags = Tag.objects.filter(user=request.user).select_related('user')
     main_currency = request.user.main_currency.currency
     table_tags = [
@@ -568,10 +614,20 @@ def generate_current_tags_report(request):
         name='current_tags_report',
     )
 
-def generate_monthly_transactions_report_all_accounts(request, year, month):
+def generate_monthly_transactions_report_all_accounts(request, year, month) -> HttpResponse:
     """
-    Generates a PDF report for all the transactions in a month as a summary.
+    Summary:
+        Generates a PDF report of the monthly transactions for all accounts.
+
+    Parameters:
+        request (HttpRequest): The request object containing metadata about the request.
+        year (int): The year to generate the report for.
+        month (int): The month to generate the report for.
+
+    Returns:
+        HttpResponse: A Django HTTP response with the generated PDF as an attachment.
     """
+
     total_balance_main_currency = 0
     total_start_balance = 0
     main_currency = request.user.main_currency.currency
@@ -769,9 +825,17 @@ def generate_monthly_transactions_report_all_accounts(request, year, month):
         name=f'monthly_transactions_report'
     )
 
-def generate_yearly_transactions_report_all_accounts(request, year):
+def generate_yearly_transactions_report_all_accounts(request, year) -> HttpResponse:
     """
-    Generates a PDF report for all the transactions in a year.
+    Summary:
+        Generates a PDF report with a summary of all transactions for all accounts in a given year.
+
+    Args:
+        request (HttpRequest): The request object.
+        year (int): The year for which the report should be generated.
+
+    Returns:
+        HttpResponse: The PDF report as a response.
     """
     main_currency = request.user.main_currency
     months = range(1, 13) if int(year) < datetime.date.today().year else range(1, datetime.date.today().month + 1)
@@ -946,7 +1010,17 @@ def generate_yearly_transactions_report_all_accounts(request, year):
         name=f'yearly_transactions_report'
     )
 
-def current_balances_report_accounts(request):
+def current_balances_report_accounts(request) -> HttpResponse:
+    """
+    Summary:
+        Generates a PDF report with the current balance of all the accounts in the current month and year.
+
+    Parameters:
+        request (HttpRequest): The request object containing metadata about the request.
+
+    Returns:
+        HttpResponse: A Django HTTP response with the generated PDF as an attachment.
+    """
     today = datetime.datetime.now()
     year = today.year
     month = today.month

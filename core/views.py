@@ -1,3 +1,12 @@
+"""
+This file contains views for the core application.
+Views are functions that handle HTTP requests and return HTTP responses.
+They are the core of the Django framework.
+
+The views here are for the main application, the ones that will be used by normal users.
+Most of them are generic views that use Django's generic view system.
+"""
+
 from typing import Any
 from django.db.models.query import QuerySet
 from django.db.models import Sum, F, Prefetch, Case, When, Q, Value
@@ -388,11 +397,42 @@ class GeneralListView(LoginRequiredMixin, ListView):
 
 ## ACCOUNT VIEWS
 class AccountListView(GeneralListView):
+    """
+    Summary:
+    This view is responsible for listing the user's accounts. It uses the `Account` model to retrieve
+    and display all visible accounts belonging to the authenticated user. The view also supports filtering
+    and pagination of the account list.
+
+    Properties:
+    - model (Model): The Django model `Account` used to retrieve and display account data.
+    - template_name (str): The template used to render the list of accounts.
+    - filter_class (Type[FilterSet]): The filter class used to filter the accounts based on user input.
+
+    Methods:
+    - get_queryset(self) -> QuerySet[Any]: Retrieves the filtered queryset of accounts visible to the user.
+    - get_current_month(self): Returns the current month as an integer.
+    - get_current_year(self): Returns the current year as an integer.
+    - get_previous_month(self): Returns the previous month as an integer.
+    - get_previous_year(self): Returns the previous year as an integer.
+    - aggregate_currency(self, account, transaction_type, current_year, current_month): Aggregates the total transaction amounts for a specific month and year.
+    """
+
     model = Account
     template_name = 'partials/accounts/accounts.html'
     filter_class = AccountFilter
 
     def get_queryset(self) -> QuerySet[Any]:
+        """
+        Summary:
+        Retrieves the filtered queryset of accounts that are visible to the authenticated user.
+
+        Parameters:
+        None
+
+        Returns:
+        QuerySet[Any]: A queryset containing the accounts that match the search parameters and are visible to the user.
+        """
+
         queryset = self.model.objects.filter(owner=self.request.user, visible=True).prefetch_related(
             'accounts_money_tags', 'transaction_from_account'
         ).select_related('currency')
@@ -402,26 +442,78 @@ class AccountListView(GeneralListView):
         return self.filter_class(search_params, queryset=queryset)
     
     def get_current_month(self):
+        """
+        Summary:
+        Returns the current month as an integer.
+
+        Returns:
+        int: The current month as an integer.
+        """
         return datetime.date.today().month
     
     def get_current_year(self):
+        """
+        Summary:
+        Returns the current year as an integer.
+
+        Returns:
+        int: The current year as an integer.
+        """
         return datetime.date.today().year
     
     def get_previous_month(self):
+        """
+        Summary:
+        Returns the previous month as an integer. If the current month is January, it returns 12 (December of the previous year).
+
+        Returns:
+        int: The previous month as an integer.
+        """
         current_month = datetime.date.today().month
         return current_month - 1 if current_month > 1 else 12
     
     def get_previous_year(self):
+        
+        """
+        Summary:
+        Returns the previous year as an integer. If the current month is January, it returns the previous year.
+
+        Returns:
+        int: The previous year as an integer.
+        """
         current_month = self.get_current_month()
         current_year = self.get_current_year()
         return current_year if current_month != 1 else current_year - 1
     
     def aggregate_currency(self, account, transaction_type, current_year=datetime.date.today().year, current_month=datetime.date.today().month):
-            return account.transaction_from_account.filter(
-                date__year=current_year, date__month=current_month, transaction_type=transaction_type
-            ).aggregate(total=Sum('amount'))['total'] or 0
+        """
+        Summary:
+        Aggregates the total transaction amounts for a specific month and year.
+
+        Parameters:
+        account (Account): The account for which to retrieve the transaction amounts.
+        transaction_type (str): The transaction type to filter by, either '+' for incoming or '-' for outgoing.
+        current_year (int): The year for which to retrieve the transactions. Defaults to the current year.
+        current_month (int): The month for which to retrieve the transactions. Defaults to the current month.
+
+        Returns:
+        float: The total transaction amount for the given account, month and year.
+        """
+        return account.transaction_from_account.filter(
+            date__year=current_year, date__month=current_month, transaction_type=transaction_type
+        ).aggregate(total=Sum('amount'))['total'] or 0
     
     def get_object_list(self, object_list, exchange_rates):
+        """
+        Aggregates the total income, expenses, assigned and start balance for all accounts in the given object_list.
+
+        Parameters:
+        object_list (list): A list of Account objects.
+        exchange_rates (list): A list of ExchangeRate objects containing the exchange rates for the current month.
+
+        Returns:
+        list: A list of dictionaries, each containing the total income, expenses, assigned and start balance for an account in the given object_list.
+        """
         result = []
         for account in object_list:
             monthly_income_total = self.aggregate_currency(account, '+')
@@ -475,6 +567,15 @@ class AccountListView(GeneralListView):
         return result
     
     def get_context_data(self, **kwargs: Any):
+        """
+        Retrieves the context data that should be used to render the ListView, including the exchange rates, aggregated data for each account, and the filter class.
+
+        Parameters:
+        kwargs (Any): Additional context data that might be needed.
+
+        Returns:
+        dict: A dictionary containing the context data for rendering the ListView.
+        """
         context = super().get_context_data(**kwargs)
         exchange_rates = ExchangeRate.objects.filter(active=True).values('currency1', 'currency2', 'exchange_rate')
 
@@ -497,6 +598,21 @@ class AccountListView(GeneralListView):
         return context
     
     def post(self, request):
+        """
+        Handles the POST request sent when the user wants to delete an account.
+
+        The view will retrieve the account with the given primary key, set its visible flag to False, and save the changes.
+
+        If the account does not exist, the view will redirect to the accounts page with an error message.
+
+        If the account was successfully deleted, the view will redirect to the accounts page with a success message.
+
+        Parameters:
+        request (HttpRequest): The request object sent by the client.
+
+        Returns:
+        HttpResponse: A redirect to the accounts page with a message about the outcome of the deletion.
+        """
         if(request.POST.get('pk')):
             try:
                 with transaction.atomic():
@@ -512,10 +628,31 @@ class AccountListView(GeneralListView):
             return redirect("/accounts")
 
 class AccountSumaryTableView(AccountListView):
+    """
+    Summary:
+    This class is a Django View that handles the summary table for all accounts, including the balance, income and expenses for the current month, and the exchange rates.
+
+    Properties:
+    model (Model): The model that should be used to retrieve the list of items.
+    template_name (str): The name of the template that should be used to render the ListView.
+    paginate_by (int): The number of items to show per page.
+
+    Methods:
+    get_context_data(self, **kwargs: Any): Retrieves the context data that should be used to render the ListView, including the list of items and pagination information.
+    """
     template_name = 'partials/accounts/summary.html'
     paginate_by = None
 
     def get_context_data(self, **kwargs: Any):
+        """
+        Retrieves the context data that should be used to render the ListView, including the exchange rates, aggregated data for each account, and the filter class.
+
+        Parameters:
+        kwargs (Any): Additional context data that might be needed.
+
+        Returns:
+        dict: A dictionary containing the context data for rendering the ListView.
+        """
         qs = self.get_queryset().qs
         context = {}
         exchange_rates = ExchangeRate.objects.filter(active=True).values('currency1', 'currency2', 'exchange_rate')
@@ -537,11 +674,41 @@ class AccountSumaryTableView(AccountListView):
         return context
 
 class AccountCreation(LoginRequiredMixin, FormView):
+    """
+    Summary:
+    This class is a Django View that handles the creation of new accounts. It uses a form to gather data about the account
+    and saves it to the database. If the account has a positive balance, an initial transaction is created to represent
+    the opening balance. Additionally, a historic balance record is created for the account.
+
+    Properties:
+    form_class (Form): The form class used to create a new account.
+    template_name (str): The name of the template used to render the form.
+    success_url (str): The URL to redirect to upon successful form submission.
+
+    Methods:
+    form_valid(form: Any): Handles the successful submission of the form. Saves the account and creates initial transactions and historic balance records if needed.
+    form_invalid(form: Any) -> HttpResponse: Handles the case where the form is invalid by re-rendering the form with errors.
+    """
+
     form_class = AccountForm
     template_name = 'partials/accounts/form.html'
     success_url = "/accounts"
 
     def form_valid(self, form: Any):
+        """
+        Summary:
+        Handles the successful submission of the account creation form.
+
+        This method saves the account and, if the account has a positive balance,
+        creates an initial transaction to represent the opening balance. Additionally,
+        it creates a historic balance record for the account.
+
+        Parameters:
+        form (Any): The form containing the account data.
+
+        Returns:
+        HttpResponse: The response to be sent after the form is successfully processed.
+        """
         res = super().form_valid(form)
 
         with transaction.atomic():
@@ -566,11 +733,54 @@ class AccountCreation(LoginRequiredMixin, FormView):
         return res
     
     def form_invalid(self, form: Any) -> HttpResponse:
+        """
+        Summary:
+        Handles the case where the form is invalid by re-rendering the form with errors.
+
+        This method is called when the form is invalid and it renders the form with errors in the template.
+
+        Parameters:
+        form (Any): The form containing the account data.
+
+        Returns:
+        HttpResponse: The response to be sent after the form is successfully processed.
+        """
+        
         return render(self.request, 'partials/accounts/form.html', {'form': form})
     
 class AccountUpdate(AccountCreation):
+    """
+    Summary:
+    This class is a Django View that handles the update of existing accounts. It uses a form to gather data about the account
+    and saves it to the database. If the account has a positive balance, an initial transaction is created to represent
+    the opening balance. Additionally, a historic balance record is created for the account.
 
+    Properties:
+    form_class (Form): The form class used to update an existing account.
+    template_name (str): The name of the template used to render the form.
+    success_url (str): The URL to redirect to upon successful form submission.
+
+    Methods:
+    form_valid(form: Any): Handles the successful submission of the form. Saves the account and creates initial transactions and historic balance records if needed.
+    form_invalid(form: Any) -> HttpResponse: Handles the case where the form is invalid by re-rendering the form with errors.
+    get_context_data(self, **kwargs: Any) -> dict[str, Any]: Retrieves the context data that should be used to render the template, including the form and a flag to indicate if this is an update or a creation.
+    """
     def form_valid(self, form: Any):
+        """
+        Summary:
+        Handles the successful submission of the account update form.
+
+        This method saves the updated account data. It uses a transaction to ensure
+        that the update is atomic. Upon successful update, it displays a success message
+        to the user.
+
+        Parameters:
+        form (Any): The form containing the updated account data.
+
+        Returns:
+        HttpResponse: A redirect response to the accounts page after the form is successfully processed.
+        """
+
         with transaction.atomic():
             form = self.form_class(form.data, instance=Account.objects.get(pk=self.kwargs['pk']))
             form.save()
@@ -580,20 +790,76 @@ class AccountUpdate(AccountCreation):
         return redirect("/accounts")
     
     def form_invalid(self, form: Any) -> HttpResponse:
+        """
+        Summary:
+        Handles the case where the account update form is invalid by re-rendering the form with errors.
+
+        This method is called when the form submission fails validation. It renders the form template
+        with error messages, allowing the user to correct the input.
+
+        Parameters:
+        form (Any): The form containing the data that was submitted and found to be invalid.
+
+        Returns:
+        HttpResponse: The response to render the form with errors.
+        """
+
         return render(self.request, '/accounts/form.html', {'form': form, 'edit': True})
     
     def get_context_data(self, **kwargs: Any) -> dict[str, Any]:
+        """
+        Summary:
+        Returns a dictionary of context variables for the account update template.
+
+        This method overrides the default get_context_data method to include the
+        account instance being updated and a flag indicating that the form is for
+        editing.
+
+        Parameters:
+        **kwargs (Any): Any additional keyword arguments.
+
+        Returns:
+        dict[str, Any]: A dictionary of context variables.
+        """
         instance = Account.objects.get(pk=self.kwargs['pk'])
         return {**super().get_context_data(**kwargs), 'form': self.form_class(instance=instance), 'edit': True}
 
 # TRANSACTIONS VIEWS
 class TransactionListView(GeneralListView):
+    """
+    Summary:
+    This class is a Django View that handles the display of all the transactions of an account. It uses a form to filter the transactions
+    by date, tags, and more. The transactions are displayed in a table with columns for the date, description, amount, and tags. The view also
+    calculates the total balance of the account by summing the amounts of all the transactions.
+
+    Properties:
+    model (Model): The model used to retrieve the transactions.
+    template_name (str): The name of the template used to render the transactions table.
+    filter_class (Filter): The filter class used to filter the transactions.
+    paginate_by (int): The number of items to display per page.
+
+    Methods:
+    update_tags(account: Account): Updates the tags of the account by creating a MoneyTag for each tag.
+    get_queryset(self) -> QuerySet[Any]: Retrieves the filtered and annotated transactions.
+    get_context_data(self, **kwargs: Any) -> dict[str, Any]: Retrieves the context data that should be used to render the template, including the form, the transactions, the account, and the total balance.
+    """
+    
     model = Transaction
     template_name = 'partials/transactions/transactions.html'
     filter_class = TransactionFilter
     paginate_by = 10
 
     def update_tags(self, account):
+        """
+        Updates the tags associated with a given account.
+
+        This method retrieves all tags belonging to the current user and ensures that
+        a MoneyTag is created for each tag-account combination using an atomic transaction.
+
+        Parameters:
+        account (Account): The account for which tags need to be updated.
+        """
+
         with transaction.atomic():
             tags = Tag.objects.filter(user=self.request.user)
 
@@ -604,6 +870,17 @@ class TransactionListView(GeneralListView):
                     )[0]
     
     def get_queryset(self) -> QuerySet[Any]:
+        """
+        Summary:
+        Retrieves the filtered and annotated transactions.
+
+        This method uses the filter class to filter the transactions by the values
+        provided in the request GET parameters. The transactions are annotated with
+        the previous value of the transaction in the currency of the account.
+
+        Returns:
+        QuerySet[Any]: The filtered and annotated transactions.
+        """
         return self.filter_class(
             self.request.GET,
             queryset=self.model.objects.select_related(
@@ -616,6 +893,22 @@ class TransactionListView(GeneralListView):
         )
     
     def get_context_data(self, **kwargs: Any) -> dict[str, Any]:
+        """
+        Summary:
+        Retrieves the context data necessary for rendering the transaction list view.
+
+        This method extends the default context data by adding account-specific information
+        such as the account details, main currency balance, previous balance, assigned and
+        not-assigned funds, and transaction details converted to the main currency. It also
+        calculates the previous month's balance and updates account tags.
+
+        Parameters:
+        **kwargs (Any): Additional keyword arguments.
+
+        Returns:
+        dict[str, Any]: A dictionary containing the context data for rendering the transaction list view.
+        """
+
         context = super().get_context_data(**kwargs)
         account = Account.objects.filter(pk=self.kwargs['pk']).select_related('currency').first()
         exchange_rates = ExchangeRate.objects.filter(active=True).values('currency1', 'currency2', 'exchange_rate')
@@ -659,10 +952,40 @@ class TransactionListView(GeneralListView):
         return context
 
 class TransactionCreation(FormView):
+    """
+    Summary:
+    This view handles the creation of a transaction from a given account.
+    
+    Properties:
+    form_class (TransactionForm): The form class that will be used to validate the transaction data.
+    template_name (str): The template to render for this view.
+    
+    Methods:
+    form_valid(form, account=None): Overrides the form_valid method from the FormView to add the from_account field to the transaction and save it.
+    """
+    
     form_class = TransactionForm
     template_name = 'partials/transactions/form.html'
 
     def form_valid(self, form: TransactionForm, account = None) -> HttpResponse:
+        """
+        Summary:
+        Handles the successful submission of the transaction form.
+
+        This method processes the transaction by associating it with the specified account.
+        It updates the account's current balance, handles money tags if applicable, and updates 
+        the historic balance for the account. All operations are performed atomically to ensure
+        data integrity.
+
+        Parameters:
+        form (TransactionForm): The form containing the transaction data.
+        account (Optional[Account]): The account to associate with the transaction. If not provided, 
+                                    it is retrieved using the account's primary key from the URL.
+
+        Returns:
+        HttpResponse: A redirect response to the transaction's page after the form is successfully processed.
+        """
+
         with transaction.atomic():
             account = Account.objects.get(pk=self.kwargs['pk'] if not account else account)
 
@@ -701,6 +1024,28 @@ class TransactionCreation(FormView):
         return redirect(f"/transactions/{account.pk}")
 
     def update_tags_and_accounts(self, amount, account, tag):
+        """
+        Summary:
+        Adjusts the amounts of MoneyTags for a given account and redistributes amounts
+        across different accounts as necessary.
+
+        This method iterates over MoneyTags associated with a specified tag and account,
+        adjusting their amounts based on the provided amount. If the amount to be adjusted
+        is greater than what is available in the current account, it redistributes the
+        deficit to other accounts that share the same tag until the required amount is met
+        or all available funds are exhausted.
+
+        Parameters:
+        amount (Decimal): The amount to adjust in the MoneyTags.
+        account (Account): The account from which the tags are being updated.
+        tag (MoneyTag): The MoneyTag associated with the account.
+
+        Side Effects:
+        - Adjusts the amount in the MoneyTags.
+        - May affect current balances of related accounts.
+        - Saves changes to the MoneyTag instances in the database.
+        """
+
         money_tags = MoneyTag.objects.filter(tag=tag.tag).filter(
             Q(account=account) | Q(amount__gt=0)
         ).order_by(
@@ -766,23 +1111,86 @@ class TransactionCreation(FormView):
                             print(f"Adding {compensation} to tag {tag['tag']} on account {account} to compensate for lack of money")
 
     def form_invalid(self, form: Any) -> HttpResponse:
+        """
+        Summary:
+        If the form is invalid, render the invalid form, adding an error message.
+
+        Parameters:
+        form (Any): The invalid form.
+
+        Returns:
+        HttpResponse: The rendered template with the invalid form.
+        """
         messages.error(self.request, "An error has ocurred while creating your Transaction.")
         print(form.errors)
         return render(self.request, 'partials/transactions/form.html', {'form': form, 'account': Account.objects.get(pk=self.kwargs['pk'])})
     
     def get_form(self, form_class = None):
+        """
+        Summary:
+        Returns an instance of the form to be used in this view.
+
+        Parameters:
+        form_class (Any): The form class to be used.
+
+        Returns:
+        Form: The instance of the form to be used in this view.
+        """
         form = super().get_form(self.form_class)
         form.initial['date'] = datetime.datetime.now()
         return form
 
     def get_context_data(self, **kwargs: Any) -> dict[str, Any]:
+        """
+        Summary:
+        Retrieves the context data that should be used to render the template, including the account and its tags.
+
+        Parameters:
+        kwargs (Any): Additional context data that might be needed.
+
+        Returns:
+        dict: A dictionary containing the context data for rendering the TransactionCreation view.
+        """
         context = super().get_context_data(**kwargs)
         context['account'] = Account.objects.filter(pk=self.kwargs['pk']).select_related('currency').first()
         context['tags'] = MoneyTag.objects.filter(account=context['account']).select_related('tag').all()
         return context
 
 class TransactionUpdate(TransactionCreation):
+    """
+    Summary:
+    This class is a Django View that handles the update of existing transactions. It uses a form to gather data about the transaction
+    and saves it to the database. If the transaction has a positive balance, an initial transaction is created to represent
+    the opening balance. Additionally, a historic balance record is created for the account.
+
+    Properties:
+    form_class (Form): The form class used to update an existing transaction.
+    template_name (str): The name of the template used to render the form.
+    success_url (str): The URL to redirect to upon successful form submission.
+
+    Methods:
+    form_valid(form: Any): Handles the successful submission of the form. Saves the transaction and creates initial transactions and historic balance records if needed.
+    form_invalid(form: Any): Handles the case where the form is invalid by re-rendering the form with errors.
+    get_context_data(self, **kwargs: Any): Retrieves the context data that should be used to render the template, including the form and a flag to indicate if this is an update or a creation.
+    get_form(self, form_class = None): Returns an instance of the form to be used in this view.
+    """
+    
     def form_valid(self, form: Any):
+        """
+        Summary:
+        Handles the successful submission of the transaction form.
+
+        This method processes the transaction by associating it with the specified account.
+        It updates the account's current balance, handles money tags if applicable, and updates 
+        the historic balance for the account. All operations are performed atomically to ensure
+        data integrity.
+
+        Parameters:
+        form (TransactionForm): The form containing the transaction data.
+
+        Returns:
+        HttpResponse: A redirect response to the transaction's page after the form is successfully processed.
+        """
         with transaction.atomic():
             transaction_instance = Transaction.objects.get(pk=self.kwargs['pk'])
             form = self.form_class(form.data, form.files, instance=transaction_instance)
@@ -832,17 +1240,70 @@ class TransactionUpdate(TransactionCreation):
         return redirect(f"/transactions/{account.pk}")
     
     def form_invalid(self, form: Any) -> HttpResponse:
-        print(form.errors)
+        """
+        Summary:
+        Handles the case where the transaction update form is invalid by re-rendering the form with errors.
+
+        This method is called when the form submission fails validation. It prints the form errors
+        to the console and renders the form template with error messages, allowing the user to correct
+        the input.
+
+        Parameters:
+        form (Any): The form containing the data that was submitted and found to be invalid.
+
+        Returns:
+        HttpResponse: The response to render the form with errors.
+        """
+
         return render(self.request, '/transactions/form.html', {'form': form, 'edit': True})
 
     def get_context_data(self, **kwargs: Any) -> dict[str, Any]:
+        """
+        Summary:
+        Retrieves the context data that should be used to render the template, including the account and the form.
+
+        Parameters:
+        kwargs (Any): Additional context data that might be needed.
+
+        Returns:
+        dict: A dictionary containing the context data for rendering the TransactionUpdate view.
+        """
         instance = Transaction.objects.get(pk=self.kwargs['pk'])
         return {**super().get_context_data(**kwargs), 'account': instance.from_account, 'form': self.form_class(instance=instance), 'edit': True}
 
 class TransactionDelete(LoginRequiredMixin, View):
+    """
+    Summary:
+    This class is a Django View that handles the deletion of existing transactions. It verifies that the user is the owner of the account
+    associated with the transaction, and then deletes the transaction, updating the account's current balance and historic balance records
+    if the transaction is not on hold.
+
+    Properties:
+    model (Model): The model used to retrieve the transactions.
+
+    Methods:
+    delete(self, request, *args, **kwargs): Handles the deletion of the transaction. Verifies that the user is the owner of the account
+                                             associated with the transaction, and then deletes the transaction, updating the account's
+                                             current balance and historic balance records if the transaction is not on hold.
+    """
+    
     model = Transaction
 
     def delete(self, request, *args, **kwargs):
+        """
+        Summary:
+        Handles the deletion of the transaction. Verifies that the user is the owner of the account
+        associated with the transaction, and then deletes the transaction, updating the account's
+        current balance and historic balance records if the transaction is not on hold.
+
+        Parameters:
+        request (HttpRequest): The request that triggered this view.
+        *args (Any): Additional positional arguments that might be passed to this view.
+        **kwargs (Any): Additional keyword arguments that might be passed to this view.
+
+        Returns:
+        HttpResponse: A redirect response to the account's page after the transaction is successfully deleted.
+        """
         transaction_instance = self.model.objects.get(pk=self.kwargs['pk'])
         account = transaction_instance.from_account
 
@@ -878,12 +1339,38 @@ class TransactionDelete(LoginRequiredMixin, View):
         return render(request, 'partials/transactions/updated-balance.html', {'account': account})
 
 class GeneralTransactionListView(GeneralListView):
+    """
+    Summary:
+    This class is a Django View that handles the display of all the user's transactions, regardless of the account.
+
+    Properties:
+    model (Model): The model used to retrieve the transactions.
+    template_name (str): The name of the template used to render the view.
+    filter_class (Filter): The filter class used to filter the transactions.
+    paginate_by (int): The number of items to display per page.
+
+    Methods:
+    get_queryset(self) -> QuerySet[Any]: Retrieves the filtered and annotated transactions.
+    get_context_data(self, **kwargs: Any) -> dict[str, Any]: Retrieves the context data that should be used to render the template, including the form, the transactions, the account, and the total balance.
+    """
+    
     model = Transaction
     template_name = 'partials/transactions/transactions_general.html'
     filter_class = TransactionFilter
     paginate_by = 15
     
     def get_queryset(self) -> QuerySet[Any]:
+        """
+        Summary:
+        Retrieves the filtered and annotated transactions.
+
+        This method uses the filter class to filter the transactions by the values
+        provided in the request GET parameters. The transactions are annotated with
+        the previous value of the transaction in the currency of the account.
+
+        Returns:
+        QuerySet[Any]: The filtered and annotated transactions.
+        """
         return self.filter_class(
             self.request.GET,
             queryset=self.model.objects.select_related(
@@ -892,6 +1379,18 @@ class GeneralTransactionListView(GeneralListView):
         )
     
     def get_context_data(self, **kwargs: Any) -> dict[str, Any]:
+        """
+        Summary:
+        Retrieves the context data that should be used to render the template, including the form, the transactions, the account, and the total balance.
+
+        This method extends the default context data by adding information about the user's accounts, such as the total balance of all accounts, the total amount of money coming in and going out, and the total amount of money on hold. The transactions are annotated with the previous value of the transaction in the currency of the account.
+
+        Parameters:
+        **kwargs (Any): Additional keyword arguments.
+
+        Returns:
+        dict[str, Any]: The context data that should be used to render the template.
+        """
         context = super().get_context_data(**kwargs)
 
         amounts_balance = Account.objects.filter(owner=self.request.user, visible=True).annotate(total=Sum('current_balance')).values('currency','total')
@@ -931,10 +1430,38 @@ class GeneralTransactionListView(GeneralListView):
 
 # TAGS VIEWS
 class TagCreation(LoginRequiredMixin, FormView):
+    """
+    Summary:
+    This view handles the creation of tags. It uses a form to validate
+    and save the tag data submitted by the user. Upon successful creation,
+    a success message is displayed to the user.
+
+    Properties:
+    form_class (Form): The form class used for tag creation.
+    template_name (str): The template used to render the tag creation form.
+
+    Methods:
+    form_valid(form: Any) -> HttpResponse: Handles the successful submission
+    of the form. Saves the tag to the database and displays a success message.
+    """
+
     form_class = TagForm
     template_name = 'partials/tags/form.html'
 
     def form_valid(self, form: Any) -> HttpResponse:
+        """
+        Summary:
+        Handles the successful submission of the tag creation form.
+
+        This method saves the tag to the database and displays a success message
+        to the user.
+
+        Parameters:
+        form (Any): The form containing the tag data.
+
+        Returns:
+        HttpResponse: A redirect response to the tags page after the form is successfully processed.
+        """
         with transaction.atomic():
             form.instance.user = self.request.user
             form.save()
@@ -944,12 +1471,41 @@ class TagCreation(LoginRequiredMixin, FormView):
         return redirect("/tags")
 
 class TagListView(GeneralListView):
+    """
+    Summary:
+    This view is responsible for listing all the tags of a user. It uses a filter
+    to filter the tags based on the search parameters provided by the user. The
+    view also supports pagination of the tag list.
+
+    Properties:
+    model (Model): The Django model `Tag` used to retrieve and display tag data.
+    template_name (str): The template used to render the tag list.
+    filter_class (Type[FilterSet]): The filter class used to filter the tags based
+    on user input.
+    paginate_by (int): The number of items to display per page.
+
+    Methods:
+    get_queryset(self) -> QuerySet[Any]: Retrieves the filtered queryset of tags
+    visible to the user.
+    """
     model = Tag
     template_name = 'partials/tags/list.html'
     filter_class = TagFilter
     paginate_by = 20
 
     def get_queryset(self):
+        """
+        Summary:
+        Retrieves the filtered queryset of tags visible to the user.
+
+        This method uses the filter class to filter the tags based on the search
+        parameters provided by the user. The tags are annotated with the total
+        amount of money assigned to each tag and ordered by the assigned amount
+        in descending order.
+
+        Returns:
+        QuerySet[Any]: The filtered queryset of tags visible to the user.
+        """
         return self.filter_class(
             self.request.GET,
             queryset=self.model.objects.filter(user=self.request.user)
@@ -964,6 +1520,23 @@ class TagListView(GeneralListView):
         )
     
     def get_context_data(self, **kwargs):
+        """
+        Summary:
+        Retrieves the context data necessary for rendering the tag list view.
+
+        This method extends the default context data by adding information about the
+        user's accounts, such as the total balance of all accounts, the total amount of
+        money assigned to each tag, and the total amount of money not assigned to any
+        tag. The tags are annotated with the total amount of money assigned to each tag
+        and ordered by the assigned amount in descending order.
+
+        Parameters:
+        **kwargs (Any): Additional keyword arguments.
+
+        Returns:
+        dict[str, Any]: The context data that should be used to render the template.
+        """
+
         context = super().get_context_data(**kwargs)
         context["accounts"] = self.get_assigned_balance_per_account()
         context["current_balance"] = self.get_current_balance()
@@ -973,6 +1546,26 @@ class TagListView(GeneralListView):
         return context
     
     def get_assigned_balance_per_account(self):
+        """
+        Summary:
+        Retrieves the assigned balance per account.
+
+        This method retrieves the balance of each account visible to the user, the
+        total amount of money assigned to each account from all its tags, and the
+        total amount of money not assigned to any tag. The results are returned as a
+        list of dictionaries with the following structure:
+
+        - account: The account object.
+        - balance: A dictionary containing the total balance of the account in both
+          the main currency and the account's currency.
+        - assigned: A dictionary containing the total assigned balance of the account
+          in both the main currency and the account's currency.
+        - not_assigned: A dictionary containing the total unassigned balance of the
+          account in both the main currency and the account's currency.
+
+        Returns:
+        list: A list of dictionaries containing the assigned balance per account.
+        """
         accounts_money_tags = Account.objects.filter(
             owner=self.request.user, visible=True
         ).prefetch_related('accounts_money_tags').select_related('currency').annotate(
@@ -1003,14 +1596,49 @@ class TagListView(GeneralListView):
         return alt
     
     def get_current_balance(self):
+        """
+        Summary:
+        Retrieves the total current balance of all accounts visible to the user.
+
+        This method retrieves the balance of each account visible to the user, and
+        converts the balance to the user's main currency using the current exchange
+        rates.
+
+        Returns:
+        Decimal: The total current balance of all accounts visible to the user in the
+        user's main currency.
+        """
         accounts_balance = Account.objects.filter(owner=self.request.user, visible=True).annotate(total=Sum('current_balance')).values('currency','total')
         return convert_all(accounts_balance, self.request.user.main_currency.currency.pk)
     
     def get_assigned_balance(self):
+        """
+        Summary:
+        Retrieves the total assigned balance of all visible accounts owned by the user.
+
+        This method calculates the sum of amounts assigned to accounts via MoneyTags,
+        aggregated by currency. The result is then converted to the user's main currency
+        using current exchange rates.
+
+        Returns:
+        Decimal: The total assigned balance of all visible accounts in the user's main currency.
+        """
+
         assigned_balance = MoneyTag.objects.filter(account__owner=self.request.user, account__visible=True).annotate(total=Sum('amount'), currency=F('account__currency__pk')).values('currency','total')
         return convert_all(assigned_balance, self.request.user.main_currency.currency.pk)
     
     def get_object_list(self, object_list):
+        """
+        Retrieves a list of tags with their total assigned balance and the difference between the current month and the previous month in the user's main currency.
+
+        This method iterates over the given object_list, which is expected to be a list of MoneyTag objects. For each tag, it calculates the total assigned balance by summing the amounts of all MoneyTags associated with the tag, and converts the result to the user's main currency using the current exchange rates. It then calculates the difference between the current month and the previous month by querying the TagHistory model, and stores the result as 'flow' and 'pctg' in the returned list. The 'history' key stores the amount assigned to the tag for each month.
+
+        Parameters:
+        object_list (list): A list of MoneyTag objects.
+
+        Returns:
+        list: A list of dictionaries, each containing a tag, its total assigned balance in the user's main currency, the difference between the current month and the previous month, and the amount assigned to the tag for each month.
+        """
         exchange_rates = ExchangeRate.objects.filter(active=True).values('currency1', 'currency2', 'exchange_rate')
         alt = []
         for tag in object_list:
@@ -1047,33 +1675,115 @@ class TagListView(GeneralListView):
         return alt
 
 class TagUpdate(LoginRequiredMixin, FormView):
+    """
+    Summary:
+    This view is responsible for updating a tag. It handles the rendering of the form,
+    the validation of the form data, and the saving of the tag.
+
+    Properties:
+    form_class (Form): The form class used to validate the form data.
+    template_name (str): The template used to render the form.
+    model (Model): The model used to retrieve the tag instance.
+    success_url (str): The URL to redirect to after the tag has been updated.
+
+    Methods:
+    get_form_kwargs(self): Retrieves the form kwargs, including the instance of the tag.
+    form_valid(self, form): Saves the tag and redirects to the success URL.
+    form_invalid(self, form): Renders the form with errors.
+    get_context_data(self, **kwargs): Retrieves the context data, including the tag instance.
+    """
     form_class = TagForm
     template_name = 'partials/tags/form.html'
 
     def get_form_kwargs(self):
+        """
+        Summary:
+        Retrieves the form kwargs, including the instance of the tag.
+
+        Parameters:
+        None
+
+        Returns:
+        dict: A dictionary containing the form kwargs.
+        """
         kwargs = super().get_form_kwargs()
         kwargs['instance'] = Tag.objects.get(pk=self.kwargs['pk'])
         return kwargs
 
     def form_valid(self, form: Any):
+        """
+        Summary:
+        Saves the tag and redirects to the success URL.
+
+        Parameters:
+        form (Any): The form containing the tag data.
+
+        Returns:
+        HttpResponse: A redirect response to the success URL after the tag is successfully updated.
+        """
         form.save()
         messages.success(self.request, "The tag has been updated successfully.")
 
         return redirect("/tags")
 
     def form_invalid(self, form: Any) -> HttpResponse:
+        """
+        Summary:
+        Handles the case where the form is invalid by re-rendering the form with errors.
+
+        This method is called when the form is invalid and it renders the form with errors in the template.
+
+        Parameters:
+        form (Any): The form containing the tag data.
+
+        Returns:
+        HttpResponse: The response to be sent after the form is successfully processed.
+        """
         return render(self.request, 'partials/tags/form.html', {'form': form, 'edit': True})
 
     def get_context_data(self, **kwargs):
+        """
+        Summary:
+        Retrieves the context data, including the tag instance.
+
+        This method extends the default context data by adding the tag instance
+        and a flag to indicate that this is an update, not a creation.
+
+        Parameters:
+        **kwargs (Any): Additional keyword arguments.
+
+        Returns:
+        dict: A dictionary containing the context data for rendering the tag update form.
+        """
         context = super().get_context_data(**kwargs)
         context['edit'] = True
         self.tag = Tag.objects.get(pk=self.kwargs['pk'], user=self.request.user)
         return context
 
 class TagDelete(LoginRequiredMixin, View):
+    """
+    Summary:
+    This view handles the deletion of a tag. It retrieves the tag to be deleted,
+    checks if the user owns the tag, and deletes the tag and its associated MoneyTags.
+
+    Properties:
+    model (Model): The model used to retrieve the tag instance.
+
+    Methods:
+    delete(self, request, *args, **kwargs): Handles the deletion of the tag by retrieving the tag instance,
+                                            checking if the user owns the tag, and deleting the tag and its associated MoneyTags.
+    """
     model = Tag
 
     def delete(self, request, *args, **kwargs):
+        """
+        Summary:
+        Handles the deletion of a tag. It retrieves the tag to be deleted,
+        checks if the user owns the tag, and deletes the tag and its associated MoneyTags.
+
+        Returns:
+        HttpResponse: A redirect response to the account's page after the tag is successfully deleted.
+        """
         instance = self.model.objects.get(pk=self.kwargs['pk'])
 
         if(instance.user != request.user):
@@ -1086,9 +1796,33 @@ class TagDelete(LoginRequiredMixin, View):
         return render(request, 'partials/transactions/updated-balance.html')
 
 class TagAssignment(LoginRequiredMixin, View):
+    """
+    Summary:
+    This view manages the assignment of tags to an account. It retrieves the appropriate forms for each tag
+    and prepares the context data needed for rendering the assignment form.
+
+    Properties:
+    template_name (str): The path to the template used for rendering the tag assignment form.
+
+    Methods:
+    get_forms(account, request=None): Retrieves the forms for each tag associated with the user and calculates the total amount assigned to each tag in the main currency.
+    get_context_data(request=None): Constructs the context data required for rendering the template, including the account details, forms for tag assignment, and exchange rates.
+    """
+
     template_name = 'partials/tags/assignment_form.html'
 
     def get_forms(self, account, request = None):
+        """
+        Summary:
+        Retrieves the forms for each tag associated with the user and calculates the total amount assigned to each tag in the main currency.
+
+        Parameters:
+        account (Account): The account for which the forms are being retrieved.
+        request (HttpRequest, optional): The request object containing the user data. Defaults to None.
+
+        Returns:
+        list[dict]: A list of dictionaries containing the form for each tag and the total amount assigned to each tag in the main currency.
+        """
         tags = Tag.objects.filter(user=self.request.user)
         totals = MoneyTag.objects.filter(tag__in=tags.values_list('id', flat=True))
         forms = []
@@ -1111,6 +1845,17 @@ class TagAssignment(LoginRequiredMixin, View):
         return forms
     
     def get_context_data(self, request = None):
+        """
+        Summary:
+        Constructs the context data required for rendering the template, including the account details, forms for tag assignment, and exchange rates.
+
+        Parameters:
+        request (HttpRequest, optional): The request object containing the user data. Defaults to None.
+
+        Returns:
+        dict[str, Any]: The context data that should be used to render the template.
+        """
+        
         context = {}
         context['account'] = Account.objects.select_related('currency').get(pk=self.kwargs['pk'])
         context['forms'] = self.get_forms(context['account'], request)
@@ -1140,12 +1885,26 @@ class TagAssignment(LoginRequiredMixin, View):
         return context
 
     def get(self, request, *args, **kwargs):
+        """
+        Summary:
+        Handles GET requests by rendering the template with the context data.
+
+        Returns:
+        HttpResponse: The rendered template with the context data.
+        """
         return render(request, self.template_name, self.get_context_data())
 
     def post(self, request, pk):
+        """
+        Summary:
+        Handles POST requests by saving the data of the selected tags in the database and redirecting to the previous page.
+
+        Returns:
+        HttpResponse: A redirect response to the previous page after the form is successfully processed.
+        """
+        
         account = Account.objects.get(pk=pk)
         tags = Tag.objects.filter(user=self.request.user)
-        forms = []
 
         with transaction.atomic():
             for tag in tags:
@@ -1164,10 +1923,30 @@ class TagAssignment(LoginRequiredMixin, View):
         return redirect(f"/transactions/{account.pk}/")
 
 def logout_view(request):
+    """
+    Summary:
+    Logs out the user and redirects to the login page.
+
+    Returns:
+    HttpResponse: A redirect response to the login page after the user is logged out.
+    """
     logout(request)
     return redirect("/login")
 
 def graph_by_accounts(request):
+    """
+    Summary:
+    Retrieves the filtered and annotated account data in the form of a sorted
+    list of dictionaries, where each dictionary contains the name, currency, and
+    total balance of the account. The total balance is converted to the user's
+    main currency.
+
+    Parameters:
+    request (HttpRequest): The request object.
+
+    Returns:
+    JsonResponse: A JSON response containing the sorted list of dictionaries.
+    """
     accounts = AccountFilter(request.GET, queryset=Account.objects.filter(visible=True, owner=request.user).select_related('currency')).qs.annotate(total=F('current_balance')).values('name', 'currency', 'total')
     accounts = sorted(
         convert_each(
@@ -1180,12 +1959,46 @@ def graph_by_accounts(request):
     return JsonResponse(accounts, safe=False)
 
 def graph_by_tags(request):
+    """
+    Summary:
+    Retrieves a list of accounts with their total balance in the user's main currency.
+
+    This method applies the AccountFilter to filter accounts that are visible and
+    owned by the current user. It annotates each account with its current balance,
+    converts the total balance to the user's main currency, and returns the data
+    as a JSON response.
+
+    Parameters:
+    request (HttpRequest): The request object containing the user data and query parameters.
+
+    Returns:
+    JsonResponse: A JSON response containing a list of accounts with their name, 
+    currency, and total balance in the user's main currency.
+    """
+
     accounts = AccountFilter(request.GET, queryset=MoneyTag.objects.filter(account__visible=True, account__owner=request.user).select_related('currency')).qs.annotate(total=F('current_balance')).values('name', 'currency', 'total')
     accounts = convert_each(accounts, request.user.main_currency.pk)
 
     return JsonResponse(accounts, safe=False)
 
 def daily_balance_graph(request, pk):
+    """
+    Summary:
+    Generates a JSON response containing the daily balances of the specified account for the past 30 days.
+
+    For each day in the past 30 days, this function calculates the balance by summing the transactions
+    of the account. It considers transaction types to adjust the balance accordingly and then returns
+    the result as a JSON response.
+
+    Parameters:
+    request (HttpRequest): The request object.
+    pk (int): The primary key of the account whose daily balances are to be calculated.
+
+    Returns:
+    JsonResponse: A JSON response containing a list of dictionaries, each with the date and the balance
+    for that day.
+    """
+
     account = Account.objects.get(pk=pk)
     today = datetime.date.today()
 
@@ -1210,10 +2023,25 @@ def daily_balance_graph(request, pk):
     return JsonResponse(balances, safe=False)
 
 def tag_graph_by_account(request, pk):
+    """
+    Summary:
+    Generates a JSON response containing the balance for each tag associated with a specified account.
+
+    This function retrieves all MoneyTags associated with the given account and calculates their
+    balances. It includes the available balance that is not assigned to any tag, labeling it as
+    "AVAILABLE". The results are sorted by balance in descending order and returned as a JSON response.
+
+    Parameters:
+    request (HttpRequest): The request object.
+    pk (int): The primary key of the account for which the tag balances are to be calculated.
+
+    Returns:
+    JsonResponse: A JSON response containing the balances of each tag and the available balance.
+    """
+
     account = Account.objects.get(pk=pk)
     
     balances = []
-    total_assigned = 0
     money_tags = MoneyTag.objects.filter(account=account).values('tag__name', 'amount') 
     for tag in money_tags:
         balance = tag['amount']
@@ -1232,14 +2060,52 @@ def tag_graph_by_account(request, pk):
 # Password Views
 
 class ChangePasswordView(LoginRequiredMixin, FormView):
+    """
+    Summary:
+    A view for changing the password of the user.
+
+    Properties:
+    template_name (str): The template to render for this view.
+    form_class (Form): The form class to validate the password change.
+
+    Methods:
+    get(self, request): Handles the GET request by rendering the template with the form.
+    form_valid(self, form): Handles the successful submission of the form by changing the user's password and redirecting to the login page.
+    form_invalid(self, form): Handles the unsuccessful submission of the form by re-rendering the template with the form and its errors.
+    """
+    
     template_name = 'partials/user_management/change_password.html'
     form_class = ChangePasswordForm
 
     def get(self, request):
+        """
+        Summary:
+        Handles the GET request by rendering the password change form template.
+
+        This method retrieves the form instance and renders the template with the form as context data.
+
+        Parameters:
+        request (HttpRequest): The request object containing the user data and HTTP method.
+
+        Returns:
+        HttpResponse: The response object containing the rendered template with the form.
+        """
         form = self.get_form()
         return render(request, self.template_name, {'form': form})
 
     def form_valid(self, form):
+        """
+        Summary:
+        Handles the successful submission of the form by changing the user's password and redirecting to the login page.
+
+        This method retrieves the user instance and checks if the provided current password matches the user's current password.
+        If it does, it changes the user's password to the new one and saves the changes.
+        It adds a success message to the messages and redirects to the login page with a 201 status code.
+        If the current password does not match, it displays an error message and renders the template with the form and its errors.
+
+        Returns:
+        HttpResponse: The response object containing the rendered template with the form or a redirect to the login page.
+        """
         user = self.request.user
         if user.check_password(form.cleaned_data['current_password']):
             user.set_password(form.cleaned_data['new_password'])
@@ -1254,18 +2120,59 @@ class ChangePasswordView(LoginRequiredMixin, FormView):
             return self.form_invalid(form)
 
     def form_invalid(self, form):
+        """
+        Summary:
+        Handles the case where the form submission fails validation by rendering the form template with error messages.
+
+        This method checks if the new password and repeat password fields match. If they do not,
+        it adds an error message indicating the mismatch. It renders the form template with the existing form data
+        and errors to allow the user to correct the input.
+
+        Parameters:
+        form (Any): The form containing the submitted data that failed validation.
+
+        Returns:
+        HttpResponse: The response object containing the rendered template with the form and its errors.
+        """
+
         if form.cleaned_data['new_password'] != form.cleaned_data['repeat_password']:
             messages.error(self.request, 'The new passwords do not match.')
     
         return render(self.request, self.template_name, {'form': form})
 
 class HistoricBalanceListView(GeneralListView):
+    """
+    Summary:
+    This view is responsible for listing the historic balances of the user's accounts. It filters 
+    the historic balances based on year and month and supports pagination.
+
+    Properties:
+    - filter_class (Type[FilterSet]): The filter class used to filter the historic balances.
+    - model (Model): The Django model `HistoricBalance` used to retrieve and display historic balance data.
+    - template_name (str): The template used to render the historic balance list.
+    - paginate_by (int): The number of items to display per page.
+
+    Methods:
+    - get_queryset(self): Retrieves the filtered queryset of historic balances visible to the user.
+    - get_context_data(self, **kwargs): Retrieves the context data necessary for rendering the historic balance list view.
+    """
+
     filter_class = HistoricBalanceFilter
     model = HistoricBalance
     template_name = 'partials/accounts/historic-balance.html'
     paginate_by = 100
 
     def get_queryset(self):
+        """
+        Retrieves the filtered queryset of historic balances visible to the user.
+
+        This method extends the default method by using the filter class to filter the historic
+        balances based on the year and month provided in the request GET parameters. If the year
+        and month are not provided, it defaults to the current year and month.
+
+        Returns:
+        QuerySet[HistoricBalance]: The filtered queryset of historic balances visible to the user.
+        """
         current_year = datetime.date.today().year
         current_month = datetime.date.today().month
         
@@ -1283,6 +2190,22 @@ class HistoricBalanceListView(GeneralListView):
         )
     
     def get_context_data(self, **kwargs):
+        """
+        Summary:
+        Retrieves the context data necessary for rendering the historic balance list view.
+
+        This method extends the default method by retrieving the filtered queryset of historic balances
+        visible to the user. It annotates the queryset with the sum of all the income and expenses of the
+        transactions associated with each account. It also annotates the queryset with the total sum of
+        all the income and expenses of the transactions that do not have an account associated. The sums
+        are converted to the user's main currency before being added to the context data.
+
+        Parameters:
+        kwargs (dict): Additional keyword arguments passed to the method.
+
+        Returns:
+        dict[str, Any]: The context data necessary for rendering the historic balance list view.
+        """
         context = super().get_context_data(**kwargs)
 
         if self.request.GET.get('year') and self.request.GET.get('month') :
@@ -1401,19 +2324,66 @@ class HistoricBalanceListView(GeneralListView):
         return context
     
 class TransferCreationView(TransactionCreation):
+    """
+    Summary:
+    This class is a Django View that handles the creation of transfer transactions between accounts.
+
+    Properties:
+    template_name (str): The template used to render the transfer form.
+    form_class (Form): The form class used to create a transfer transaction.
+
+    Methods:
+    get_form(self, form_class=None): Returns an instance of the form class initialized with the current date.
+    get(self, request, *args, **kwargs): Renders the transfer form template with the form and account data.
+    post(self, request, *args, **kwargs): Processes the transfer transaction by updating the accounts and handling the conversion and fees.
+    """
+
     template_name = 'partials/transactions/transfer_form.html'
     form_class = TransferForm
 
     def get_form(self, form_class = None):
+        """
+        Returns an instance of the form class initialized with the current date.
+
+        Parameters:
+        form_class (Form): The form class to be used.
+
+        Returns:
+        Form: The instance of the form class initialized with the current date.
+        """
         form = self.form_class(self.request, initial={
             'date': datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
         })
         return form
 
     def get(self, request, *args, **kwargs):
+        """
+        Summary:
+        Renders the transfer form template with the form and account data.
+
+        Parameters:
+        request (HttpRequest): The request object.
+        *args (list): Additional positional arguments.
+        **kwargs (dict): Additional keyword arguments.
+
+        Returns:
+        HttpResponse: The rendered template as a response.
+        """
         return render(request, self.template_name, {'form': self.get_form(), 'account': Account.objects.get(pk=self.kwargs['pk'])})
     
     def post(self, request, *args, **kwargs):
+        """
+        Summary:
+        Processes the transfer transaction by updating the accounts and handling the conversion and fees.
+
+        Parameters:
+        request (HttpRequest): The request object.
+        *args (list): Additional positional arguments.
+        **kwargs (dict): Additional keyword arguments.
+
+        Returns:
+        HttpResponse: A redirect response after the form is successfully processed.
+        """
         try:
             with transaction.atomic():
                 from_account = Account.objects.get(pk=self.kwargs['pk']) 
@@ -1527,6 +2497,19 @@ class TransferCreationView(TransactionCreation):
         return redirect(f"/transactions/{self.kwargs['pk']}/")
     
 def transfer_update(request, pk):
+    """
+    Summary:
+    This view is used to update a transfer form based on the sent and received amounts.
+    It calculates the final balance for both accounts, the effective exchange rate, and
+    the fee for the transfer.
+
+    Parameters:
+    request (HttpRequest): The request object containing the sent and received amounts.
+    pk (int): The primary key of the account that is making the transfer.
+
+    Returns:
+    HttpResponse: A rendered template containing the updated form data.
+    """
     from_account = Account.objects.get(pk=pk)
 
     to_account = Account.objects.get(pk=request.GET.get('to_account'))
@@ -1577,33 +2560,62 @@ def transfer_update(request, pk):
     })
 
 def set_tag_amount(request, tag_id):
-  tag = Tag.objects.get(pk=tag_id)
-  account = Account.objects.filter(pk=request.POST.get('account')).select_related('currency').first()
+    """
+    Summary:
+    Sets the amount for a specified tag in a given account.
 
-  if(account.owner != request.user or tag.user != request.user):
-    return HttpResponseForbidden()
-  
-  try:
-    with transaction.atomic():
-        if request.method == 'POST':
-            money_tags = MoneyTag.objects.filter(tag=tag).annotate(currency=F('account__currency'), total=F('amount')).values('currency', 'total')
+    This function sets the amount for a MoneyTag associated with a specified tag
+    and account. It ensures that the total amount of the tag is converted to the
+    currency of the specified account and updates the MoneyTag instances in the
+    database accordingly.
 
-            total = convert_all(
-                money_tags,
-                account.currency.pk
-            )
+    Parameters:
+    request (HttpRequest): The request object containing POST data with the account ID.
+    tag_id (int): The primary key of the tag whose amount is to be set.
 
-            MoneyTag.objects.filter(tag=tag, account=account).update(amount=total)
-            MoneyTag.objects.filter(tag=tag).exclude(account=account).update(amount=0)
+    Returns:
+    HttpResponse: Redirects to the tags page upon success or failure.
+    """
 
-            messages.success(request, "The tag amount has been set successfully.")
-            return redirect(f'/tags/')    
-  except Exception as e:
-    print(str(e))
-    messages.error(request, "An error has occurred while setting the tag amount.")
-    return redirect(f'/tags/')
+    tag = Tag.objects.get(pk=tag_id)
+    account = Account.objects.filter(pk=request.POST.get('account')).select_related('currency').first()
+
+    if(account.owner != request.user or tag.user != request.user):
+        return HttpResponseForbidden()
+    
+    try:
+        with transaction.atomic():
+            if request.method == 'POST':
+                money_tags = MoneyTag.objects.filter(tag=tag).annotate(currency=F('account__currency'), total=F('amount')).values('currency', 'total')
+
+                total = convert_all(
+                    money_tags,
+                    account.currency.pk
+                )
+
+                MoneyTag.objects.filter(tag=tag, account=account).update(amount=total)
+                MoneyTag.objects.filter(tag=tag).exclude(account=account).update(amount=0)
+
+                messages.success(request, "The tag amount has been set successfully.")
+                return redirect(f'/tags/')    
+    except Exception as e:
+        print(str(e))
+        messages.error(request, "An error has occurred while setting the tag amount.")
+        return redirect(f'/tags/')
   
 def reassign_tag(request, tag_id):
+    """
+    Summary:
+    Reassigns a tag to another tag by redistributing the amounts
+    in the MoneyTags associated with the accounts of the two tags.
+
+    Parameters:
+    request (HttpRequest): The request object containing the POST data with the tag2 id.
+    tag_id (int): The primary key of the tag to be reassigned.
+
+    Returns:
+    HttpResponse: Redirects to the tags page upon success or failure.
+    """
     if(request.user != Tag.objects.get(pk=tag_id).user):
         return HttpResponseForbidden()
     

@@ -1,4 +1,57 @@
-from django.contrib import admin
+"""
+core/urls.py
+
+This module defines the URL patterns for the core application. It maps URL paths to the corresponding views, allowing
+users to navigate through different parts of the application. The views handle user requests and return appropriate
+responses.
+
+URL Patterns:
+- WelcomeView: Handles the welcome page for authenticated users.
+- LoginView: Handles user login.
+- logout_view: Logs out the user and redirects to the login page.
+- SignUpView: Handles user sign-up.
+
+Account Views:
+- AccountListView: Lists all user accounts.
+- AccountCreation: Handles creation of a new account.
+- AccountUpdate: Handles updating an existing account.
+
+Transaction Views:
+- GeneralTransactionListView: Lists all transactions.
+- TransactionListView: Lists transactions for a specific account.
+- TransactionCreation: Handles creation of a new transaction.
+- TransactionUpdate: Handles updating an existing transaction.
+- TransactionDelete: Handles deletion of a transaction.
+
+Transfer Views:
+- TransferCreationView: Handles creation of a new transfer.
+- transfer_update: Handles updating an existing transfer.
+
+Tag Views:
+- TagListView: Lists all user tags.
+- TagCreation: Handles creation of a new tag.
+- TagUpdate: Handles updating an existing tag.
+- TagDelete: Handles deletion of a tag.
+- TagAssignment: Assigns a tag to an account.
+- set_tag_amount: Sets the amount for a tag.
+- reassign_tag: Reassigns a tag to a different account.
+
+Graph Views:
+- graph_by_accounts: Generates graphs by accounts.
+- daily_balance_graph: Generates daily balance graphs.
+- tag_graph_by_account: Generates tag graphs by account.
+
+Historic Balances:
+- HistoricBalanceListView: Lists historic balances for accounts.
+
+Summary Table Views:
+- AccountSumaryTableView: Lists account summary tables.
+
+User Management Views:
+- ChangePasswordView: Handles password change requests.
+"""
+
+
 from django.urls import path
 from .views import *
 

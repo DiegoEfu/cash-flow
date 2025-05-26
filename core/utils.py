@@ -1,3 +1,12 @@
+"""
+core/utils.py
+
+This file contains utility functions that are used throughout the application.
+It also contains functions used to fetch data from the Internet, such as the
+exchange rate of a currency.
+
+"""
+
 from django.db import transaction
 from django.db.models import F
 from core.models import Currency, ExchangeRate, TagHistory, Tag
