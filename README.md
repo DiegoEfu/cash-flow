@@ -23,7 +23,7 @@ Developed by Diego Faria as an open-source portfolio project.
 
 ## Usage
 
-1. Open a web browser and go to `http://localhost:8000/`
+1. Open a web browser and go to `http://127.0.0.1:8000/`
 2. Log in  or sign in with your username and password
 3. Add your accounts, transactions, and tags
 4. Generate graphs, reports and keep feeding the system for useful financial feedback!

@@ -1669,7 +1669,11 @@ class TagListView(GeneralListView):
                 tag=tag, 
                 year=datetime.date.today().year if datetime.date.today().month != 1 else datetime.date.today().year - 1,
                 month=datetime.date.today().month - 1 if datetime.date.today().month != 1 else 12
-            ).last().amount
+            ).last().amount if TagHistory.objects.filter(
+                tag=tag, 
+                year=datetime.date.today().year if datetime.date.today().month != 1 else datetime.date.today().year - 1,
+                month=datetime.date.today().month - 1 if datetime.date.today().month != 1 else 12
+            ) else 0
             alt[-1]['flow'] = total - previous
             alt[-1]['pctg'] = round(alt[-1]['flow'] / previous * 100, 2) if previous != 0 else 0
         return alt
