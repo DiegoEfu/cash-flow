@@ -402,7 +402,7 @@ def update_tag_history(tag):
         tag_history.save()
     else:
         TagHistory.objects.create(
-            tag=Tag.objects.get(pk=tag),
+            tag=Tag.objects.get(pk=tag.pk),
             amount=total_assigned,
             month=month,
             year=year,

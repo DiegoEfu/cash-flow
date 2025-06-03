@@ -1333,7 +1333,7 @@ class TransactionDelete(LoginRequiredMixin, View):
                 else:
                     historic_balance.balance -= amount
                 historic_balance.save()
-
+                
             transaction_instance.delete()
 
         return render(request, 'partials/transactions/updated-balance.html', {'account': account})
@@ -1795,6 +1795,7 @@ class TagDelete(LoginRequiredMixin, View):
         
         with transaction.atomic():
             instance.money_tags.all().delete()
+            instance.tag_history.all().delete()
             instance.delete()
 
         return render(request, 'partials/transactions/updated-balance.html')
@@ -2629,8 +2630,8 @@ def reassign_tag(request, tag_id):
             tag = Tag.objects.get(pk=tag_id)
             tag2 = Tag.objects.get(pk=tag2_id)
 
-            money_tags1 = MoneyTag.objects.filter(tag=tag).select_related('account')
-            money_tags2 = MoneyTag.objects.filter(tag=tag2).exclude(tag=tag).select_related('account')
+            money_tags1 = MoneyTag.objects.filter(tag=tag).select_related('account').order_by('account')
+            money_tags2 = MoneyTag.objects.filter(tag=tag2).exclude(tag=tag).select_related('account').order_by('account')
 
             for money_tag1, money_tag2 in zip(money_tags1, money_tags2):
                 money_tag2.amount += money_tag1.amount
