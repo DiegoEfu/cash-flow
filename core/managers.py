@@ -71,15 +71,15 @@ class TransactionQuerySet(models.QuerySet):
         )['total_income'] or 0
     
     def get_balance(self):
-    """
-    Summary:
-    Calculates the balance by subtracting the total expenses from the total income.
+        """
+        Summary:
+        Calculates the balance by subtracting the total expenses from the total income.
 
-    This method retrieves the total income and the total expenses and computes the difference
-    to determine the overall balance.
+        This method retrieves the total income and the total expenses and computes the difference
+        to determine the overall balance.
 
-    Returns:
-    int: The calculated balance, which is the total income minus the total expenses.
-    """
+        Returns:
+        int: The calculated balance, which is the total income minus the total expenses.
+        """
 
         return self.get_total_income() - self.get_total_expenses()
