@@ -52,6 +52,7 @@ def convert_all(amounts, main_currency_pk, exchange_rates = None):
             .select_related('currency1', 'currency2').values('exchange_rate', 'currency1', 'currency2')
            
     for amount in amounts:
+        print(amount['currency'], main_currency_pk)
         if amount['currency'] != main_currency_pk:
             exchange_rate = next((rate['exchange_rate'] for rate in exchange_rates if \
                                   rate['currency1'] == amount['currency'] and rate['currency2'] == main_currency_pk
