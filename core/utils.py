@@ -61,7 +61,7 @@ def convert_all(amounts, main_currency_pk, exchange_rates = None):
                 exchange_rate = 1/next((rate['exchange_rate'] for rate in exchange_rates if \
                                       rate['currency1'] == main_currency_pk and rate['currency2'] == amount['currency']
                                     ), 1)
-            
+
             acc += convert(amount['total'], exchange_rate)
         else:
             acc += amount['total']

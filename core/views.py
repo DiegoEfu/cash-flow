@@ -75,7 +75,9 @@ class WelcomeView(View):
             exchange_rates = ExchangeRate.objects.filter(active=True) \
                 .select_related('currency1', 'currency2').values('exchange_rate', 'currency1', 'currency2')
              
-            amounts_balance = Account.objects.filter(owner=request.user, visible=True).annotate(total=Sum('current_balance')).values('currency', 'total')
+            amounts_balance = Account.objects.filter(owner=request.user, visible=True).annotate(total=Sum('current_balance')).values('currency', 'total', 'current_balance')
+
+            print(amounts_balance)
             
             amounts = Transaction.objects.select_related('from_account__currency').filter(
                 Q(from_account__owner=request.user) | Q(user=request.user),
@@ -1375,7 +1377,7 @@ class GeneralTransactionListView(GeneralListView):
             self.request.GET,
             queryset=self.model.objects.select_related(
                 'from_account', 'from_account__currency', 'tag', 'exchange_rate'
-            ).filter(Q(from_account__owner=self.request.user) | Q(user=self.request.user))
+            ).filter(Q(from_account__owner=self.request.user) | Q(user=self.request.user)).exclude(from_account__visible=False)
         )
     
     def get_context_data(self, **kwargs: Any) -> dict[str, Any]:
@@ -1422,7 +1424,7 @@ class GeneralTransactionListView(GeneralListView):
         transactions = qs.values('from_account__currency').annotate(total=Sum('amount')).values('total', 'from_account__currency', 'transaction_type', 'hold')
         context['total_in'] = round(convert_all([{'total': transaction['total'], 'currency': transaction['from_account__currency']} for transaction in transactions.filter(transaction_type='+', hold=False)], main_currency.pk, exchange_rates), 2)
         context['total_out'] = round(convert_all([{'total': transaction['total'], 'currency': transaction['from_account__currency']} for transaction in transactions.filter(transaction_type='-', hold=False)], main_currency.pk, exchange_rates), 2)
-        context['total_hold'] = round(convert_all([{'total': transaction['total'], 'currency': transaction['from_account__currency']} for transaction in transactions.filter(hold=True)], main_currency.pk, exchange_rates), 2)
+        context['total_hold'] = round(convert_all([{'total': transaction['total'], 'currency': transaction['from_account__currency']} for transaction in transactions.filter(hold=True, transaction_type='+')], main_currency.pk, exchange_rates), 2)
         context['total_cash_flow'] = context['total_in'] - context['total_out']
 
         context['main_currency']  = main_currency.code
@@ -1924,6 +1926,9 @@ class TagAssignment(LoginRequiredMixin, View):
                 else:
                     money_tag.amount = 0
                     money_tag.save()
+
+            update_tag_history(request.user) # Update tag history for the current month
+            messages.success(request, "Your tags have been successfully updated.")            
 
         return redirect(f"/transactions/{account.pk}/")
 
