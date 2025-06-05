@@ -209,16 +209,16 @@ def generate_monthly_transactions_report(request, account, year, month) -> HttpR
                 sums['in_ex'] += transaction.amount if transaction.transaction_type == '+' and not transaction.internal else 0
                 sums['out_ex'] += abs(transaction.amount) if transaction.transaction_type == '-' and not transaction.internal else 0
                 sums['in_mc'] += convert_all_transactions_amounts_to_main_currency_precisely(
-                    [{'amount': transaction.amount, 'from_account__currency': transaction.from_account.currency.pk, 'exchange_rate': transaction.exchange_rate.pk}], request.user.main_currency.pk
+                    [{'amount': transaction.amount, 'from_account__currency': transaction.from_account.currency.pk, 'exchange_rate': transaction.exchange_rate.pk}], request.user.main_currency.currency.pk
                 ) if transaction.transaction_type == '+' and transaction.internal else 0
                 sums['out_mc'] += convert_all_transactions_amounts_to_main_currency_precisely(
-                    [{'amount': transaction.amount, 'from_account__currency': transaction.from_account.currency.pk, 'exchange_rate': transaction.exchange_rate.pk}], request.user.main_currency.pk
+                    [{'amount': transaction.amount, 'from_account__currency': transaction.from_account.currency.pk, 'exchange_rate': transaction.exchange_rate.pk}], request.user.main_currency.currency.pk
                 ) if transaction.transaction_type == '-' and transaction.internal else 0
                 sums['in_ex_mc'] += convert_all_transactions_amounts_to_main_currency_precisely(
-                    [{'amount': transaction.amount, 'from_account__currency': transaction.from_account.currency.pk, 'exchange_rate': transaction.exchange_rate.pk}], request.user.main_currency.pk
+                    [{'amount': transaction.amount, 'from_account__currency': transaction.from_account.currency.pk, 'exchange_rate': transaction.exchange_rate.pk}], request.user.main_currency.currency.pk
                 ) if transaction.transaction_type == '+' and not transaction.internal else 0
                 sums['out_ex_mc'] += convert_all_transactions_amounts_to_main_currency_precisely(
-                    [{'amount': transaction.amount, 'from_account__currency': transaction.from_account.currency.pk, 'exchange_rate': transaction.exchange_rate.pk}], request.user.main_currency.pk
+                    [{'amount': transaction.amount, 'from_account__currency': transaction.from_account.currency.pk, 'exchange_rate': transaction.exchange_rate.pk}], request.user.main_currency.currency.pk
                 ) if transaction.transaction_type == '-' and not transaction.internal else 0
                 
                 if transaction.tag:
@@ -232,17 +232,17 @@ def generate_monthly_transactions_report(request, account, year, month) -> HttpR
                     if transaction.transaction_type == '+':
                         tags[transaction.tag.name]['in'] += transaction.amount
                         tags[transaction.tag.name]['in_mc'] += convert_all_transactions_amounts_to_main_currency_precisely(
-                            [{'amount': transaction.amount, 'from_account__currency': transaction.from_account.currency.pk, 'exchange_rate': transaction.exchange_rate.pk}], request.user.main_currency.pk
+                            [{'amount': transaction.amount, 'from_account__currency': transaction.from_account.currency.pk, 'exchange_rate': transaction.exchange_rate.pk}], request.user.main_currency.currency.pk
                         )
                     else:
                         tags[transaction.tag.name]['out'] += abs(transaction.amount)
                         tags[transaction.tag.name]['out_mc'] += convert_all_transactions_amounts_to_main_currency_precisely(
-                        [{'amount': transaction.amount, 'from_account__currency': transaction.from_account.currency.pk, 'exchange_rate': transaction.exchange_rate.pk}], request.user.main_currency.pk
+                        [{'amount': transaction.amount, 'from_account__currency': transaction.from_account.currency.pk, 'exchange_rate': transaction.exchange_rate.pk}], request.user.main_currency.currency.pk
                         )   
 
             sums['avg_balance'] += current_balance
             sums['avg_balance_mc'] += convert_all_transactions_amounts_to_main_currency_precisely(
-                [{'amount': current_balance, 'from_account__currency': account.currency.pk,  'date': day, 'exchange_rate': None}], request.user.main_currency.pk
+                [{'amount': current_balance, 'from_account__currency': account.currency.pk,  'date': day, 'exchange_rate': None}], request.user.main_currency.currency.pk
             )
 
         sums['cash_flow'] = current_balance - start_balance
@@ -766,7 +766,7 @@ def generate_monthly_transactions_report_all_accounts(request, year, month) -> H
     ])
     table_summary.append([
         '% of Variation (Balances)',
-        f'{((total_balance_main_currency - total_start_balance) / total_start_balance) * 100:,.2f}%',
+        f'{((total_balance_main_currency - total_start_balance) / total_start_balance) * 100:,.2f}%' if total_start_balance else '-',
     ])
     table_summary.append([
         'Total Ext. Expenses',

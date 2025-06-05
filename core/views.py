@@ -75,7 +75,9 @@ class WelcomeView(View):
             exchange_rates = ExchangeRate.objects.filter(active=True) \
                 .select_related('currency1', 'currency2').values('exchange_rate', 'currency1', 'currency2')
              
-            amounts_balance = Account.objects.filter(owner=request.user, visible=True).annotate(total=Sum('current_balance')).values('currency', 'total')
+            amounts_balance = Account.objects.filter(owner=request.user, visible=True).annotate(total=Sum('current_balance')).values('currency', 'total', 'current_balance')
+
+            main_currency_pk = request.user.main_currency.currency.pk
             
             amounts = Transaction.objects.select_related('from_account__currency').filter(
                 Q(from_account__owner=request.user) | Q(user=request.user),
@@ -84,14 +86,14 @@ class WelcomeView(View):
             ).annotate(total=Sum('amount'), currency=F('from_account__currency')
             ).values('total', 'exchange_rate', 'amount', 'currency', 'transaction_type', 'opening', 'date', from_account__currency=Case(
                 When(from_account__currency__isnull=False, then=F('from_account__currency')),
-                When(from_account__currency__isnull=True, then=Value(request.user.main_currency.pk)),
+                When(from_account__currency__isnull=True, then=Value(main_currency_pk)),
             ))
             amounts_income = [transaction for transaction in amounts if transaction['transaction_type'] == '+' and not transaction['opening']]
             amounts_expense = [transaction for transaction in amounts if transaction['transaction_type'] == '-']
 
-            total_balance = convert_all(amounts_balance, request.user.main_currency.pk, exchange_rates)
-            total_income = convert_all_transactions_amounts_to_main_currency_precisely(amounts_income, request.user.main_currency.pk)
-            total_expense = convert_all_transactions_amounts_to_main_currency_precisely(amounts_expense, request.user.main_currency.pk)
+            total_balance = convert_all(amounts_balance, main_currency_pk)
+            total_income = convert_all_transactions_amounts_to_main_currency_precisely(amounts_income, main_currency_pk)
+            total_expense = convert_all_transactions_amounts_to_main_currency_precisely(amounts_expense, main_currency_pk)
 
             previous_month = datetime.date.today().month - 1 if datetime.date.today().month > 1 else 12
             year = datetime.date.today().year if previous_month != 12 else datetime.date.today().year - 1
@@ -99,7 +101,7 @@ class WelcomeView(View):
             balances_last_month = HistoricBalance.objects.filter(account__owner=request.user, month=previous_month, year=year)
             if balances_last_month.exists():
                 balances_last_month = balances_last_month.annotate(total=F('balance'), currency=F('account__currency')).values('total', 'currency')
-                balance_last_month = convert_all(balances_last_month, request.user.main_currency.pk, exchange_rates)
+                balance_last_month = convert_all(balances_last_month, main_currency_pk, exchange_rates)
             else:
                 balance_last_month = 0
             
@@ -107,14 +109,14 @@ class WelcomeView(View):
                 .annotate(total=Sum('amount'), currency=F('from_account__currency')) \
                 .values('total', 'exchange_rate', 'amount', 'currency', 'transaction_type', 'opening', 'date', from_account__currency=Case(
                 When(from_account__currency__isnull=False, then=F('from_account__currency')),
-                When(from_account__currency__isnull=True, then=Value(request.user.main_currency.pk)),
+                When(from_account__currency__isnull=True, then=Value(main_currency_pk)),
             ))
             
             incomes_last_month = [transaction for transaction in transactions if transaction['transaction_type'] == '+' and not transaction['opening']]
-            income_last_month = convert_all_transactions_amounts_to_main_currency_precisely(incomes_last_month, request.user.main_currency.pk)
+            income_last_month = convert_all_transactions_amounts_to_main_currency_precisely(incomes_last_month, main_currency_pk)
 
             expenses_last_month = [transaction for transaction in transactions if transaction['transaction_type'] == '-']
-            expense_last_month = convert_all_transactions_amounts_to_main_currency_precisely(expenses_last_month, request.user.main_currency.pk)
+            expense_last_month = convert_all_transactions_amounts_to_main_currency_precisely(expenses_last_month, main_currency_pk)
 
             percentage_balance = calculate_percentage(total_balance, balance_last_month)
             percentage_income = calculate_percentage(total_income, income_last_month)
@@ -1138,6 +1140,7 @@ class TransactionCreation(FormView):
         """
         form = super().get_form(self.form_class)
         form.initial['date'] = datetime.datetime.now()
+        form.fields['tag'].queryset = Tag.objects.filter(user=self.request.user)
         return form
 
     def get_context_data(self, **kwargs: Any) -> dict[str, Any]:
@@ -1375,7 +1378,7 @@ class GeneralTransactionListView(GeneralListView):
             self.request.GET,
             queryset=self.model.objects.select_related(
                 'from_account', 'from_account__currency', 'tag', 'exchange_rate'
-            ).filter(Q(from_account__owner=self.request.user) | Q(user=self.request.user))
+            ).filter(Q(from_account__owner=self.request.user) | Q(user=self.request.user)).exclude(from_account__visible=False)
         )
     
     def get_context_data(self, **kwargs: Any) -> dict[str, Any]:
@@ -1422,7 +1425,7 @@ class GeneralTransactionListView(GeneralListView):
         transactions = qs.values('from_account__currency').annotate(total=Sum('amount')).values('total', 'from_account__currency', 'transaction_type', 'hold')
         context['total_in'] = round(convert_all([{'total': transaction['total'], 'currency': transaction['from_account__currency']} for transaction in transactions.filter(transaction_type='+', hold=False)], main_currency.pk, exchange_rates), 2)
         context['total_out'] = round(convert_all([{'total': transaction['total'], 'currency': transaction['from_account__currency']} for transaction in transactions.filter(transaction_type='-', hold=False)], main_currency.pk, exchange_rates), 2)
-        context['total_hold'] = round(convert_all([{'total': transaction['total'], 'currency': transaction['from_account__currency']} for transaction in transactions.filter(hold=True)], main_currency.pk, exchange_rates), 2)
+        context['total_hold'] = round(convert_all([{'total': transaction['total'], 'currency': transaction['from_account__currency']} for transaction in transactions.filter(hold=True, transaction_type='+')], main_currency.pk, exchange_rates), 2)
         context['total_cash_flow'] = context['total_in'] - context['total_out']
 
         context['main_currency']  = main_currency.code
@@ -1925,6 +1928,9 @@ class TagAssignment(LoginRequiredMixin, View):
                     money_tag.amount = 0
                     money_tag.save()
 
+            update_tag_history(request.user) # Update tag history for the current month
+            messages.success(request, "Your tags have been successfully updated.")            
+
         return redirect(f"/transactions/{account.pk}/")
 
 def logout_view(request):
@@ -1955,7 +1961,7 @@ def graph_by_accounts(request):
     accounts = AccountFilter(request.GET, queryset=Account.objects.filter(visible=True, owner=request.user).select_related('currency')).qs.annotate(total=F('current_balance')).values('name', 'currency', 'total')
     accounts = sorted(
         convert_each(
-            accounts, request.user.main_currency.pk
+            accounts, request.user.main_currency.currency.pk
         ), 
         key=lambda x: x['total'], 
         reverse=True
@@ -1982,7 +1988,7 @@ def graph_by_tags(request):
     """
 
     accounts = AccountFilter(request.GET, queryset=MoneyTag.objects.filter(account__visible=True, account__owner=request.user).select_related('currency')).qs.annotate(total=F('current_balance')).values('name', 'currency', 'total')
-    accounts = convert_each(accounts, request.user.main_currency.pk)
+    accounts = convert_each(accounts, request.user.main_currency.currency.pk)
 
     return JsonResponse(accounts, safe=False)
 
@@ -2359,6 +2365,8 @@ class TransferCreationView(TransactionCreation):
         form = self.form_class(self.request, initial={
             'date': datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
         })
+        form.fields['tag'].queryset = Tag.objects.filter(user=self.request.user)
+        form.fields['tag'].empty_label = '--------------------'
         return form
 
     def get(self, request, *args, **kwargs):
@@ -2424,7 +2432,6 @@ class TransferCreationView(TransactionCreation):
                 if(receive_transaction.is_valid()):
                     self.form_valid(receive_transaction, to_account.pk)
                 else:
-                    print("RECEIBE", received_amount if fee >= 0 else round(received_amount - fee_converted, 2))
                     print(receive_transaction.errors)
                     raise Exception("The transference is invalid.")
                 
