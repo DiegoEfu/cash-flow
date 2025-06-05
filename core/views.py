@@ -2366,6 +2366,7 @@ class TransferCreationView(TransactionCreation):
             'date': datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
         })
         form.fields['tag'].queryset = Tag.objects.filter(user=self.request.user)
+        form.fields['tag'].empty_label = '--------------------'
         return form
 
     def get(self, request, *args, **kwargs):
