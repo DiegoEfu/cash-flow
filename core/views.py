@@ -2362,7 +2362,10 @@ class TransferCreationView(TransactionCreation):
         Returns:
         Form: The instance of the form class initialized with the current date.
         """
-        form = self.form_class(self.request, initial={
+        form = self.form_class({
+            'pk': self.kwargs['pk'],
+            'user': self.request.user
+        }, initial={
             'date': datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
         })
         form.fields['tag'].queryset = Tag.objects.filter(user=self.request.user)
