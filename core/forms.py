@@ -193,8 +193,8 @@ class TransferForm(TransactionForm):
     """
     def __init__(self, request = None, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.fields['to_account'].choices = Account.objects.filter(owner=request.user, visible=True).exclude(pk=request.GET.get('pk')).values_list('pk', 'name') if request else []
-        self.fields['deduce_from_tag'].choices = Tag.objects.filter(user=request.user).exclude(pk=request.GET.get('pk')).values_list('pk', 'name') if request else []
+        self.fields['to_account'].choices = Account.objects.filter(owner=request['user'], visible=True).exclude(pk=request.get('pk')).values_list('pk', 'name') if request else []
+        self.fields['deduce_from_tag'].choices = Tag.objects.filter(user=request['user']).exclude(pk=request.get('pk')).values_list('pk', 'name') if request else []
 
     to_account = forms.ChoiceField(required=True)
     received_amount = forms.FloatField(required=True)
