@@ -1929,6 +1929,7 @@ class TagAssignment(LoginRequiredMixin, View):
                     money_tag.save()
 
                 update_tag_history(tag.pk) # Update tag history for the current month
+            
             messages.success(request, "Your tags have been successfully updated.")            
 
         return redirect(f"/transactions/{account.pk}/")
