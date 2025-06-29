@@ -217,7 +217,7 @@
                 <tr>
                     <td>{{transaction.transaction.pk}}</td>
                     <td>{{transaction.transaction.date}} {% if transaction.transaction.hold %} <span class="badge badge-warning">(On Hold)</span> {%endif%}</td>
-                    <td data-tip="{{transaction.transaction.tag|default:''}}" class="{% if transaction.transaction.tag %}tooltip tooltip-left{% endif %}">{{transaction.transaction.description|default:'-'}}</td>
+                    <td data-tip="{{transaction.transaction.tag|default:''}}" class="{% if transaction.transaction.tag %}tooltip tooltip-left{% endif %}">{{transaction.transaction.description.upper|default:'-'}}</td>
                     <td>
                       <span class="badge badge-{% if transaction.transaction.transaction_type == '+' %}success{% else %}error{% endif %}">
                         {% if transaction.transaction.transaction_type == '+' %}INCOME{% else %}EXPENSE{% endif %}
