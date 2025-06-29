@@ -78,7 +78,7 @@
             <tbody id="items">
                 {% for balances in object_list %}
                 <tr>
-                    <td>{{balances.obj.account.name}} - {{balances.obj.month}}/{{balances.obj.year}}</td>
+                    <td>{{balances.obj.account.name.upper}} - {{balances.obj.month}}/{{balances.obj.year}}</td>
                     <td><span class="tooltip tooltip-left" data-tip="{{balances.obj.account.currency.code}} {{balances.obj.balance}}">{{balances.balance}}</span></td>
                     <td>
                       <span class="tooltip tooltip-right text-info" data-tip="Int.: {{request.user.main_currency}} {{balances.total_internal_in}}">

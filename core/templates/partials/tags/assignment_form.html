@@ -38,7 +38,7 @@
                 <tr>
                   <td>{{forloop.counter}}</td>
                   <td>
-                    {{form.form.instance.tag}}
+                    {{form.form.instance.tag.name.upper}}
                     <input type="hidden" name="{{form.form.instance.tag.pk}}-id" value="{{form.form.instance.id}}">
                     <button type="button" class="btn btn-xs remove-btn" id="remove-{{form.form.prefix}}"> 
                       x

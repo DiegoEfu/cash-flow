@@ -71,7 +71,7 @@
                       <input type="checkbox" id="modal_accounts" class="modal-toggle" />
                       <div class="modal" role="dialog">
                         <div class="modal-box">
-                          <h3 class="text-lg font-bold">Accounts with money for {{tag.tag.name}}</h3>
+                          <h3 class="text-lg font-bold">Accounts with money assigned</h3>
                           <table class="w-full">
                               <thead>
                                 <tr>
@@ -83,7 +83,7 @@
                               <tbody>
                                 {% for account in accounts %}
                                 <tr>
-                                  <td>{{account.account}}</td>
+                                  <td>{{account.account.name.upper}}</td>
                                   <td>
                                     <p class="tooltip tooltip-success" data-tip="{{account.account.currency.code}} {{account.assigned.account_currency}}">{{account.assigned.main_currency}}</p>
                                   </td>
@@ -121,7 +121,7 @@
             <tbody id="items">
                 {% for tag in object_list %}
                 <tr>
-                    <td>{{tag.tag.name}}</td>
+                    <td>{{tag.tag.name.upper}}</td>
                     <td>{{tag.total|default:'0.00'}}</td>
                     <td>{{tag.tag.month_goal|default:'0.00'}}</td>
                     <td>{{tag.spent|default:'0.00'}}</td>
@@ -163,7 +163,7 @@
                       <input type="checkbox" id="my_modal_{{tag.tag.pk}}" class="modal-toggle" />
                       <div class="modal" role="dialog">
                         <div class="modal-box">
-                          <h3 class="text-lg font-bold">Accounts with money for {{tag.tag.name}}</h3>
+                          <h3 class="text-lg font-bold">Accounts with money for {{tag.tag.name.upper}}</h3>
                           <table class="w-full">
                               <thead>
                                 <tr>
@@ -175,7 +175,7 @@
                                 {% for money_tag in tag.tag.money_tags.all %}
                                 {% if money_tag.amount != 0 %}
                                 <tr>
-                                  <td>{{money_tag.account}}</td>
+                                  <td>{{money_tag.account.name.upper}}</td>
                                   <td>{{money_tag.account.currency.code}} {{money_tag.amount}}</td>
                                 </tr>
                                 {% endif %}
