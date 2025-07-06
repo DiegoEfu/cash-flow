@@ -2297,7 +2297,9 @@ class HistoricBalanceListView(GeneralListView):
             user=self.request.user,
             from_account__isnull=True,
             date__year=int(self.request.GET.get('year', datetime.date.today().year)),
-            date__month=int(self.request.GET.get('month', datetime.date.today().month))
+            date__month=int(self.request.GET.get('month', datetime.date.today().month)),
+            hold=False,
+            opening=False
         ).aggregate(
             total_in=Sum(
                 Case(
@@ -2326,9 +2328,9 @@ class HistoricBalanceListView(GeneralListView):
         }
 
         context['totals']['total_in'] += transactions_without_account['total_in'] or 0
-        context['totals']['total_out'] += transactions_without_account['total_out'] or 0
+        context['totals']['total_out'] += abs(transactions_without_account['total_out']) or 0
         context['totals']['total_external_in'] += transactions_without_account['total_in'] or 0
-        context['totals']['total_external_out'] += transactions_without_account['total_out'] or 0
+        context['totals']['total_external_out'] += abs(transactions_without_account['total_out']) or 0
         context['exchange_diffs'] = transactions_without_account 
         context['total_exchange_diff'] = (context['exchange_diffs']['total_in'] or 0) - (context['exchange_diffs']['total_out'] or 0)
 

@@ -672,6 +672,7 @@ def generate_monthly_transactions_report_all_accounts(request, year, month) -> H
             from_account=account,
             date__year=year,
             date__month=month,
+            hold=False
         ):
             converted_amount = convert_all_transactions_amounts_to_main_currency_precisely(
                 [{'amount': transaction.amount, 'from_account__currency': account.currency.pk, 'exchange_rate': transaction.exchange_rate.pk if transaction.exchange_rate else None, 'date': transaction.date.date()}], main_currency.pk
@@ -729,7 +730,8 @@ def generate_monthly_transactions_report_all_accounts(request, year, month) -> H
     for transaction in Transaction.objects.filter(
         date__year=year,
         date__month=month,
-        from_account=None
+        from_account=None,
+        user=request.user
     ):
         if(transaction.transaction_type == '+'):
             exchange_in += transaction.amount
@@ -768,18 +770,30 @@ def generate_monthly_transactions_report_all_accounts(request, year, month) -> H
         '% of Variation (Balances)',
         f'{((total_balance_main_currency - total_start_balance) / total_start_balance) * 100:,.2f}%' if total_start_balance else '-',
     ])
+    total_in_external = sum([values["in_ext"] for values in table_dict.values()])
+    total_out_external = sum([values["out_ext"] for values in table_dict.values()])
     table_summary.append([
         'Total Ext. Expenses',
-        f'{sum([values["out_ext"] for values in table_dict.values()]):,.2f}',
+        f'{total_out_external:,.2f}',
     ])
     table_summary.append([
         'Total Ext. Income',
-        f'{sum([values["in_ext"] for values in table_dict.values()]):,.2f}',
+        f'{total_in_external:,.2f}',
     ])
     table_summary.append([
         'Total Cash Flow',
-        f'{total_balance_main_currency - total_start_balance:,.2f}',
+        f'{total_in_external - total_out_external:,.2f}',
     ])
+
+    tag_history = TagHistory.objects.filter(month=month, year=year)
+    table_tag_history = [
+        ['Tag', f'Amount ({main_currency.code})'],
+    ] if tag_history.exists() else []
+    for history in tag_history:
+        table_tag_history.append([
+                history.tag.name,
+                f'{history.amount:,.2f}',
+        ])
     
     return generate_report(
         request,
@@ -809,6 +823,18 @@ def generate_monthly_transactions_report_all_accounts(request, year, month) -> H
                     ('LINEBELOW', (0, 1), (-1, -1), 0.5, colors.gray),
                 ],
             ),
+            Spacer(1, 10),
+            Table(
+                table_tag_history,
+                style=[
+                    ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+                    ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+                    ('FONTNAME', (0, 0), (-1, -1), 'Helvetica'),
+                    ('FONTSIZE', (0, 0), (-1, -1), 8),
+                    ('LINEBELOW', (0, 0), (-1, 0), 1, colors.black),
+                    ('LINEBELOW', (0, 1), (-1, -1), 0.5, colors.gray),
+                ],
+            ) if table_tag_history else '',
             Spacer(1, 10),
             Table(
                 table_summary,
@@ -923,7 +949,8 @@ def generate_yearly_transactions_report_all_accounts(request, year) -> HttpRespo
             date__year=year,
             date__month=month,
             from_account=None,
-            user=request.user
+            user=request.user,
+            hold=False
         ):
             if transaction.transaction_type == '+':
                 exchange_diff += transaction.amount
