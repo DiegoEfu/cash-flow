@@ -2198,7 +2198,7 @@ class HistoricBalanceListView(GeneralListView):
         return self.filter_class(
             query_dict,
             request=self.request,
-            queryset=self.model.objects.select_related('account').filter(account__owner=self.request.user)
+            queryset=self.model.objects.select_related('account').filter(account__owner=self.request.user).order_by('account__name')
         )
     
     def get_context_data(self, **kwargs):
@@ -2297,7 +2297,9 @@ class HistoricBalanceListView(GeneralListView):
             user=self.request.user,
             from_account__isnull=True,
             date__year=int(self.request.GET.get('year', datetime.date.today().year)),
-            date__month=int(self.request.GET.get('month', datetime.date.today().month))
+            date__month=int(self.request.GET.get('month', datetime.date.today().month)),
+            hold=False,
+            opening=False
         ).aggregate(
             total_in=Sum(
                 Case(
@@ -2326,10 +2328,11 @@ class HistoricBalanceListView(GeneralListView):
         }
 
         context['totals']['total_in'] += transactions_without_account['total_in'] or 0
-        context['totals']['total_out'] += transactions_without_account['total_out'] or 0
+        context['totals']['total_out'] += abs(transactions_without_account['total_out']) or 0
         context['totals']['total_external_in'] += transactions_without_account['total_in'] or 0
-        context['totals']['total_external_out'] += transactions_without_account['total_out'] or 0
+        context['totals']['total_external_out'] += abs(transactions_without_account['total_out']) or 0
         context['exchange_diffs'] = transactions_without_account 
+        context['total_exchange_diff'] = (context['exchange_diffs']['total_in'] or 0) - (context['exchange_diffs']['total_out'] or 0)
 
         context['total_cash_flow'] = context['totals']['total_in'] - context['totals']['total_out']
 
@@ -2637,19 +2640,23 @@ def reassign_tag(request, tag_id):
     
     tag2_id = request.POST.get('tag2_id')
 
-    with transaction.atomic():
-            tag = Tag.objects.get(pk=tag_id)
-            tag2 = Tag.objects.get(pk=tag2_id)
+    try:
+        with transaction.atomic():
+                tag = Tag.objects.get(pk=tag_id)
+                tag2 = Tag.objects.get(pk=tag2_id)
 
-            money_tags1 = MoneyTag.objects.filter(tag=tag).select_related('account').order_by('account')
-            money_tags2 = MoneyTag.objects.filter(tag=tag2).exclude(tag=tag).select_related('account').order_by('account')
+                money_tags1 = MoneyTag.objects.filter(tag=tag).select_related('account').order_by('account')
+                money_tags2 = MoneyTag.objects.filter(tag=tag2).exclude(tag=tag).select_related('account').order_by('account')
 
-            for money_tag1, money_tag2 in zip(money_tags1, money_tags2):
-                money_tag2.amount += money_tag1.amount
-                money_tag2.save()
-                money_tag1.amount = 0
-                money_tag1.save()
-            
-            messages.success(request, "The tag has been reassigned successfully.")
+                for money_tag1, money_tag2 in zip(money_tags1, money_tags2):
+                    money_tag2.amount += money_tag1.amount
+                    money_tag2.save()
+                    money_tag1.amount = 0
+                    money_tag1.save()
+                
+                messages.success(request, "The tag has been reassigned successfully.")
+    except Exception as e:
+        print(str(e))
+        messages.error(request, "An error has occurred while reassigning the tag.")
 
     return redirect(f'/tags/')

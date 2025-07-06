@@ -196,7 +196,7 @@
                           <form action="{% url 'reassign_tag' tag_id=tag.tag.pk %}" method="post">
                             {% csrf_token %}
                             <h3 class="text-lg font-bold">Reassign Tag for {{tag.tag.name}}</h3>
-                            <select name="tag2_id" class="select select-bordered w-full">
+                            <select name="tag2_id" class="select select-bordered w-full" required>
                               <option disabled selected>Select Tag</option>
                               {% for tag in object_list %}
                               <option value="{{tag.tag.pk}}">{{tag.tag.name}}</option>
@@ -213,7 +213,7 @@
                       <input type="checkbox" id="modal_send_funds_{{tag.tag.pk}}" class="modal-toggle" />
                       <div class="modal" role="dialog">
                         <div class="modal-box">
-                          <form action="{% url 'send_tag_account' tag_id=tag.tag.pk %}" method="post">
+                          <form action="{% url 'send_tag_account' tag_id=tag.tag.pk %}" method="post" required>
                             {% csrf_token %}
                             <h3 class="text-lg font-bold">Send Funds from {{tag.tag.name}}</h3>
                             <select name="account" class="select select-bordered w-full">
