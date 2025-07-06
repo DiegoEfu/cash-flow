@@ -2637,19 +2637,23 @@ def reassign_tag(request, tag_id):
     
     tag2_id = request.POST.get('tag2_id')
 
-    with transaction.atomic():
-            tag = Tag.objects.get(pk=tag_id)
-            tag2 = Tag.objects.get(pk=tag2_id)
+    try:
+        with transaction.atomic():
+                tag = Tag.objects.get(pk=tag_id)
+                tag2 = Tag.objects.get(pk=tag2_id)
 
-            money_tags1 = MoneyTag.objects.filter(tag=tag).select_related('account').order_by('account')
-            money_tags2 = MoneyTag.objects.filter(tag=tag2).exclude(tag=tag).select_related('account').order_by('account')
+                money_tags1 = MoneyTag.objects.filter(tag=tag).select_related('account').order_by('account')
+                money_tags2 = MoneyTag.objects.filter(tag=tag2).exclude(tag=tag).select_related('account').order_by('account')
 
-            for money_tag1, money_tag2 in zip(money_tags1, money_tags2):
-                money_tag2.amount += money_tag1.amount
-                money_tag2.save()
-                money_tag1.amount = 0
-                money_tag1.save()
-            
-            messages.success(request, "The tag has been reassigned successfully.")
+                for money_tag1, money_tag2 in zip(money_tags1, money_tags2):
+                    money_tag2.amount += money_tag1.amount
+                    money_tag2.save()
+                    money_tag1.amount = 0
+                    money_tag1.save()
+                
+                messages.success(request, "The tag has been reassigned successfully.")
+    except Exception as e:
+        print(str(e))
+        messages.error(request, "An error has occurred while reassigning the tag.")
 
     return redirect(f'/tags/')
