@@ -2198,7 +2198,7 @@ class HistoricBalanceListView(GeneralListView):
         return self.filter_class(
             query_dict,
             request=self.request,
-            queryset=self.model.objects.select_related('account').filter(account__owner=self.request.user)
+            queryset=self.model.objects.select_related('account').filter(account__owner=self.request.user).order_by('account__name')
         )
     
     def get_context_data(self, **kwargs):
@@ -2330,6 +2330,7 @@ class HistoricBalanceListView(GeneralListView):
         context['totals']['total_external_in'] += transactions_without_account['total_in'] or 0
         context['totals']['total_external_out'] += transactions_without_account['total_out'] or 0
         context['exchange_diffs'] = transactions_without_account 
+        context['total_exchange_diff'] = (context['exchange_diffs']['total_in'] or 0) - (context['exchange_diffs']['total_out'] or 0)
 
         context['total_cash_flow'] = context['totals']['total_in'] - context['totals']['total_out']
 

@@ -55,22 +55,13 @@
         </div>
     </div>
 
-    <div class="collapse bg-gray-900 mb-3">
-        <div class="collapse-title text-xl font-medium">Reports</div>
-        <div class="collapse-content">
-          <a href="#" class="btn btn-primary">Generate Report by Month (PDF)</a>
-          <a href="#" class="btn btn-warning">Generate Report by Year (PDF)</a>
-          <a href="#" class="btn btn-secondary">Generic Account List with Current Totals (PDF)</a>
-        </div>
-    </div>
-
     <div class="table-wrapper">
         <div class="table-wrapper">
         <table class="table table-xs w-full text-center">
             <thead>
-                <tr>
+                <tr class="bg-gray-900 text-white">
                     <td>Account</td>
-                    <th>Balance ({{request.user.main_currency}})</th>
+                    <th>Final Balance ({{request.user.main_currency}})</th>
                     <th>IN ({{request.user.main_currency}})</th>
                     <th>OUT ({{request.user.main_currency}})</th>
                 </tr>
@@ -102,7 +93,7 @@
                 {% endfor %}
                 <tr>
                   <td>Monthly Exchange Differences</td>
-                  <td>N/A</td>
+                  <td><span class="tooltip tooltip-left" data-tip="This is not considered when calculating current balance, it is just an indicator.">({{total_exchange_diff|default:0.00}})</span></td>
                   <td><span class="tooltip tooltip-left text-success" data-tip="{{request.user.main_currency}} {{exchange_diffs.total_in}}">{{exchange_diffs.total_in|default:0.00}}</span></td>
                   <td><span class="tooltip tooltip-left text-error" data-tip="{{request.user.main_currency}} {{exchange_diffs.total_out}}">{{exchange_diffs.total_out|default:0.00}}</span></td>
               </tr>
