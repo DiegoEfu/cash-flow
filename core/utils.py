@@ -28,7 +28,6 @@ def get_current_exchange_rates():
     today = datetime.date.today()
     ers = ExchangeRate.objects.filter(date__gte=today)
     if not ers.exists():
-        print("A")
         ers = ExchangeRate.objects.filter(active=True)
     
     return ers.select_related('currency1', 'currency2').values('exchange_rate', 'currency1', 'currency2')
