@@ -25,7 +25,7 @@ from django.contrib import messages
 from django.views.generic import View
 from django.forms.models import model_to_dict
 
-from .utils import update_tag_history, find_transaction_fitting_exchange_rate, convert_all, convert_each, convert_all_transactions_amounts_to_main_currency_precisely, calculate_percentage, get_new_exchange_rate
+from .utils import get_current_exchange_rates, update_tag_history, find_transaction_fitting_exchange_rate, convert_all, convert_each, convert_all_transactions_amounts_to_main_currency_precisely, calculate_percentage, get_new_exchange_rate
 
 from decimal import Decimal
 import datetime
@@ -72,8 +72,7 @@ class WelcomeView(View):
         total balance in each currency.
         """
         if request.user.is_authenticated:
-            exchange_rates = ExchangeRate.objects.filter(active=True) \
-                .select_related('currency1', 'currency2').values('exchange_rate', 'currency1', 'currency2')
+            exchange_rates = get_current_exchange_rates()
              
             amounts_balance = Account.objects.filter(owner=request.user, visible=True).annotate(total=Sum('current_balance')).values('currency', 'total', 'current_balance')
 
@@ -579,7 +578,7 @@ class AccountListView(GeneralListView):
         dict: A dictionary containing the context data for rendering the ListView.
         """
         context = super().get_context_data(**kwargs)
-        exchange_rates = ExchangeRate.objects.filter(active=True).values('currency1', 'currency2', 'exchange_rate')
+        exchange_rates = get_current_exchange_rates()
 
         object_list = self.get_object_list(context['object_list'], exchange_rates)
         
@@ -657,7 +656,7 @@ class AccountSumaryTableView(AccountListView):
         """
         qs = self.get_queryset().qs
         context = {}
-        exchange_rates = ExchangeRate.objects.filter(active=True).values('currency1', 'currency2', 'exchange_rate')
+        exchange_rates = get_current_exchange_rates()
         
         object_list = self.get_object_list(qs, exchange_rates)
 
@@ -913,7 +912,7 @@ class TransactionListView(GeneralListView):
 
         context = super().get_context_data(**kwargs)
         account = Account.objects.filter(pk=self.kwargs['pk']).select_related('currency').first()
-        exchange_rates = ExchangeRate.objects.filter(active=True).values('currency1', 'currency2', 'exchange_rate')
+        exchange_rates = get_current_exchange_rates()
         main_pk = self.request.user.main_currency.currency.pk
         
         context['account'] = account
@@ -1409,7 +1408,7 @@ class GeneralTransactionListView(GeneralListView):
             years.append(year)
         context['years'] = years
 
-        exchange_rates = ExchangeRate.objects.filter(active=True).values('currency1', 'currency2', 'exchange_rate')
+        exchange_rates = get_current_exchange_rates()
         context['object_list'] = [{
             'mc_amount': convert_each([{
                 'total': transaction.amount, 
@@ -1642,7 +1641,7 @@ class TagListView(GeneralListView):
         Returns:
         list: A list of dictionaries, each containing a tag, its total assigned balance in the user's main currency, the difference between the current month and the previous month, and the amount assigned to the tag for each month.
         """
-        exchange_rates = ExchangeRate.objects.filter(active=True).values('currency1', 'currency2', 'exchange_rate')
+        exchange_rates = get_current_exchange_rates()
         alt = []
         for tag in object_list:
             total = 0
@@ -2236,9 +2235,9 @@ class HistoricBalanceListView(GeneralListView):
 
             exchange_rates = list(unique_exchange_rates.values())
         else:
-            exchange_rates = ExchangeRate.objects.filter(active=True).order_by(
+            exchange_rates = get_current_exchange_rates().order_by(
                 'currency1', 'currency2', '-date'
-            ).values('currency1', 'currency2', 'exchange_rate')
+            )
         
         context['object_list'] = context['object_list'].annotate(
             total_in=Coalesce(Sum('account__transaction_from_account__amount', output_field=DecimalField(), filter=Q(account__transaction_from_account__transaction_type='+', account__transaction_from_account__date__year=F('year'), account__transaction_from_account__date__month=F('month'), account__transaction_from_account__hold=False)), Value(Decimal(0))),

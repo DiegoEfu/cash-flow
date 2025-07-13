@@ -16,6 +16,23 @@ import datetime
 import requests
 import urllib3
 
+def get_current_exchange_rates():
+    """
+    Summary:
+        Fetches the current active exchange rates from the database.
+
+    Returns:
+        QuerySet: A queryset of active exchange rates with related currencies.
+    """
+    
+    today = datetime.date.today()
+    ers = ExchangeRate.objects.filter(date__gte=today)
+    if not ers.exists():
+        print("A")
+        ers = ExchangeRate.objects.filter(active=True)
+    
+    return ers.select_related('currency1', 'currency2').values('exchange_rate', 'currency1', 'currency2')
+
 def convert(amount, exchange_rate):
     """
     Summary:
@@ -48,12 +65,8 @@ def convert_all(amounts, main_currency_pk, exchange_rates = None):
     acc = 0
 
     if(not exchange_rates):    
-        exchange_rates = ExchangeRate.objects.filter(date__gte=datetime.date.today()) \
-            if ExchangeRate.objects.filter(date__gte=datetime.date.today()).exists() else \
-            ExchangeRate.objects.filter(active=True)
-        
-        exchange_rates = exchange_rates.select_related('currency1', 'currency2').values('exchange_rate', 'currency1', 'currency2')
-           
+        exchange_rates = get_current_exchange_rates()
+                   
     for amount in amounts:
         if amount['currency'] != main_currency_pk:
             exchange_rate = next((rate['exchange_rate'] for rate in exchange_rates if \
@@ -122,8 +135,7 @@ def convert_transactions(transactions, main_currency_pk, exchange_rates = None):
         list of dict: A list of dictionaries with transactions converted to the main currency, each dictionary containing 'total' after conversion.
     """
     if not exchange_rates:
-        exchange_rates = ExchangeRate.objects.filter(active=True) \
-            .select_related('currency1', 'currency2').values('exchange_rate', 'currency1', 'currency2')
+        exchange_rates = get_current_exchange_rates()
     
     new_transactions = []
     for transaction in transactions:
