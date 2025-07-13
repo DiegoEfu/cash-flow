@@ -133,6 +133,6 @@ class Command(BaseCommand):
                         description='Automatic Reconciliation of Exchange Rates Values',
                         from_account=None,
                         transaction_type='+',
-                        date=datetime.datetime.combine(datetime.date.today(), datetime.time.max),
+                        date=fecha,
                     )
                     print(f'User {user} had a balance of {previous_balances[user]:.2f} and now has {balance:.2f}, a difference of {difference:.2f}')

@@ -13,7 +13,7 @@ from django.db.models import Sum, F, Prefetch, Case, When, Q, Value
 from django.db.models.functions import Coalesce
 from django.db.models import DecimalField
 from django.db import transaction
-from django.http import HttpRequest, HttpResponse, HttpResponseForbidden, JsonResponse
+from django.http import HttpRequest, HttpResponse, HttpResponseForbidden, HttpResponseBadRequest, JsonResponse
 from django.shortcuts import render, redirect
 from django.urls import reverse
 
@@ -2528,6 +2528,9 @@ def transfer_update(request, pk):
     Returns:
     HttpResponse: A rendered template containing the updated form data.
     """
+    if(request.method != 'GET' or not request.GET.get('to_account') or not request.GET.get('amount')):
+        return HttpResponseBadRequest("Invalid request method or missing parameters.")
+   
     from_account = Account.objects.get(pk=pk)
 
     to_account = Account.objects.get(pk=request.GET.get('to_account'))
@@ -2601,6 +2604,14 @@ def set_tag_amount(request, tag_id):
     if(account.owner != request.user or tag.user != request.user):
         return HttpResponseForbidden()
     
+    if not account:
+        messages.error(request, "The account does not exist or you do not have permission to access it.")
+        return redirect(f'/tags/')
+    
+    if request.method != 'POST' and request.POST.get('amount') == None or request.POST.get('amount') == '':
+        messages.error(request, "The amount is required to set the tag amount.")
+        return redirect(f'/tags/')
+    
     try:
         with transaction.atomic():
             if request.method == 'POST':
@@ -2639,6 +2650,10 @@ def reassign_tag(request, tag_id):
     
     tag2_id = request.POST.get('tag2_id')
 
+    if request.method != 'POST' or not tag2_id:
+        messages.error(request, "Invalid request method or missing tag.")
+        return redirect(f'/tags/')
+    
     try:
         with transaction.atomic():
                 tag = Tag.objects.get(pk=tag_id)
