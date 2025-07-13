@@ -49,7 +49,10 @@ def convert_all(amounts, main_currency_pk, exchange_rates = None):
 
     if(not exchange_rates):    
         exchange_rates = ExchangeRate.objects.filter(date__gte=datetime.date.today()) \
-            .select_related('currency1', 'currency2').values('exchange_rate', 'currency1', 'currency2')
+            if ExchangeRate.objects.filter(date__gte=datetime.date.today()).exists() else \
+            ExchangeRate.objects.filter(active=True)
+        
+        exchange_rates = exchange_rates.select_related('currency1', 'currency2').values('exchange_rate', 'currency1', 'currency2')
            
     for amount in amounts:
         if amount['currency'] != main_currency_pk:
