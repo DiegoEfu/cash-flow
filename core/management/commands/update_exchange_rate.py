@@ -134,5 +134,6 @@ class Command(BaseCommand):
                         from_account=None,
                         transaction_type='+',
                         date=fecha,
+                        date=fecha,
                     )
                     print(f'User {user} had a balance of {previous_balances[user]:.2f} and now has {balance:.2f}, a difference of {difference:.2f}')

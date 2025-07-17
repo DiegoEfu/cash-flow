@@ -1421,10 +1421,9 @@ class GeneralTransactionListView(GeneralListView):
         context['current_balance']  = round(convert_all(amounts_balance, main_currency.pk), 2)
         
         qs = self.get_queryset().qs
-        transactions = qs.values('from_account__currency').annotate(total=Sum('amount')).values('total', 'from_account__currency', 'transaction_type', 'hold')
-        context['total_in'] = round(convert_all([{'total': transaction['total'], 'currency': transaction['from_account__currency']} for transaction in transactions.filter(transaction_type='+', hold=False)], main_currency.pk, exchange_rates), 2)
-        context['total_out'] = round(convert_all([{'total': transaction['total'], 'currency': transaction['from_account__currency']} for transaction in transactions.filter(transaction_type='-', hold=False)], main_currency.pk, exchange_rates), 2)
-        context['total_hold'] = round(convert_all([{'total': transaction['total'], 'currency': transaction['from_account__currency']} for transaction in transactions.filter(hold=True, transaction_type='+')], main_currency.pk, exchange_rates), 2)
+        context['total_in'] = round(convert_all_transactions_amounts_to_main_currency_precisely([{'amount': transaction.amount, 'exchange_rate': transaction.exchange_rate.pk if transaction.exchange_rate else None,  'from_account__currency': transaction.from_account.currency.pk if transaction.from_account else main_currency.pk, 'date': transaction.date} for transaction in qs.filter(transaction_type='+', hold=False)], main_currency.pk), 2)
+        context['total_out'] = round(convert_all_transactions_amounts_to_main_currency_precisely([{'amount': transaction.amount, 'exchange_rate': transaction.exchange_rate.pk if transaction.exchange_rate else None, 'from_account__currency': transaction.from_account.currency.pk if transaction.from_account else main_currency.pk, 'date': transaction.date} for transaction in qs.filter(transaction_type='-', hold=False)], main_currency.pk), 2)
+        context['total_hold'] = round(convert_all_transactions_amounts_to_main_currency_precisely([{'amount': transaction.amount, 'exchange_rate': transaction.exchange_rate.pk if transaction.exchange_rate else None, 'from_account__currency': transaction.from_account.currency.pk if transaction.from_account else main_currency.pk, 'date': transaction.date} for transaction in qs.filter(hold=True, transaction_type='+')], main_currency.pk), 2)
         context['total_cash_flow'] = context['total_in'] - context['total_out']
 
         context['main_currency']  = main_currency.code
