@@ -326,32 +326,44 @@ def convert_all_transactions_amounts_to_main_currency_precisely(transactions, ma
     """
     exchange_rates = ExchangeRate.objects.filter(
         id__in = [transaction['exchange_rate'] for transaction in transactions],
-    ).select_related('currency1', 'currency2').values('exchange_rate', 'currency1', 'currency2')
+    ).select_related('currency1', 'currency2').values('id', 'exchange_rate', 'currency1', 'currency2')
 
     total = 0
     for transaction in transactions:
+        exchange_rate = 1.0
         if transaction['from_account__currency'] != main_currency:
-            exchange_rate = next((rate['exchange_rate'] for rate in exchange_rates if rate['currency1'] == transaction['from_account__currency'] and rate['currency2'] == main_currency), None)
-            if not exchange_rate:
-                exchange_rate = next((rate['exchange_rate'] for rate in exchange_rates if rate['currency1'] == main_currency and rate['currency2'] == transaction['from_account__currency']), None)
-                if not exchange_rate:
-                    exchange_rate = ExchangeRate.objects.filter(
-                        currency1__pk=main_currency, 
-                        currency2__pk=transaction['from_account__currency'],
-                        date__lte=transaction['date'].date() if type(transaction['date']) == datetime.datetime else transaction['date'],
-                    ).first().exchange_rate if ExchangeRate.objects.filter(
-                        currency1__pk=main_currency, 
-                        currency2__pk=transaction['from_account__currency'],
-                        date__lte=transaction['date'].date() if type(transaction['date']) == datetime.datetime else transaction['date'],
-                    ).exists() else ExchangeRate.objects.filter(
+            exchange_rate = next((rate['exchange_rate'] for rate in exchange_rates if rate['id'] == transaction['exchange_rate']), None)
+            if not exchange_rate: # If no exchange rate is found, we try to find the exchange rate in the opposite direction
+                exchange_rate_obj = ExchangeRate.objects.filter(
+                    currency1__pk=main_currency, 
+                    currency2__pk=transaction['from_account__currency'],
+                    date__lte=transaction['date'].date() if type(transaction['date']) == datetime.datetime else transaction['date'],
+                ).first()
+                if exchange_rate_obj:
+                    exchange_rate = exchange_rate_obj.exchange_rate
+                else:
+                    exchange_rate_obj = ExchangeRate.objects.filter(
                         currency1__pk=main_currency, 
                         currency2__pk=transaction['from_account__currency'],
                         date__gte=transaction['date'].date() if type(transaction['date']) == datetime.datetime else transaction['date'],
-                    ).first().exchange_rate
+                    ).first()
+                    exchange_rate = exchange_rate_obj.exchange_rate if exchange_rate_obj else None
+
+            if not exchange_rate: # If no exchange rate is found, we try to find the exchange rate in the opposite direction
+                exchange_rate_obj = ExchangeRate.objects.filter(
+                    currency1__pk=transaction['from_account__currency'], 
+                    currency2__pk=main_currency,
+                    date__lte=transaction['date'].date() if type(transaction['date']) == datetime.datetime else transaction['date'],
+                ).first()
+                exchange_rate = exchange_rate_obj.exchange_rate if exchange_rate_obj else ExchangeRate.objects.filter(
+                    currency1__pk=transaction['from_account__currency'], 
+                    currency2__pk=main_currency,
+                    date__gte=transaction['date'].date() if type(transaction['date']) == datetime.datetime else transaction['date'],
+                ).first().exchange_rate
 
                 exchange_rate = 1 / exchange_rate
             
-            transaction['amount'] = transaction['amount'] / exchange_rate
+            transaction['amount'] = round(transaction['amount'] / exchange_rate, 2)
         
         total += transaction['amount']
     
