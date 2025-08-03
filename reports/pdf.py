@@ -712,6 +712,7 @@ def generate_monthly_transactions_report_all_accounts(request, year, month) -> H
         table_dict[account]['final_balance'] = convert_all_transactions_amounts_to_main_currency_precisely(
             [{'amount': final_balance_record, 'from_account__currency': account.currency.pk, 'exchange_rate': None, 'date': datetime.date(year, month, calendar.monthrange(year, month)[1])}], main_currency.pk
         )
+        print(account, table_dict[account]['final_balance'], final_balance_record)
 
         total_balance_main_currency += table_dict[account]['final_balance']
         

@@ -347,7 +347,9 @@ def convert_all_transactions_amounts_to_main_currency_precisely(transactions, ma
                         currency2__pk=transaction['from_account__currency'],
                         date__gte=transaction['date'].date() if type(transaction['date']) == datetime.datetime else transaction['date'],
                     ).first()
-                    exchange_rate = exchange_rate_obj.exchange_rate if exchange_rate_obj else None
+                    exchange_rate = (exchange_rate_obj.exchange_rate) if exchange_rate_obj else None
+                
+                exchange_rate = 1/exchange_rate if exchange_rate else None
 
             if not exchange_rate: # If no exchange rate is found, we try to find the exchange rate in the opposite direction
                 exchange_rate_obj = ExchangeRate.objects.filter(
@@ -361,8 +363,6 @@ def convert_all_transactions_amounts_to_main_currency_precisely(transactions, ma
                     date__gte=transaction['date'].date() if type(transaction['date']) == datetime.datetime else transaction['date'],
                 ).first().exchange_rate
 
-                exchange_rate = 1 / exchange_rate
-            
             transaction['amount'] = round(transaction['amount'] / exchange_rate, 2)
         
         total += transaction['amount']
