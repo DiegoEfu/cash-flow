@@ -1378,7 +1378,9 @@ class GeneralTransactionListView(GeneralListView):
             queryset=self.model.objects.select_related(
                 'from_account', 'from_account__currency', 'tag', 'exchange_rate'
             ).filter(Q(from_account__owner=self.request.user) | Q(user=self.request.user)).exclude(from_account__visible=False)
-        )
+        ) if len(self.request.GET.keys()) > 1 else self.filter_class({
+            'date_from': datetime.datetime.today().replace(day=1, hour=0, minute=0, second=0, microsecond=0),
+        })
     
     def get_context_data(self, **kwargs: Any) -> dict[str, Any]:
         """
@@ -1400,7 +1402,7 @@ class GeneralTransactionListView(GeneralListView):
         
         if not self.request.GET.get('date_from'):
             context['filter'] = self.filter_class({
-                'date_from': datetime.datetime.now() - datetime.timedelta(days=30),
+                'date_from': datetime.datetime.today().replace(day=1, hour=0, minute=0, second=0, microsecond=0),
             })
 
         years = []
@@ -2326,9 +2328,9 @@ class HistoricBalanceListView(GeneralListView):
         }
 
         context['totals']['total_in'] += transactions_without_account['total_in'] or 0
-        context['totals']['total_out'] += abs(transactions_without_account['total_out']) or 0
+        context['totals']['total_out'] += abs(transactions_without_account['total_out']) if transactions_without_account['total_out'] != None else 0
         context['totals']['total_external_in'] += transactions_without_account['total_in'] or 0
-        context['totals']['total_external_out'] += abs(transactions_without_account['total_out']) or 0
+        context['totals']['total_external_out'] += abs(transactions_without_account['total_out']) if transactions_without_account['total_out'] != None else 0
         context['exchange_diffs'] = transactions_without_account 
         context['total_exchange_diff'] = (context['exchange_diffs']['total_in'] or 0) - (context['exchange_diffs']['total_out'] or 0)
 
