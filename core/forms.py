@@ -57,6 +57,13 @@ class UserForm(forms.ModelForm):
         if user:
             raise forms.ValidationError("Username already exists.")
         return username
+    
+    def clean_email(self):
+        email = self.cleaned_data['email']
+        user = get_user_model().objects.filter(email=email).first()
+        if user:
+            raise forms.ValidationError("Email already exists.")
+        return email
 
     class Meta:
         model = get_user_model()

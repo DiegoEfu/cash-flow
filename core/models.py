@@ -119,7 +119,7 @@ class Account(StrAsNameMixin, models.Model):
     class Meta:
         ordering = ("name",)
 
-class Tag(StrAsNameMixin, models.Model):
+class Tag(models.Model):
     """
     Summary:
     Represents a user's tag, with a unique id, name, owner, and monthly goal.
@@ -138,6 +138,9 @@ class Tag(StrAsNameMixin, models.Model):
     name = models.CharField(max_length=50, unique=True)
     user = models.ForeignKey(get_user_model(), on_delete=models.PROTECT, related_name="tags")
     month_goal = models.DecimalField(max_digits=15, decimal_places=2, default=0.00, blank=True, null=True, validators=[MinValueValidator(0.0)])
+
+    def __str__(self, *args, **kwds):
+        return self.name.upper()
 
     class Meta:
         verbose_name_plural = "Tags"
