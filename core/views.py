@@ -1000,10 +1000,10 @@ class TransactionCreation(FormView):
                 account.save()
 
                 if(form.data['tag']):
-                    tag = MoneyTag.objects.get(tag=form.data['tag'], account=account)
+                    tag, _ = MoneyTag.objects.get_or_create(tag=Tag.objects.get(pk=form.data['tag']), account=account)
 
                     if form.data['transaction_type'] == '+':
-                        tag.amount += amount
+                        tag.amount += float(amount)
                         tag.save()
                     else:
                         self.update_tags_and_accounts(amount, account, tag)
