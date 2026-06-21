@@ -209,3 +209,31 @@ class TransferForm(TransactionForm):
 
 # This form is used to create a transfer transaction.
 money_tag_formset = forms.modelformset_factory(MoneyTag, form=MoneyTagForm)
+
+class ExchangeRateForm(forms.Form):
+    """
+    Summary:
+    A form for updating the exchange rate of a specific currency.
+
+    Properties:
+    exchange_rate (DecimalField): The exchange rate for the currency.
+
+    Methods:
+    None specific to this class, as it inherits from Django's Form which provides form handling functionality.
+    """
+
+    exchange_rate = forms.DecimalField(max_digits=15, decimal_places=6, validators=[MinValueValidator(0.000001)])
+
+    # Validation for repeated currencies
+    def clean(self):
+        cleaned_data = super().clean()
+        currency1 = cleaned_data.get('currency1')
+        currency2 = cleaned_data.get('currency2')
+
+        if currency1 == currency2:
+            raise forms.ValidationError("The currencies must be different.")
+        
+        return cleaned_data
+
+    class Meta:
+        fields = ['exchange_rate', 'currency1', 'currency2']

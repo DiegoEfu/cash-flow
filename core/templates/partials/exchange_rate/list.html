@@ -1,0 +1,101 @@
+{% extends 'base.html' %}
+{% load widget_tweaks %}
+
+{% block content %}
+<div class="p-8">
+    <div class="grid xl:grid-cols-3 xs:grid-cols-1">
+        <div class="flex justify-center items-center p-2">
+            <a href="{% url 'welcome_view' %}" class="btn">Go back</a>
+        </div>        
+        <div class="p-2">
+            <h1 class="text-center text-4xl xl:text-4xl">Current Exchange Rates</h1>
+            <h3 class="text-center text-primary text-xl xl:text-xl">Check out the current exchange rates</h3>
+        </div>
+        <div class="flex justify-center items-center p-2">
+            <!-- The update will be here -->
+        </div>
+    </div>
+
+    <div class="divider"></div>
+
+    {% if messages %}
+    {% for message in messages %}
+    <div class="alert {% if 'success' in message.tags %}alert-success{% else %}alert-warning{%endif%}">
+        {{message}}
+    </div>
+    {% endfor %}    
+    <div class="divider"></div>
+    {% endif %}
+
+    <div class="collapse bg-gray-900 mb-3">
+      <input type="checkbox" />
+      <div class="collapse-title text-xl font-medium">Filters</div>
+        <div class="collapse-content">
+          <form hx-get="{% url 'exchange_rate_list' %}" hx-select="#items" hx-target="#items" hx-swap="outerHTML" hx-indicator="#loading-bars" hx-trigger="submit, change, keyup delay:1s">
+            <div class="grid grid-cols-1">
+              <div class="me-4">
+                <label for="id_date">Date:</label> <br>
+                {% render_field filter.form.date class="input input-bordered w-full" type="date" %}
+              </div>
+
+              <div class="me-4">
+                <label for="id_currency2">Base Currency:</label> <br>
+                {% render_field filter.form.currency1 class="input input-bordered w-full" %}
+              </div>
+
+              <div class="me-4">
+                <label for="id_currency2">Ref. Currency:</label> <br>
+                {% render_field filter.form.currency2 class="input input-bordered w-full" %}
+              </div>
+
+              <input type="submit" hidden>
+            </div>
+          </form>       
+        </div>
+    </div>
+
+    <br>
+
+    <div class="table-wrapper">
+        <table class="table table-xs text-center">
+            <thead>
+                <tr class="bg-gray-900">
+                    <th>Date</th>
+                    <th>Exchange Rate</th>
+                    <th>Base Currency</th>
+                    <th>Ref. Currency</th>
+                </tr>
+            </thead>
+            <tbody id="items">
+                {% for er in object_list %}
+                <tr>
+                    <td>{{er.date|date:"Y-m-d"}}</td>
+                    <td>{{er.exchange_rate|default:'0.00'}}</td>
+                    <td>{{er.currency1.code}}</td>
+                    <td>{{er.currency2.code}}</td>
+                </tr>
+                {% empty %}                     
+                <tr class="table-primary">
+                    <td colspan="4" class="text-center">No exchange rates found.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>        
+    </div>
+
+    <div id="loading-bars" class="htmx-indicator indicator-style">
+      <span class="loading loading-bars loading-lg htmx-indicator"></span>
+    </div>
+</div>
+
+<script>
+  document.body.addEventListener('htmx:beforeRequest', function(evt) {
+    document.body.style.opacity = 0.5;
+  });
+
+  document.body.addEventListener('htmx:afterRequest', function(evt) {
+    document.body.style.opacity = 1.0;
+    console.log(evt.detail.xhr);
+  });
+</script>
+{% endblock %}

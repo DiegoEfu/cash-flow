@@ -2676,3 +2676,21 @@ def reassign_tag(request, tag_id):
         messages.error(request, "An error has occurred while reassigning the tag.")
 
     return redirect(f'/tags/')
+
+class ExchangeRateListView(LoginRequiredMixin, ListView):
+    model = ExchangeRate
+    template_name = 'partials/exchange_rate/list.html'
+    filter_class = ExchangeRateFilter
+    
+    def get_filter_params(self):
+        get_copy = self.request.GET.copy()
+        get_copy['date'] = ExchangeRate.objects.filter(active=True).order_by('-date').first().date.strftime('%Y-%m-%d') if not self.request.GET.get('date') else self.request.GET.get('date')
+        return get_copy
+    
+    def get_queryset(self):
+        return self.filter_class(self.get_filter_params(), queryset=ExchangeRate.objects.all()).qs
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['filter'] = self.filter_class(self.get_filter_params(), queryset=self.get_queryset())
+        return context

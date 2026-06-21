@@ -99,4 +99,7 @@ urlpatterns = [
 
     # USER MANAGEMENT VIEWS
     path('user/change-password/', ChangePasswordView.as_view(), name="change_password"),
+
+    # EXCHANGE RATE VIEWS
+    path('exchange-rate/', ExchangeRateListView.as_view(), name="exchange_rate_list"),
 ]

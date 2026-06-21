@@ -4,6 +4,7 @@ Filter classes are used to filter the data in the views based on the parameters 
 """
 
 import django_filters
+import datetime
 from core.models import *
 
 class AccountFilter(django_filters.FilterSet):
@@ -140,3 +141,32 @@ class HistoricBalanceFilter(django_filters.FilterSet):
         model = HistoricBalance
         fields = ('year', 'month')
         required = ('year', 'month')
+
+class ExchangeRateFilter(django_filters.FilterSet):
+    """
+    Summary:
+    This class is a Django FilterSet used to filter exchange rates based on date.
+    It supports filtering by date, allowing partial matches for flexibility in search.
+
+    Properties:
+    date_from (django_filters.DateTimeFilter): Filters the exchange rates by date greater than or equal to the specified date.
+    date_until (django_filters.DateTimeFilter): Filters the exchange rates by date less than or equal to the specified date.
+
+    Methods:
+    No methods are defined in this class.
+
+    Meta:
+    model (Model): The model used in the filter set is ExchangeRate.
+    fields (tuple): The fields that can be used to filter the exchange rates are 'date_from' and 'date_until'.
+    """
+
+    # date should always start at today
+    def __init__(self, data = None, queryset = None, *, request = None, prefix = None):
+        super().__init__(data, queryset, request=request, prefix=prefix)
+        self.filters['date'] = django_filters.DateTimeFilter(field_name='date')
+        last_date = ExchangeRate.objects.filter(active=True).first().date
+        self.filters['date'].extra.update({'initial': last_date.strftime('%Y-%m-%d')})
+
+    class Meta:
+        model = ExchangeRate
+        fields = ('date', 'currency1', 'currency2')
