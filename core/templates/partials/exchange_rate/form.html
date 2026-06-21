@@ -1,0 +1,48 @@
+{% load widget_tweaks %}
+ 
+<div class="grid grid-cols-3">
+    <div class="flex justify-center">
+        <a href="{% url 'tag_list' %}" class="btn">Go back</a>
+    </div>
+    <div>
+        {% if edit %}
+        <h1 class="text-center text-4xl xl:text-4xl">Update Exchange Rates</h1>
+        {% else %}
+        <h1 class="text-center text-4xl xl:text-4xl">Make a New Tag</h1>
+        {% endif %}
+    </div>
+    <div class="flex justify-center">
+    </div>
+</div>
+
+<form hx-post="{% url 'exchange_rate_update' %}" hx-target="main" hx-select="main" class="grid grid-cols-1">
+    {% csrf_token %}
+
+    <label>Date:</label>
+    <input type="date" name="date" id="date" class="input input-bordered" required>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Rate</th>
+                <th>Base Currency</th>
+                <th>Ref. Currency</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><input type="number" name="rate" id="rate" class="input input-bordered" required></td>
+                <td>
+                    <select name="base_currency" id="base_currency" class="select select-bordered" required>
+                        <option value="{{base_currency.id}}">{{base_currency.code}}</option>
+                    </select>
+                </td>
+                <td><select name="ref_currency" id="ref_currency" class="select select-bordered" required>
+                    {% for currency in currencies %}
+                    <option value="{{currency.id}}">{{currency.code}}</option>
+                    {% endfor %}
+                </select></td>
+            </tr>
+        </tbody>
+    </table>
+</form>
