@@ -986,7 +986,7 @@ class TransactionCreation(FormView):
         Returns:
         HttpResponse: A redirect response to the transaction's page after the form is successfully processed.
         """
-
+        
         with transaction.atomic():
             account = Account.objects.get(pk=self.kwargs['pk'] if not account else account)
 
@@ -1003,7 +1003,7 @@ class TransactionCreation(FormView):
                     tag, _ = MoneyTag.objects.get_or_create(tag=Tag.objects.get(pk=form.data['tag']), account=account)
 
                     if form.data['transaction_type'] == '+':
-                        tag.amount += float(amount)
+                        tag.amount += Decimal(amount)
                         tag.save()
                     else:
                         self.update_tags_and_accounts(amount, account, tag)
@@ -1099,7 +1099,8 @@ class TransactionCreation(FormView):
 
                 if(availability > 0):
                     for i,tag in enumerate(tags_to_subtract_from):
-                        converted_tag_amount = convert_each([{'total': tag['amount'], 'currency': tag['tag'].money_tags.get(account=account).account.currency.pk}], account.currency.pk)[0]['total']
+                        converted_tag_amount = convert_each([{'total': tag['amount'], 'currency': tag['tag'].money_tags.\
+                                                              get_or_create(account=account)[0].account.currency.pk}], account.currency.pk)[0]['total']
                         if converted_tag_amount > 0: # Currency: current account currency
                             exchange_rate = tag['amount'] / converted_tag_amount
                             mt = MoneyTag.objects.get(tag=tag['tag'], account=account)
