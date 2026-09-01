@@ -1,48 +1,62 @@
 {% load widget_tweaks %}
  
-<div class="grid grid-cols-3">
-    <div class="flex justify-center">
-        <a href="{% url 'tag_list' %}" class="btn">Go back</a>
+<div class="max-w-2xl mx-auto space-y-6">
+    <div class="flex items-center justify-between">
+        <a href="{% url 'exchange_rate_list' %}" class="btn btn-ghost btn-sm rounded-xl gap-2 text-gray-400 hover:text-white border border-white/10">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
+            Go back
+        </a>
+        <h1 class="text-2xl font-bold text-white">
+            {% if edit %}Update Exchange Rates{% else %}Register Exchange Rate{% endif %}
+        </h1>
+        <div></div>
     </div>
-    <div>
-        {% if edit %}
-        <h1 class="text-center text-4xl xl:text-4xl">Update Exchange Rates</h1>
-        {% else %}
-        <h1 class="text-center text-4xl xl:text-4xl">Make a New Tag</h1>
-        {% endif %}
-    </div>
-    <div class="flex justify-center">
+
+    <div class="card glass-card rounded-3xl p-6 sm:p-8 shadow-2xl">
+        <form hx-post="{% url 'exchange_rate_update' %}" hx-target="main" hx-select="main" class="space-y-6">
+            {% csrf_token %}
+
+            <div class="form-control w-full">
+                <label for="date" class="label text-sm font-semibold text-gray-300">Date</label>
+                <input type="date" name="date" id="date" class="input input-bordered w-full rounded-xl bg-base-100/50 focus:border-primary" required>
+            </div>
+
+            <div class="overflow-x-auto rounded-2xl border border-white/10">
+                <table class="table w-full text-left">
+                    <thead class="bg-base-200/50 text-gray-300 text-xs">
+                        <tr>
+                            <th>Rate</th>
+                            <th>Base Currency</th>
+                            <th>Ref. Currency</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr class="hover:bg-base-100/30">
+                            <td>
+                                <input type="number" step="0.0001" name="rate" id="rate" class="input input-bordered input-sm w-full rounded-lg bg-base-100/50" placeholder="e.g. 1.05" required>
+                            </td>
+                            <td>
+                                <select name="base_currency" id="base_currency" class="select select-bordered select-sm w-full rounded-lg bg-base-100/50" required>
+                                    <option value="{{base_currency.id}}">{{base_currency.code}}</option>
+                                </select>
+                            </td>
+                            <td>
+                                <select name="ref_currency" id="ref_currency" class="select select-bordered select-sm w-full rounded-lg bg-base-100/50" required>
+                                    {% for currency in currencies %}
+                                    <option value="{{currency.id}}">{{currency.code}}</option>
+                                    {% endfor %}
+                                </select>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="pt-2 flex justify-end">
+                <button type="submit" class="btn btn-primary rounded-xl px-8 shadow-lg shadow-primary/25 hover:shadow-primary/40 font-semibold">
+                    Save Exchange Rate
+                </button>
+            </div>
+        </form>
     </div>
 </div>
-
-<form hx-post="{% url 'exchange_rate_update' %}" hx-target="main" hx-select="main" class="grid grid-cols-1">
-    {% csrf_token %}
-
-    <label>Date:</label>
-    <input type="date" name="date" id="date" class="input input-bordered" required>
-
-    <table>
-        <thead>
-            <tr>
-                <th>Rate</th>
-                <th>Base Currency</th>
-                <th>Ref. Currency</th>
-            </tr>
-        </thead>
-        <tbody>
-            <tr>
-                <td><input type="number" name="rate" id="rate" class="input input-bordered" required></td>
-                <td>
-                    <select name="base_currency" id="base_currency" class="select select-bordered" required>
-                        <option value="{{base_currency.id}}">{{base_currency.code}}</option>
-                    </select>
-                </td>
-                <td><select name="ref_currency" id="ref_currency" class="select select-bordered" required>
-                    {% for currency in currencies %}
-                    <option value="{{currency.id}}">{{currency.code}}</option>
-                    {% endfor %}
-                </select></td>
-            </tr>
-        </tbody>
-    </table>
-</form>

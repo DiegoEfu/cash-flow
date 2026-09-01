@@ -1,90 +1,165 @@
 {% load widget_tweaks %}
 {% load static %}
  
-<div class="grid grid-cols-3">
-    <div class="flex justify-center">
-        <a href="{% url 'transactions_list' pk=account.pk %}" class="btn">Go back</a>
+<div class="max-w-4xl mx-auto space-y-6">
+    <div class="flex items-center justify-between">
+        <a href="{% url 'transactions_list' pk=account.pk %}" class="btn btn-ghost btn-sm rounded-xl gap-2 text-gray-400 hover:text-white border border-white/10">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
+            Go back
+        </a>
+        <h1 class="text-2xl font-bold text-white">Make a New Transfer</h1>
+        <div class="text-right">
+            <span class="text-xs text-gray-400 block">Sender Balance</span>
+            <span class="text-lg font-bold text-success font-mono">{{account.currency.code}} <span id="current_balance">{{account.current_balance}}</span></span>
+        </div>
     </div>
-    <div>
-        <h1 class="text-center text-4xl xl:text-4xl">Make a New Transfer</h1>
 
-        <h1 class="text-success text-center">Current Balance: {{account.currency.code}} <span id="current_balance">{{account.current_balance}}</span></h1>
-        {% if form.instance %}
-        <input type="hidden" name="previous-amount" value="{{form.instance.amount}}" />
-        <input type="hidden" name="previous-type" value="{{form.instance.transaction_type}}" />
-        {% endif %}
-    </div>
-    <div class="flex justify-center">
+    {% if form.instance %}
+    <input type="hidden" name="previous-amount" value="{{form.instance.amount}}" />
+    <input type="hidden" name="previous-type" value="{{form.instance.transaction_type}}" />
+    {% endif %}
+
+    <div class="card glass-card rounded-3xl p-6 sm:p-8 shadow-2xl">
+        <form hx-post="{% url 'transfer_creation' pk=account.pk %}" hx-target="main" hx-select="main" class="space-y-6" enctype="multipart/form-data">
+            {% csrf_token %}
+
+            {% if form.non_field_errors %}
+            <div role="alert" class="alert alert-error rounded-2xl shadow-lg border border-error/30 text-sm">
+                <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                <div>
+                    <h3 class="font-bold">Transfer Validation Error</h3>
+                    {% for error in form.non_field_errors %}
+                    <p class="text-xs">{{ error }}</p>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+            
+            <div class="grid md:grid-cols-2 gap-4">
+                <div class="form-control w-full">
+                    <label for="id_description" class="label text-sm font-semibold text-gray-300">Description</label>
+                    {% render_field form.description class+="input input-bordered w-full rounded-xl bg-base-100/50 focus:border-primary" required="required" %}
+                    {% if form.description.errors %}
+                    <label class="label text-xs text-error font-medium flex items-center gap-1 mt-1">
+                        {% for error in form.description.errors %}{{ error }}{% endfor %}
+                    </label>
+                    {% endif %}
+                </div>
+
+                <div class="form-control w-full">
+                    <label for="id_date" class="label text-sm font-semibold text-gray-300">Date</label>
+                    {% render_field form.date class+="input input-bordered w-full rounded-xl bg-base-100/50 focus:border-primary" type="datetime-local" %}
+                    {% if form.date.errors %}
+                    <label class="label text-xs text-error font-medium flex items-center gap-1 mt-1">
+                        {% for error in form.date.errors %}{{ error }}{% endfor %}
+                    </label>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="grid md:grid-cols-2 gap-4">
+                <div class="form-control w-full">
+                    <label for="id_amount" class="label text-sm font-semibold text-gray-300">Sent Amount ({{account.currency.code}})</label>
+                    <input required type="number" name="amount" id="id_amount" value="{{form.amount.value|default:''}}" hx-include="input:not(#id_received_amount), select" class="input input-bordered w-full rounded-xl bg-base-100/50 focus:border-primary" min="0.01" step="0.01" placeholder="0.00" hx-get="/transfer/update/{{account.pk}}" hx-trigger="keyup changed delay:1000ms" hx-swap="none">
+                    <span class="text-xs text-gray-400 mt-1 flex justify-between">
+                        <span>Sender Final Balance:</span>
+                        <b class="text-error font-mono">{{account.currency.code}} <span id="final_balance">{{account.current_balance}}</span></b>
+                    </span>
+                    {% if form.amount.errors %}
+                    <label class="label text-xs text-error font-medium flex items-center gap-1 mt-1">
+                        {% for error in form.amount.errors %}{{ error }}{% endfor %}
+                    </label>
+                    {% endif %}
+                </div>
+
+                <div class="form-control w-full">
+                    <label for="id_operate_on_tag" class="label text-sm font-semibold text-gray-300">Operate on Tag</label>            
+                    {% render_field form.tag class+="select select-bordered w-full rounded-xl bg-base-100/50 focus:border-primary" %}
+                    {% if form.tag.errors %}
+                    <label class="label text-xs text-error font-medium flex items-center gap-1 mt-1">
+                        {% for error in form.tag.errors %}{{ error }}{% endfor %}
+                    </label>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="grid md:grid-cols-3 gap-4">
+                <div class="form-control w-full">
+                    <label for="id_to_account" class="label text-sm font-semibold text-gray-300">To Account</label>
+                    <select name="to_account" class="select select-bordered w-full rounded-xl bg-base-100/50 focus:border-primary" hx-include="input:not(#id_received_amount), select" hx-trigger="change" hx-swap="none" hx-get="/transfer/update/{{account.pk}}">
+                        {% for option in form.to_account.field.choices %}
+                            <option value="{{ option.0 }}" {% if option.0 == form.to_account.value %}selected{% endif %}>{{ option.1 }}</option>
+                        {% endfor %}
+                    </select>
+                    <span class="text-xs text-gray-400 mt-1 flex justify-between">
+                        <span>Current Balance:</span>
+                        <b class="text-success font-mono"><span id="currency_to_acc"></span> <span id="current_balance_to_acc"> - </span></b>
+                    </span>     
+                    {% if form.to_account.errors %}
+                    <label class="label text-xs text-error font-medium flex items-center gap-1 mt-1">
+                        {% for error in form.to_account.errors %}{{ error }}{% endfor %}
+                    </label>
+                    {% endif %}
+                </div>
+
+                <div class="form-control w-full">
+                    <label for="id_received_amount" class="label text-sm font-semibold text-gray-300">Received Amount</label>
+                    <input type="number" required name="received_amount" id="id_received_amount" value="{{form.received_amount.value|default:''}}" hx-include="input, select" class="input input-bordered w-full rounded-xl bg-base-100/50 focus:border-primary" min="0.01" step="0.01" placeholder="0.00" hx-get="/transfer/update/{{account.pk}}" hx-trigger="keyup changed delay:1000ms" hx-swap="none">
+                    <span class="text-xs text-gray-400 mt-1 flex justify-between">
+                        <span>Receiver Final Balance:</span>
+                        <b class="text-error font-mono"><span id="currency_to_acc2"></span> <span id="rec_final_balance"> - </span></b>
+                    </span>
+                    {% if form.received_amount.errors %}
+                    <label class="label text-xs text-error font-medium flex items-center gap-1 mt-1">
+                        {% for error in form.received_amount.errors %}{{ error }}{% endfor %}
+                    </label>
+                    {% endif %}
+                </div>
+
+                <div class="form-control w-full">
+                    <label for="id_deduce_from_tag" class="label text-sm font-semibold text-gray-300">Deduce Fee From Tag</label>
+                    {% render_field form.deduce_from_tag class+="select select-bordered w-full rounded-xl bg-base-100/50 focus:border-primary" %}
+                    <span class="text-xs text-gray-400 mt-1 flex justify-between">
+                        <span>Calculated Fee:</span>
+                        <b class="text-error font-mono">{{account.currency.code}} <span id="fee"> - </span></b>
+                    </span>
+                    {% if form.deduce_from_tag.errors %}
+                    <label class="label text-xs text-error font-medium flex items-center gap-1 mt-1">
+                        {% for error in form.deduce_from_tag.errors %}{{ error }}{% endfor %}
+                    </label>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="grid md:grid-cols-2 gap-4 pt-2">
+                <div class="form-control w-full">
+                    <label for="id_reference" class="label text-sm font-semibold text-gray-300">Reference</label>
+                    {% render_field form.reference class+="input input-bordered w-full rounded-xl bg-base-100/50 focus:border-primary" %}
+                    {% if form.reference.errors %}
+                    <label class="label text-xs text-error font-medium flex items-center gap-1 mt-1">
+                        {% for error in form.reference.errors %}{{ error }}{% endfor %}
+                    </label>
+                    {% endif %}
+                </div>
+                
+                <div class="form-control w-full">
+                    <label for="id_voucher" class="label text-xs font-semibold text-gray-400">Voucher (PDF, JPG, PNG)</label> 
+                    {% render_field form.voucher type="file" class+="file-input file-input-bordered file-input-sm w-full rounded-xl" accept=".pdf, .jpg, .png" %}
+                    {% if form.voucher.errors %}
+                    <label class="label text-xs text-error font-medium flex items-center gap-1 mt-1">
+                        {% for error in form.voucher.errors %}{{ error }}{% endfor %}
+                    </label>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <div class="pt-4 flex justify-end">
+                <button type="submit" class="btn btn-primary rounded-xl px-8 shadow-lg shadow-primary/25 hover:shadow-primary/40 font-semibold">
+                    Register Transfer
+                </button>
+            </div>
+        </form>
     </div>
 </div>
-
-<form hx-post="{% url 'transfer_creation' pk=account.pk %}" hx-target="main" hx-select="main" class="grid grid-cols-1" enctype="multipart/form-data">
-    {% csrf_token %}
-    
-    <div class="mb-3 grid md:grid-cols-2 sm:grid-cols-1 xs:grid-cols-1">
-        <div class="me-3">
-            <label for="id_description" class="form-label">Description:</label>
-            {% render_field form.description class="input input-bordered w-full" required="required" %}
-        </div>
-
-        <div class="me-3">
-            <label for="id_date" class="form-label">Date:</label>
-            {% render_field form.date class="input input-bordered w-full" type="datetime-local" %}
-        </div>
-    </div>
-    <div class="mb-3 grid md:grid-cols-2 sm:grid-cols-1 xs:grid-cols-1">
-
-        <div class="me-3">
-            <label for="id_amount" class="form-label">Sent Amount ({{account.currency.code}}):</label>
-            <input required type="number" name="amount" id="id_amount" value="{{form.amount.value}}" hx-include="input:not(#id_received_amount), select" class="input input-bordered w-full" min="0.01" step="0.01" placeholder="Must be greater than or equal to 0.01" hx-get="/transfer/update/{{account.pk}}" hx-trigger="keyup changed delay:1000ms" hx-swap="none">
-            <small class="text-xs">Sender Final Balance:  <b class="text-error">{{account.currency.code}}  <span id="final_balance">{{account.current_balance}}</span></b></small>
-        </div>
-
-        <div>
-            <label for="id_operate_on_tag" class="form-label">Operate on Tag:</label>            
-            {% render_field form.tag class="select select-bordered w-full" %}
-        </div>
-    </div>
-
-    <div class="mb-3 grid md:grid-cols-3 sm:grid-cols-1 xs:grid-cols-1">
-        <div class="me-3">
-            <label for="id_to_account" class="form-label">To Account:</label>
-            <select name="to_account" class="select select-bordered w-full" hx-include="input:not(#id_received_amount), select" hx-trigger="change" hx-swap="none" hx-get="/transfer/update/{{account.pk}}">
-                {% for option in form.to_account.field.choices %}
-                    <option value="{{ option.0 }}" {% if option.0 == form.to_account.value %}selected{% endif %}>{{ option.1 }}</option>
-                {% endfor %}
-            </select>
-            <small class="text-xs">Current Balance:  <b class="text-success"><span id="currency_to_acc"></span>  <span id="current_balance_to_acc"> - </span></b></small>     
-        </div>
-
-        <div class="me-3">
-            <label for="id_transaction_type" class="form-label">Received Amount:</label>
-            <input type="number" required name="received_amount" id="id_received_amount" value="{{form.received_amount.value}}" hx-include="input, select" class="input input-bordered w-full" min="0.01" step="0.01" placeholder="Must be greater than or equal to 0.01" hx-get="/transfer/update/{{account.pk}}" hx-trigger="keyup changed delay:1000ms" hx-swap="none">
-            <small class="text-xs">Receiver Final Balance:  <b class="text-error"><span id="currency_to_acc2"></span>  <span id="rec_final_balance"> - </span></b></small>
-        </div>
-
-        <div class="me-3">
-            <label for="id_deduce_from_tag" class="form-label">Deduce Fee From Tag:</label>
-            {% render_field form.deduce_from_tag class="select select-bordered w-full" %}
-            <small class="text-xs">Calculated Fee:  <b class="text-error">{{account.currency.code}}  <span id="fee"> - </span></b></small>
-        </div>
-        
-    </div>
-    <div class="grid md:grid-cols-3 sm:grid-cols-1 xs:grid-cols-1">
-        <div class="me-3">
-            <label for="id_reference" class="form-label">Reference:</label>
-            {% render_field form.reference class="input input-bordered w-full" %}
-        </div>
-        
-        <div class="mb-3 flex justify-center align-items-center">
-            <label for="id_voucher" class="form-label">Voucher:</label> 
-            {% render_field form.voucher type="file" accept=".pdf, .jpg, .png" %}
-        </div>
-    </div>
-    
-    <div class="flex justify-center">
-        <button type="submit" class="btn btn-primary">Register Transfer</button>
-    </div>
-</form>
 
 <script src="{% static 'js/form.js' %}"></script>

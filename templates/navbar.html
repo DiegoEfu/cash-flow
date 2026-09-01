@@ -1,54 +1,72 @@
 {% load static %}
-<nav class="border-gray-200 dark:bg-gray-900">
-    <div class="max-w-screen-xl flex flex-wrap items-center justify-between mx-auto p-4">
-      <a href="/" class="flex items-center space-x-3 rtl:space-x-reverse">
-          <img src="{% static '/img/logo.png' %}" class="h-8" alt="CashFlow Logo" />
-          <span class="self-center text-2xl font-semibold whitespace-nowrap dark:text-white">CashFlow</span>
+<nav class="sticky top-0 z-50 glass-nav transition-all duration-300">
+    <div class="max-w-7xl flex flex-wrap items-center justify-between mx-auto p-4">
+      <a href="/" class="flex items-center space-x-3 group">
+          <div class="p-2 rounded-xl bg-primary/10 border border-primary/20 group-hover:bg-primary/20 transition-colors">
+              <img src="{% static '/img/logo.png' %}" class="h-7 w-auto" alt="CashFlow Logo" />
+          </div>
+          <span class="self-center text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-white via-slate-200 to-primary">CashFlow</span>
       </a>
-      <button onclick="document.getElementById('navbar-default').classList.toggle('hidden')" type="button" class="inline-flex items-center p-2 w-10 h-10 justify-center text-sm text-gray-500 rounded-lg md:hidden hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-gray-200 dark:text-gray-400 dark:hover:bg-gray-700 dark:focus:ring-gray-600" aria-controls="navbar-default" aria-expanded="false">
+      
+      <button onclick="document.getElementById('navbar-default').classList.toggle('hidden')" type="button" class="inline-flex items-center p-2.5 w-10 h-10 justify-center text-sm text-gray-400 rounded-xl md:hidden hover:bg-base-200 focus:outline-none focus:ring-2 focus:ring-primary/40 transition-all" aria-controls="navbar-default" aria-expanded="false">
           <span class="sr-only">Open main menu</span>
           <svg class="w-5 h-5" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 17 14">
               <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M1 1h15M1 7h15M1 13h15"/>
           </svg>
       </button>
+
       <div class="hidden w-full md:block md:w-auto" id="navbar-default">
-        <ul class="font-medium text-white flex flex-col items-center p-4 md:p-0 mt-4 border border-gray-100 rounded-lg md:flex-row md:space-x-8 rtl:space-x-reverse md:mt-0 md:border-0 dark:bg-gray-800 md:dark:bg-gray-900 dark:border-gray-700">
-          <li class="hover:underline">
-            <a href="/" class="block py-2 px-3 rounded hover:bg-gray-100 md:hover:bg-transparent md:border-0 md:p-0 dark:text-white dark:hover:bg-gray-700 dark:hover:text-white md:dark:hover:bg-transparent">Home</a>
+        <ul class="font-medium text-sm flex flex-col items-center p-4 md:p-0 mt-4 border border-base-200 rounded-2xl md:flex-row md:space-x-2 md:mt-0 md:border-0">
+          <li>
+            <a href="/" class="block py-2 px-4 rounded-xl text-gray-300 hover:text-white hover:bg-primary/15 transition-all">Home</a>
           </li>
           {% if request.user.is_authenticated %}
-          <li class="hover:underline">
-            <a href="{% url 'account_list' %}" class="block py-2 px-3 rounded hover:bg-gray-100 md:hover:bg-transparent md:border-0 md:p-0 dark:text-white dark:hover:bg-gray-700 dark:hover:text-white md:dark:hover:bg-transparent">Accounts</a>
-          </li>
-          <li class="hover:underline">
-            <a href="{% url 'general_transactions_list' %}" class="block py-2 px-3 rounded hover:bg-gray-100 md:hover:bg-transparent md:border-0 md:p-0 dark:text-white dark:hover:bg-gray-700 dark:hover:text-white md:dark:hover:bg-transparent">Transactions</a>
-          </li>
-          <li class="hover:underline">
-            <a href="{% url 'tag_list' %}" class="block py-2 px-3 rounded hover:bg-gray-100 md:hover:bg-transparent md:border-0 md:p-0 dark:text-white dark:hover:bg-gray-700 dark:hover:text-white md:dark:hover:bg-transparent">Tags</a>
-          </li>
-          <li class="hover:underline">
-            <a href="{% url 'exchange_rate_list' %}" class="block py-2 px-3 rounded hover:bg-gray-100 md:hover:bg-transparent md:border-0 md:p-0 dark:text-white dark:hover:bg-gray-700 dark:hover:text-white md:dark:hover:bg-transparent">Rates</a>
+          <li>
+            <a href="{% url 'account_list' %}" class="block py-2 px-4 rounded-xl text-gray-300 hover:text-white hover:bg-primary/15 transition-all">Accounts</a>
           </li>
           <li>
-            <details class="dropdown">
-              <summary class="btn m-1">{{request.user.get_full_name}}</summary>
-              <ul class="menu dropdown-content bg-gray-900 rounded-box z-[1] w-52 p-2 shadow">
-                <li><a href="{% url 'change_password' %}" class="block py-2 px-4 text-sm text-white dark:text-gray-200 dark:hover:bg-gray-600 dark:hover:text-white">Change Password</a></li>
+            <a href="{% url 'general_transactions_list' %}" class="block py-2 px-4 rounded-xl text-gray-300 hover:text-white hover:bg-primary/15 transition-all">Transactions</a>
+          </li>
+          <li>
+            <a href="{% url 'tag_list' %}" class="block py-2 px-4 rounded-xl text-gray-300 hover:text-white hover:bg-primary/15 transition-all">Tags</a>
+          </li>
+          <li>
+            <a href="{% url 'exchange_rate_list' %}" class="block py-2 px-4 rounded-xl text-gray-300 hover:text-white hover:bg-primary/15 transition-all">Rates</a>
+          </li>
+          <li class="ml-2">
+            <details class="dropdown dropdown-end">
+              <summary class="btn btn-sm btn-ghost border border-white/10 hover:border-primary/40 rounded-xl gap-2 font-normal">
+                <span class="w-6 h-6 rounded-full bg-primary/20 text-primary flex items-center justify-center font-semibold text-xs">
+                  {{ request.user.first_name|slice:":1"|upper|default:"U" }}
+                </span>
+                <span>{{request.user.get_full_name|default:request.user.username}}</span>
+                <svg class="w-3.5 h-3.5 opacity-60" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+              </summary>
+              <ul class="menu dropdown-content bg-base-100/95 backdrop-blur-xl border border-white/10 rounded-2xl z-[1] w-56 p-2 shadow-2xl mt-2 space-y-1">
                 <li>
-                  <form method="post" action="{% url 'logout_view' %}">
+                  <a href="{% url 'change_password' %}" class="rounded-xl hover:bg-primary/10">
+                    <svg class="w-4 h-4 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"></path></svg>
+                    Change Password
+                  </a>
+                </li>
+                <li class="border-t border-white/5 pt-1">
+                  <form method="post" action="{% url 'logout_view' %}" class="w-full">
                     {% csrf_token %}
-                    <button type="submit">Log Out</button>
-               </form>
+                    <button type="submit" class="w-full text-left rounded-xl text-error hover:bg-error/10 flex items-center gap-2">
+                      <svg class="w-4 h-4 text-error" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
+                      Log Out
+                    </button>
+                  </form>
                 </li>
               </ul>
             </details>
           </li>
           {% else %}
           <li>
-            <a href="{% url 'login' %}" class="block py-2 px-3 text-gray-900 rounded hover:bg-gray-100 md:hover:bg-transparent md:border-0 md:p-0 dark:text-white dark:hover:bg-gray-700 dark:hover:text-white md:dark:hover:bg-transparent">Log In</a>
+            <a href="{% url 'login' %}" class="block py-2 px-4 rounded-xl text-gray-300 hover:text-white hover:bg-primary/15 transition-all">Log In</a>
           </li>
           <li>
-            <a href="#" class="block py-2 px-3 text-gray-900 rounded hover:bg-gray-100 md:hover:bg-transparent md:border-0 md:p-0 dark:text-white dark:hover:bg-gray-700 dark:hover:text-white md:dark:hover:bg-transparent">Sign Up</a>
+            <a href="{% url 'sign_up_view' %}" class="btn btn-sm btn-primary rounded-xl px-4 shadow-lg shadow-primary/25 hover:shadow-primary/40">Sign Up</a>
           </li>
           {% endif %}
         </ul>

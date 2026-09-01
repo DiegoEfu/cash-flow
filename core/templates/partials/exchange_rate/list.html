@@ -2,89 +2,91 @@
 {% load widget_tweaks %}
 
 {% block content %}
-<div class="p-8">
-    <div class="grid xl:grid-cols-3 xs:grid-cols-1">
-        <div class="flex justify-center items-center p-2">
-            <a href="{% url 'welcome_view' %}" class="btn">Go back</a>
-        </div>        
-        <div class="p-2">
-            <h1 class="text-center text-4xl xl:text-4xl">Current Exchange Rates</h1>
-            <h3 class="text-center text-primary text-xl xl:text-xl">Check out the current exchange rates</h3>
-        </div>
-        <div class="flex justify-center items-center p-2">
-            <!-- The update will be here -->
+<div class="space-y-6 py-4">
+    <!-- Header Toolbar -->
+    <div class="flex flex-col sm:flex-row items-center justify-between gap-4">
+        <div class="space-y-1 text-center sm:text-left">
+            <a href="{% url 'welcome_view' %}" class="btn btn-ghost btn-sm rounded-xl gap-2 text-gray-400 hover:text-white border border-white/10 mb-1">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
+                Dashboard
+            </a>
+            <h1 class="text-3xl font-extrabold text-white tracking-wide">Exchange Rates</h1>
+            <p class="text-xs text-gray-400">Track historic and active foreign currency exchange rates</p>
         </div>
     </div>
-
-    <div class="divider"></div>
 
     {% if messages %}
-    {% for message in messages %}
-    <div class="alert {% if 'success' in message.tags %}alert-success{% else %}alert-warning{%endif%}">
-        {{message}}
+    <div class="space-y-2">
+        {% for message in messages %}
+        <div class="alert {% if 'success' in message.tags %}alert-success{% else %}alert-warning{% endif %} rounded-2xl shadow-lg border border-white/10 text-sm">
+            <span>{{message}}</span>
+        </div>
+        {% endfor %}
     </div>
-    {% endfor %}    
-    <div class="divider"></div>
     {% endif %}
 
-    <div class="collapse bg-gray-900 mb-3">
+    <!-- Filter Drawer -->
+    <div class="collapse collapse-arrow glass-card rounded-2xl border border-white/10">
       <input type="checkbox" />
-      <div class="collapse-title text-xl font-medium">Filters</div>
-        <div class="collapse-content">
-          <form hx-get="{% url 'exchange_rate_list' %}" hx-select="#items" hx-target="#items" hx-swap="outerHTML" hx-indicator="#loading-bars" hx-trigger="submit, change, keyup delay:1s">
-            <div class="grid grid-cols-1">
-              <div class="me-4">
-                <label for="id_date">Date:</label> <br>
-                {% render_field filter.form.date class="input input-bordered w-full" type="date" %}
+      <div class="collapse-title text-sm font-bold text-white flex items-center gap-2">
+        <svg class="w-4 h-4 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"></path></svg>
+        Filter Rates
+      </div>
+      <div class="collapse-content pt-2">
+          <form hx-get="{% url 'exchange_rate_list' %}" hx-select="#items" hx-target="#items" hx-swap="outerHTML" hx-indicator="#loading-bars" hx-trigger="submit, change, keyup delay:1s" class="space-y-3">
+            <div class="grid sm:grid-cols-3 gap-3">
+              <div>
+                <label for="id_date" class="label text-[10px] font-semibold text-gray-400">Date</label>
+                {% render_field filter.form.date class+="input input-bordered input-sm w-full rounded-xl bg-base-100/50" type="date" %}
               </div>
 
-              <div class="me-4">
-                <label for="id_currency2">Base Currency:</label> <br>
-                {% render_field filter.form.currency1 class="input input-bordered w-full" %}
+              <div>
+                <label for="id_currency1" class="label text-[10px] font-semibold text-gray-400">Base Currency</label>
+                {% render_field filter.form.currency1 class+="input input-bordered input-sm w-full rounded-xl bg-base-100/50" %}
               </div>
 
-              <div class="me-4">
-                <label for="id_currency2">Ref. Currency:</label> <br>
-                {% render_field filter.form.currency2 class="input input-bordered w-full" %}
+              <div>
+                <label for="id_currency2" class="label text-[10px] font-semibold text-gray-400">Ref. Currency</label>
+                {% render_field filter.form.currency2 class+="input input-bordered input-sm w-full rounded-xl bg-base-100/50" %}
               </div>
-
-              <input type="submit" hidden>
             </div>
+            <input type="submit" hidden>
           </form>       
-        </div>
+      </div>
     </div>
 
-    <br>
-
-    <div class="table-wrapper">
-        <table class="table table-xs text-center">
-            <thead>
-                <tr class="bg-gray-900">
-                    <th>Date</th>
-                    <th>Exchange Rate</th>
-                    <th>Base Currency</th>
-                    <th>Ref. Currency</th>
-                </tr>
-            </thead>
-            <tbody id="items">
-                {% for er in object_list %}
-                <tr>
-                    <td>{{er.date|date:"Y-m-d"}}</td>
-                    <td>{{er.exchange_rate|default:'0.00'}}</td>
-                    <td>{{er.currency1.code}}</td>
-                    <td>{{er.currency2.code}}</td>
-                </tr>
-                {% empty %}                     
-                <tr class="table-primary">
-                    <td colspan="4" class="text-center">No exchange rates found.</td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>        
+    <!-- Exchange Rate Table -->
+    <div class="card glass-card rounded-3xl overflow-hidden shadow-2xl border border-white/10">
+        <div class="overflow-x-auto max-h-[550px] table-wrapper">
+            <table class="table w-full text-center">
+                <thead class="sticky top-0 bg-base-200/90 backdrop-blur-md z-10 text-gray-300 text-xs uppercase">
+                    <tr>
+                        <th>Date</th>
+                        <th>Exchange Rate</th>
+                        <th>Base Currency</th>
+                        <th>Ref. Currency</th>
+                    </tr>
+                </thead>
+                <tbody id="items" class="divide-y divide-white/5 text-xs font-mono">
+                    {% for er in object_list %}
+                    <tr class="hover:bg-base-100/30 transition-colors">
+                        <td class="text-gray-400">{{er.date|date:"Y-m-d"}}</td>
+                        <td class="font-extrabold text-white text-sm">{{er.exchange_rate|default:'0.00'}}</td>
+                        <td><span class="badge badge-sm badge-primary font-bold">{{er.currency1.code}}</span></td>
+                        <td><span class="badge badge-sm badge-ghost font-bold border-white/10">{{er.currency2.code}}</span></td>
+                    </tr>
+                    {% empty %}                     
+                    <tr>
+                        <td colspan="4" class="text-center py-8 text-gray-400 font-sans">No exchange rates found matching filter.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>        
+        </div>
     </div>
 
     <div id="loading-bars" class="htmx-indicator indicator-style">
-      <span class="loading loading-bars loading-lg htmx-indicator"></span>
+      <span class="loading loading-bars loading-lg text-primary"></span>
     </div>
 </div>
 
@@ -95,7 +97,6 @@
 
   document.body.addEventListener('htmx:afterRequest', function(evt) {
     document.body.style.opacity = 1.0;
-    console.log(evt.detail.xhr);
   });
 </script>
 {% endblock %}
