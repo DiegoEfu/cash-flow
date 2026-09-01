@@ -79,7 +79,152 @@
             </div>
             <div class="pt-2 sm:pt-0">
                 <label for="modal_accounts" class="btn btn-xs btn-outline border-white/10 rounded-xl">View Accounts breakdown</label>
-                <input type="checkbox" id="modal_accounts" class="modal-toggle" />
+            </div>
+        </div>
+    </div>
+
+    <!-- Tags Table -->
+    <div class="card glass-card rounded-3xl shadow-2xl border border-white/10">
+      <div class="overflow-x-auto max-h-[550px]">
+          <table class="table w-full text-center">
+              <thead class="sticky top-0 bg-base-200/90 backdrop-blur-md z-10 text-gray-300 text-xs uppercase">
+                  <tr>
+                      <th class="text-left">Tag Name</th>
+                      <th>Assigned ({{request.user.main_currency}})</th>
+                      <th>Monthly Goal ({{request.user.main_currency}})</th>
+                      <th>Spent This Month ({{request.user.main_currency}})</th>
+                      <th>Cash Flow ({{request.user.main_currency}})</th>
+                      <th>Actions</th>
+                  </tr>
+              </thead>
+              <tbody id="items" class="divide-y divide-white/5 text-xs">
+                  {% for tag in object_list %}
+                  <tr class="hover:bg-base-100/30 transition-colors">
+                      <td class="font-bold text-white text-left tracking-wide">{{tag.tag.name.upper}}</td>
+                      <td class="font-mono text-success font-bold">{{tag.total|default:'0.00'}}</td>
+                      <td class="font-mono text-gray-300">{{tag.tag.month_goal|default:'0.00'}}</td>
+                      <td class="font-mono text-error font-bold">{{tag.spent|default:'0.00'}}</td>
+                      <td class="font-mono text-info font-bold">{{tag.flow|default:'0.00'}} <span class="text-[10px] text-gray-400 font-normal">({{tag.pctg|default:'0.00'}}%)</span></td>                    
+                      <td>
+                          <div class="flex items-center justify-center gap-1 flex-wrap">
+                              <a hx-target="main" hx-get="{% url 'tag_update' pk=tag.tag.pk %}" class="btn btn-xs btn-ghost text-primary hover:bg-primary/10">Edit</a>
+
+                              <!-- Modal Triggers -->
+                              <label for="modal_history_{{tag.tag.pk}}" class="btn btn-xs btn-ghost border border-white/10 rounded-xl">History</label>
+
+                              {% if not tag.tag.assigned %}
+                              <a hx-target="closest tr" hx-confirm="Are you sure you want to delete this tag?" hx-delete="{% url 'tag_delete' pk=tag.tag.pk %}" class="btn btn-xs btn-ghost text-error hover:bg-error/10">Delete</a>
+                              {% else %}
+                              <label for="modal_reassign_{{tag.tag.pk}}" class="btn btn-xs btn-ghost border border-white/10 rounded-xl">Reassign</label>
+                              <label for="modal_send_funds_{{tag.tag.pk}}" class="btn btn-xs btn-ghost border border-white/10 rounded-xl">Send Funds</label>
+                              {% endif %}
+                          </div>
+                      </td>
+                  </tr>
+                  {% empty %}                    
+                  <tr>
+                      <td colspan="6" class="text-center py-8 text-gray-400">No tags found.</td>
+                  </tr>
+                  {% endfor %}
+                  {% if page_obj.has_next %}
+                  <tr hx-trigger="revealed" hx-target="this" hx-swap="outerHTML" hx-select="#items > tr" hx-get="{% url 'tag_list' %}?page={{page_obj.next_page_number }}" hx-include=".input, .select"></tr>
+                  {% endif %}
+              </tbody>
+          </table>        
+      </div>
+  </div>
+
+<!-- MODALS CONTAINER (Placed outside the table and overflow container) -->
+{% for tag in object_list %}
+
+    <!-- History Modal -->
+    <input type="checkbox" id="modal_history_{{tag.tag.pk}}" class="modal-toggle" />
+    <div class="modal" role="dialog">
+        <div class="modal-box glass-card rounded-3xl p-6 border border-white/10 text-left">
+            <h3 class="text-lg font-bold text-white mb-3">History for {{tag.tag.name}}</h3>
+            <table class="table w-full text-xs font-mono">
+                <thead>
+                    <tr class="text-gray-400">
+                        <th>Date (MM/YYYY)</th>
+                        <th>Amount</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-white/5">
+                    {% for history in tag.history.all %}
+                    <tr>
+                        <td>{{history.month}}/{{history.year}}</td>
+                        <td class="text-success font-bold">{{history.amount|default:'-'}}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            <div class="modal-action">
+                <label for="modal_history_{{tag.tag.pk}}" class="btn btn-ghost rounded-xl">Close</label>
+            </div>
+        </div>
+        <label class="modal-backdrop" for="modal_history_{{tag.tag.pk}}">Close</label>
+    </div>
+
+    {% if tag.tag.assigned %}
+    <!-- Reassign Modal -->
+    <input type="checkbox" id="modal_reassign_{{tag.tag.pk}}" class="modal-toggle" />
+    <div class="modal" role="dialog">
+        <div class="modal-box glass-card rounded-3xl p-6 border border-white/10 text-left">
+            <form action="{% url 'reassign_tag' tag_id=tag.tag.pk %}" method="post" class="space-y-4">
+                {% csrf_token %}
+                <h3 class="text-lg font-bold text-white">Reassign Tag: {{tag.tag.name}}</h3>
+                <div>
+                    <label class="label text-xs font-semibold text-gray-300">Destination Tag</label>
+                    <select name="tag2_id" class="select select-bordered w-full rounded-xl bg-base-100/50 text-white" required>
+                        <option disabled selected value="">Select Tag</option>
+                        {% for t in object_list %}
+                        <option value="{{t.tag.pk}}">{{t.tag.name}}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="modal-action">
+                    <label for="modal_reassign_{{tag.tag.pk}}" class="btn btn-ghost rounded-xl">Cancel</label>
+                    <button type="submit" class="btn btn-primary rounded-xl px-6">Reassign</button>
+                </div>
+            </form>
+        </div>
+        <label class="modal-backdrop" for="modal_reassign_{{tag.tag.pk}}">Cancel</label>
+    </div>
+
+    <!-- Send Funds Modal -->
+    <input type="checkbox" id="modal_send_funds_{{tag.tag.pk}}" class="modal-toggle" />
+    <div class="modal" role="dialog">
+        <div class="modal-box glass-card rounded-3xl p-6 border border-white/10 text-left">
+            <form action="{% url 'send_tag_account' tag_id=tag.tag.pk %}" method="post" class="space-y-4">
+                {% csrf_token %}
+                <h3 class="text-lg font-bold text-white">Send Funds from {{tag.tag.name}}</h3>
+                <div>
+                    <label class="label text-xs font-semibold text-gray-300">Destination Account</label>
+                    <select name="account" class="select select-bordered w-full rounded-xl bg-base-100/50 text-white" required>
+                        <option disabled selected value="">Select Account</option>
+                        {% for account in accounts %}
+                        <option value="{{account.account.pk}}">{{account.account}} - {{account.account.currency.code}} {{account.account.current_balance}}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="modal-action">
+                    <label for="modal_send_funds_{{tag.tag.pk}}" class="btn btn-ghost rounded-xl">Cancel</label>
+                    <button type="submit" class="btn btn-primary rounded-xl px-6">Send</button>
+                </div>
+            </form>
+        </div>
+        <label class="modal-backdrop" for="modal_send_funds_{{tag.tag.pk}}">Cancel</label>
+    </div>
+    {% endif %}
+
+{% endfor %}
+
+    <div id="loading-bars" class="htmx-indicator indicator-style">
+      <span class="loading loading-bars loading-lg text-primary"></span>
+    </div>
+</div>
+
+<input type="checkbox" id="modal_accounts" class="modal-toggle" />
                 <div class="modal" role="dialog">
                   <div class="modal-box glass-card rounded-3xl p-6 border border-white/10 text-left">
                     <h3 class="text-lg font-bold text-white mb-4">Accounts Money Allocation</h3>
@@ -106,135 +251,34 @@
                     </div>
                   </div>
                 </div>
-            </div>
-        </div>
-    </div>
 
-    <!-- Tags Table -->
-    <div class="card glass-card rounded-3xl overflow-hidden shadow-2xl border border-white/10">
-        <div class="overflow-x-auto max-h-[550px] table-wrapper">
-            <table class="table w-full text-center">
-                <thead class="sticky top-0 bg-base-200/90 backdrop-blur-md z-10 text-gray-300 text-xs uppercase">
-                    <tr>
-                        <th class="text-left">Tag Name</th>
-                        <th>Assigned ({{request.user.main_currency}})</th>
-                        <th>Monthly Goal ({{request.user.main_currency}})</th>
-                        <th>Spent This Month ({{request.user.main_currency}})</th>
-                        <th>Cash Flow ({{request.user.main_currency}})</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody id="items" class="divide-y divide-white/5 text-xs">
-                    {% for tag in object_list %}
-                    <tr class="hover:bg-base-100/30 transition-colors">
-                        <td class="font-bold text-white text-left tracking-wide">{{tag.tag.name.upper}}</td>
-                        <td class="font-mono text-success font-bold">{{tag.total|default:'0.00'}}</td>
-                        <td class="font-mono text-gray-300">{{tag.tag.month_goal|default:'0.00'}}</td>
-                        <td class="font-mono text-error font-bold">{{tag.spent|default:'0.00'}}</td>
-                        <td class="font-mono text-info font-bold">{{tag.flow|default:'0.00'}} <span class="text-[10px] text-gray-400 font-normal">({{tag.pctg|default:'0.00'}}%)</span></td>                    
-                        <td>
-                          <div class="flex items-center justify-center gap-1 flex-wrap">
-                            <a hx-target="main" hx-get="{% url 'tag_update' pk=tag.tag.pk %}" class="btn btn-xs btn-ghost text-primary hover:bg-primary/10">Edit</a>
-
-                            <label for="modal_history_{{tag.tag.pk}}" class="btn btn-xs btn-ghost border border-white/10 rounded-xl">History</label>
-                            <input type="checkbox" id="modal_history_{{tag.tag.pk}}" class="modal-toggle" />
-                            <div class="modal" role="dialog">
-                                <div class="modal-box glass-card rounded-3xl p-6 border border-white/10 text-left">
-                                    <h3 class="text-lg font-bold text-white mb-3">History for {{tag.tag.name}}</h3>
-                                    <table class="table w-full text-xs font-mono">
-                                        <thead>
-                                            <tr class="text-gray-400">
-                                                <th>Date (MM/YYYY)</th>
-                                                <th>Amount</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody class="divide-y divide-white/5">
-                                            {% for history in tag.history.all %}
-                                            <tr>
-                                                <td>{{history.month}}/{{history.year}}</td>
-                                                <td class="text-success font-bold">{{history.amount|default:'-'}}</td>
-                                            </tr>
-                                            {% endfor %}
-                                        </tbody>
-                                    </table>
-                                    <div class="modal-action">
-                                        <label for="modal_history_{{tag.tag.pk}}" class="btn btn-ghost rounded-xl">Close</label>
-                                    </div>
-                                </div>
-                            </div>
-
-                            {% if not tag.tag.assigned %}
-                            <a hx-target="closest tr" hx-confirm="Are you sure you want to delete this tag?" hx-delete="{% url 'tag_delete' pk=tag.tag.pk %}" class="btn btn-xs btn-ghost text-error hover:bg-error/10">Delete</a>
-                            {% else %}
-                            <label for="modal_reassign_{{tag.tag.pk}}" class="btn btn-xs btn-ghost border border-white/10 rounded-xl">Reassign</label>
-                            <label for="modal_send_funds_{{tag.tag.pk}}" class="btn btn-xs btn-ghost border border-white/10 rounded-xl">Send Funds</label>
-
-                            <input type="checkbox" id="modal_reassign_{{tag.tag.pk}}" class="modal-toggle" />
-                            <div class="modal" role="dialog">
-                              <div class="modal-box glass-card rounded-3xl p-6 border border-white/10 text-left">
-                                <form action="{% url 'reassign_tag' tag_id=tag.tag.pk %}" method="post" class="space-y-4">
-                                  {% csrf_token %}
-                                  <h3 class="text-lg font-bold text-white">Reassign Tag: {{tag.tag.name}}</h3>
-                                  <div>
-                                      <label class="label text-xs font-semibold text-gray-300">Destination Tag</label>
-                                      <select name="tag2_id" class="select select-bordered w-full rounded-xl bg-base-100/50 text-white" required>
-                                        <option disabled selected>Select Tag</option>
-                                        {% for t in object_list %}
-                                        <option value="{{t.tag.pk}}">{{t.tag.name}}</option>
-                                        {% endfor %}
-                                      </select>
-                                  </div>
-                                  <div class="modal-action">
-                                    <label for="modal_reassign_{{tag.tag.pk}}" class="btn btn-ghost rounded-xl">Cancel</label>
-                                    <button type="submit" class="btn btn-primary rounded-xl px-6">Reassign</button>
-                                  </div>
-                                </form>
-                              </div>
-                            </div>
-
-                            <input type="checkbox" id="modal_send_funds_{{tag.tag.pk}}" class="modal-toggle" />
-                            <div class="modal" role="dialog">
-                              <div class="modal-box glass-card rounded-3xl p-6 border border-white/10 text-left">
-                                <form action="{% url 'send_tag_account' tag_id=tag.tag.pk %}" method="post" class="space-y-4">
-                                  {% csrf_token %}
-                                  <h3 class="text-lg font-bold text-white">Send Funds from {{tag.tag.name}}</h3>
-                                  <div>
-                                      <label class="label text-xs font-semibold text-gray-300">Destination Account</label>
-                                      <select name="account" class="select select-bordered w-full rounded-xl bg-base-100/50 text-white" required>
-                                        <option disabled selected>Select Account</option>
-                                        {% for account in accounts %}
-                                        <option value="{{account.account.pk}}">{{account.account}} - {{account.account.currency.code}} {{account.account.current_balance}}</option>
-                                        {% endfor %}
-                                      </select>
-                                  </div>
-                                  <div class="modal-action">
-                                    <label for="modal_send_funds_{{tag.tag.pk}}" class="btn btn-ghost rounded-xl">Cancel</label>
-                                    <button type="submit" class="btn btn-primary rounded-xl px-6">Send</button>
-                                  </div>
-                                </form>
-                              </div>
-                            </div>
-                            {% endif %}
-                          </div>
-                        </td>
-                    </tr>
-                    {% empty %}                     
-                    <tr>
-                        <td colspan="6" class="text-center py-8 text-gray-400">No tags found.</td>
-                    </tr>
-                    {% endfor %}
-                    {% if page_obj.has_next %}
-                    <tr hx-trigger="revealed" hx-target="this" hx-swap="outerHTML" hx-select="#items > tr" hx-get="{% url 'tag_list' %}?page={{page_obj.next_page_number }}" hx-include=".input, .select"></tr>
-                    {% endif %}
-                </tbody>
-            </table>        
-        </div>
-    </div>
-
-    <div id="loading-bars" class="htmx-indicator indicator-style">
-      <span class="loading loading-bars loading-lg text-primary"></span>
-    </div>
-</div>
+  <input type="checkbox" id="modal_accounts" class="modal-toggle" />
+                <div class="modal" role="dialog">
+                  <div class="modal-box glass-card rounded-3xl p-6 border border-white/10 text-left">
+                    <h3 class="text-lg font-bold text-white mb-4">Accounts Money Allocation</h3>
+                    <table class="table w-full text-xs">
+                        <thead>
+                          <tr class="text-gray-400">
+                            <th>Account</th>
+                            <th>Assigned</th>
+                            <th>Unassigned</th>
+                          </tr>
+                        </thead>
+                        <tbody class="divide-y divide-white/5 font-mono">
+                          {% for account in accounts %}
+                          <tr>
+                            <td class="font-bold text-white">{{account.account.name.upper}}</td>
+                            <td class="text-success font-bold">{{request.user.main_currency}} {{account.assigned.main_currency}}</td>
+                            <td class="text-warning font-bold">{{request.user.main_currency}} {{account.not_assigned.main_currency}}</td>
+                          </tr>
+                          {% endfor %}
+                        </tbody>
+                    </table>
+                    <div class="modal-action">
+                      <label for="modal_accounts" class="btn btn-ghost rounded-xl">Close</label>
+                    </div>
+                  </div>
+                </div>
 
 <script>
   document.body.addEventListener('htmx:beforeRequest', function(evt) {
