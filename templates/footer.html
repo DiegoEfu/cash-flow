@@ -1,22 +1,25 @@
 <footer class="mt-auto border-t border-white/10 py-6 bg-base-300/60 backdrop-blur-md">
     <div class="w-full mx-auto max-w-7xl px-4 md:flex md:items-center md:justify-between text-xs text-gray-400">
-      <span class="text-gray-400 sm:text-center">© 2025 <a href="https://github.com/DiegoEfu" class="text-primary hover:underline font-medium">Diego Faria</a>. All Rights Reserved. <span class="badge badge-sm badge-ghost text-xs ml-1 font-mono">Portfolio Demo</span>
-    </span>
-    <ul class="flex flex-wrap items-center mt-3 font-medium text-gray-400 sm:mt-0 space-x-4">
-        {% if request.user.is_authenticated %}
-        <li>
-            <a href="/" class="hover:text-white transition-colors">Dashboard</a>
-        </li>
-        <li>
-            <a href="{% url 'account_list' %}" class="hover:text-white transition-colors">Accounts</a>
-        </li>
-        <li>
-            <a href="{% url 'general_transactions_list' %}" class="hover:text-white transition-colors">Transactions</a>
-        </li>
-        <li>
-            <a href="{% url 'tag_list' %}" class="hover:text-white transition-colors">Tags</a>
-        </li>
-        {% endif %}
-    </ul>
+        <span class="text-gray-400 sm:text-center">© 2026 <a href="https://github.com/DiegoEfu"
+                class="text-primary hover:underline font-medium">Diego Faria</a>. All Rights Reserved. <span
+                class="badge badge-sm badge-ghost text-xs ml-1 font-mono">Portfolio Demo</span>
+        </span>
+        <ul class="flex flex-wrap items-center mt-3 font-medium text-gray-400 sm:mt-0 space-x-4">
+            {% if request.user.is_authenticated %}
+            <li>
+                <a href="/" class="hover:text-white transition-colors">Dashboard</a>
+            </li>
+            <li>
+                <a href="{% url 'account_list' %}" class="hover:text-white transition-colors">Accounts</a>
+            </li>
+            <li>
+                <a href="{% url 'general_transactions_list' %}"
+                    class="hover:text-white transition-colors">Transactions</a>
+            </li>
+            <li>
+                <a href="{% url 'tag_list' %}" class="hover:text-white transition-colors">Tags</a>
+            </li>
+            {% endif %}
+        </ul>
     </div>
 </footer>
