@@ -1,73 +1,90 @@
 {% load widget_tweaks %}
  
-<div class="grid grid-cols-3">
-    <div class="flex justify-center">
-        <a href="{% url 'transactions_list' pk=account.pk %}" class="btn">Go back</a>
+<div class="max-w-6xl mx-auto space-y-6">
+    <div class="flex items-center justify-between">
+        <a href="{% url 'transactions_list' pk=account.pk %}" class="btn btn-ghost btn-sm rounded-xl gap-2 text-gray-400 hover:text-white border border-white/10">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
+            Go back
+        </a>
+        <div class="text-center">
+            <h1 class="text-2xl font-bold text-white">Assign Money to Account {{account}}</h1>
+        </div>
+        <div class="text-right">
+            <span class="text-xs text-gray-400 block">Account Balance</span>
+            <h3 id="balance" class="text-lg font-bold text-success font-mono">{{account.currency.code}} {{account.current_balance}}</h3>
+        </div>
     </div>
-    <div>
-        <h1 class="text-center text-4xl xl:text-4xl">Assign Money to the Account {{account}}</h1>
-        <h3 id="balance" class="text-center text-success text-2xl xl:text-2xl">{{account.currency.code}} {{account.current_balance}}</h3>
-    </div>
-    <div class="flex justify-center">
+
+    <input type="hidden" id="account_balance" name="account_balance" value="{{account.current_balance}}">
+    <input type="hidden" name="exchange_rate" id="exchange_rate" value="{{exchange_rate}}">
+    <input type="hidden" name="account_currency" id="account_currency" value="{{account.currency.code}}">
+    <input type="hidden" name="main_currency" id="main_currency" value="{{request.user.main_currency.currency.code}}">
+
+    <div class="card glass-card rounded-3xl p-6 sm:p-8 shadow-2xl space-y-6">
+        <form hx-post="{% url 'tag_assignment' pk=account.pk %}" hx-target="main" hx-select="main" class="space-y-6">
+            {% csrf_token %}
+            
+            <div class="overflow-x-auto rounded-2xl border border-white/10">
+                <table class="table w-full text-center">
+                  <thead class="bg-base-200/50 text-gray-300 text-xs">
+                    <tr>
+                      <th>#</th>
+                      <th>Tag Name</th>
+                      <th>Prev. Assigned ({{account.currency.code}})</th>
+                      <th>Money Assigned ({{account.currency.code}})</th>
+                      <th>Total Assigned Tag ({{request.user.main_currency.currency.code}})</th>
+                      <th>Total After Changes ({{request.user.main_currency.currency.code}})</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {% for form in forms %}
+                    <tr class="hover:bg-base-100/30">
+                      <td class="text-gray-400 text-xs">{{forloop.counter}}</td>
+                      <td>
+                        <div class="flex items-center justify-center gap-2">
+                            <span class="font-bold text-sm text-white">{{form.form.instance.tag.name.upper}}</span>
+                            <input type="hidden" name="{{form.form.instance.tag.pk}}-id" value="{{form.form.instance.id}}">
+                            <button type="button" class="btn btn-xs btn-circle btn-ghost text-error hover:bg-error/20 remove-btn" id="remove-{{form.form.prefix}}"> 
+                              ✕
+                            </button>
+                        </div>
+                        {% if form.form.non_field_errors %}
+                        <div class="text-xs text-error mt-1">{% for err in form.form.non_field_errors %}{{err}}{% endfor %}</div>
+                        {% endif %}
+                      </td>
+                      <td class="previous-assigned font-mono text-xs" id="previous-{{form.form.prefix}}">{{form.form.instance.amount}}</td>
+                      <td class="money-to-assign max-w-[150px]">
+                        {% render_field form.form.amount class+="input input-bordered input-sm w-full total rounded-xl bg-base-100/50" %}
+                        {% if form.form.amount.errors %}
+                        <div class="text-xs text-error mt-1">{% for err in form.form.amount.errors %}{{err}}{% endfor %}</div>
+                        {% endif %}
+                      </td>
+                      <td class="font-mono text-xs text-gray-300" id="total-tag-before-{{form.form.prefix}}">{{form.total}}</td>
+                      <td class="assigned-future font-mono text-xs text-primary font-semibold" id="total-tag-after-{{form.form.prefix}}">{{form.total}}</td>
+                    </tr>
+                    {% endfor %}
+                    <tr class="bg-base-200/40 font-semibold text-sm">
+                      <th colspan="2" class="text-left pl-6">Totals</th>
+                      <td id="total-assigned-previous" class="font-mono text-xs">{{totals.total_account|default:'0.00'}}</td>
+                      <td id="total-assigned-now" class="font-mono text-xs">{{totals.total_account|default:'0.00'}}</td>
+                      <td id="total-assigned-tags-before" class="font-mono text-xs">{{totals.total_tags|default:'0.00'}}</td>
+                      <td id="total-assigned-tags-after" class="font-mono text-xs text-primary">{{totals.total_tags|default:'0.00'}}</td>
+                    </tr>
+                    <tr class="bg-base-300/60 font-semibold text-sm">
+                      <th colspan="5" class="text-left pl-6">Not Assigned in this Account</th>
+                      <td id="not-assigned" class="font-mono text-xs text-warning"> {{account.currency.code}} {{totals.not_assigned_ac|default:'0.00'}} / {{request.user.main_currency.currency.code}} {{totals.not_assigned|default:'0.00'}}</td>
+                    </tr>
+                  </tbody>
+                </table>
+            </div>
+            
+            <div class="pt-2 flex justify-end">
+                <button type="submit" class="btn btn-primary rounded-xl px-8 shadow-lg shadow-primary/25 hover:shadow-primary/40 font-semibold">
+                    Register Assignment
+                </button>
+            </div>
+        </form>
     </div>
 </div>
-
-<input type="hidden" id="account_balance" name="account_balance" value="{{account.current_balance}}">
-<input type="hidden" name="exchange_rate" id="exchange_rate" value="{{exchange_rate}}">
-<input type="hidden" name="account_currency" id="account_currency" value="{{account.currency.code}}">
-<input type="hidden" name="main_currency" id="main_currency" value="{{request.user.main_currency.currency.code}}">
-
-<form hx-post="{% url 'tag_assignment' pk=account.pk %}" hx-target="main" hx-select="main" class="grid grid-cols-1">
-    {% csrf_token %}
-    
-    <div class="mb-3">
-        <div class="overflow-x-auto">
-            <table class="table text-center">
-              <thead>
-                <tr>
-                  <th></th>
-                  <th>Tag Name</th>
-                  <th>Previous Assigned in the Account ({{account.currency.code}})</th>
-                  <th>Money Assigned in Account ({{account.currency.code}})</th>
-                  <th>Current Total Assigned in Tag ({{request.user.main_currency.currency.code}})</th>
-                  <th>Total Assigned in Tag after Changes ({{request.user.main_currency.currency.code}})</th>
-                </tr>
-              </thead>
-              <tbody>
-                {% for form in forms %}
-                <tr>
-                  <td>{{forloop.counter}}</td>
-                  <td>
-                    {{form.form.instance.tag.name.upper}}
-                    <input type="hidden" name="{{form.form.instance.tag.pk}}-id" value="{{form.form.instance.id}}">
-                    <button type="button" class="btn btn-xs remove-btn" id="remove-{{form.form.prefix}}"> 
-                      x
-                    </button>
-                  </td>
-                  <td class="previous-assigned" id="previous-{{form.form.prefix}}">{{form.form.instance.amount}}</td>
-                  <td class="money-to-assign">{% render_field form.form.amount class="input input-bordered w-full total" %}</td>
-                  <td id="total-tag-before-{{form.form.prefix}}">{{form.total}}</td>
-                  <td class="assigned-future" id="total-tag-after-{{form.form.prefix}}">{{form.total}}</td>
-                </tr>
-                {% endfor %}
-                <tr>
-                  <th colspan="2">Totals</th>
-                  <td id="total-assigned-previous">{{totals.total_account|default:'0.00'}}</td>
-                  <td id="total-assigned-now">{{totals.total_account|default:'0.00'}}</td>
-                  <td id="total-assigned-tags-before">{{totals.total_tags|default:'0.00'}}</td>
-                  <td id="total-assigned-tags-after">{{totals.total_tags|default:'0.00'}}</td>
-                </tr>
-                <tr>
-                  <th colspan="5">Not Assigned in this Account</th>
-                  <td id="not-assigned"> {{account.currency.code}} {{totals.not_assigned_ac|default:'0.00'}} / {{request.user.main_currency.currency.code}} {{totals.not_assigned|default:'0.00'}}</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-    </div>
-    <div class="flex justify-center">
-        <button type="submit" class="btn btn-primary">Register Assignment</button>
-    </div>
-</form>
 
 <script type="text/javascript" src="/static/js/totals.js"></script>

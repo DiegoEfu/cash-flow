@@ -2,140 +2,205 @@
 {% load static %}
 
 {% block content %}
-<div class="mx-auto my-8 lg:container">
-    <div class="flex justify-center items-center">
-        <img src="{% static 'img/logo.png' %}" alt="Logo">
+<div class="space-y-12 py-4">
+    <!-- Hero Section -->
+    <div class="text-center space-y-4 max-w-3xl mx-auto pt-4">
+        <div class="inline-flex p-4 rounded-3xl bg-primary/10 border border-primary/20 shadow-xl mb-2 hover:scale-105 transition-transform duration-300">
+            <img src="{% static 'img/logo.png' %}" class="h-16 w-auto" alt="CashFlow Logo">
+        </div>
+        <h1 class="text-4xl sm:text-6xl font-extrabold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-white via-slate-100 to-primary">
+            CashFlow
+        </h1>
+        <p class="text-base sm:text-lg text-gray-400 font-medium">
+            Smart, multi-currency personal finance management app
+        </p>
     </div>
-
-    <h1 class="text-center text-4xl xl:text-8xl">CashFlow</h1>
-    <h2 class="text-center">Personal Finance Web Application</h2>
 
     {% if request.user.is_authenticated %}
-    <div class="divider"></div>
-    <h1 class="text-2xl text-center">Welcome, {{request.user.get_full_name}}!</h1>
+    <!-- Authenticated User Dashboard Stats -->
+    <div class="space-y-6">
+        <div class="flex items-center justify-between">
+            <h2 class="text-xl font-bold text-white flex items-center gap-2">
+                <span>Welcome back,</span>
+                <span class="text-primary">{{request.user.get_full_name|default:request.user.username}}!</span>
+            </h2>
+            <span class="badge badge-primary badge-outline text-xs px-3 py-2 font-mono">Main: {{request.user.main_currency.currency.code}}</span>
+        </div>
 
-    <div class="flex justify-center w-full" style="overflow-y: visible;">
-      <div class="stats shadow">
         {% with currency=request.user.main_currency.currency.code %}
-        <div class="stat place-items-center">
-          <div class="stat-title">Current Balance</div>
-          <div class="stat-value">{{currency}} {{balance|floatformat:2}}</div>
-          <div class="stat-desc tooltip" data-tip="{{currency}} {{balance_last_month}}">
-            {{percentage_balance|default:'-'}}% compared to last month.
-          </div>
-        </div>
-      
-        <div class="stat place-items-center">
-          <div class="stat-title">Income of this Month</div>
-          <div class="stat-value text-success">{{currency}} {{current_month_income|floatformat:2}}</div>
-          <div class="stat-desc tooltip text-success" data-tip="{{currency}} {{income_last_month}}">
-            {{percentage_income|default:'-'}}% compared to last month.
-          </div>
-        </div>
-      
-        <div class="stat place-items-center">
-          <div class="stat-title">Expenses of this Month</div>
-          <div class="stat-value text-warning">{{currency}} {{current_month_expense|floatformat:2}}</div>
-          <div class="stat-desc text-warning tooltip" data-tip="{{currency}} {{expense_last_month}}">{{percentage_expense|default:'-'}}% compared to last month.</div>
-        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <!-- Current Balance -->
+            <div class="card glass-card rounded-3xl p-6 shadow-xl space-y-2 hover:border-primary/40 transition-all duration-300 group">
+                <div class="flex items-center justify-between text-gray-400 text-xs font-semibold uppercase tracking-wider">
+                    <span>Current Balance</span>
+                    <div class="w-8 h-8 rounded-xl bg-primary/10 text-primary flex items-center justify-center group-hover:scale-110 transition-transform">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                    </div>
+                </div>
+                <div class="text-2xl sm:text-3xl font-extrabold text-white font-mono">
+                    {{currency}} {{balance|floatformat:2}}
+                </div>
+                <div class="text-xs text-gray-400 font-medium tooltip text-left cursor-help" data-tip="Last Month: {{currency}} {{balance_last_month}}">
+                    <span class="badge badge-sm font-mono {% if percentage_balance >= 0 %}badge-success{% else %}badge-error{% endif %}">
+                        {{percentage_balance|default:'-'}}%
+                    </span>
+                    <span class="ml-1 opacity-80">vs last month</span>
+                </div>
+            </div>
 
-        <div class="stat place-items-center">
-          <div class="stat-title">CashFlow of this Month</div>
-          <div class="stat-value text-info">{{currency}} {{cash_flow|floatformat:2}}</div>
-          <div class="stat-desc text-info tooltip" data-tip="{{currency}} {{cash_flow_last_month}}">{{percentage_cash_flow|default:'-'}}% compared to last month.</div>
+            <!-- Income of this Month -->
+            <div class="card glass-card rounded-3xl p-6 shadow-xl space-y-2 hover:border-success/40 transition-all duration-300 group">
+                <div class="flex items-center justify-between text-gray-400 text-xs font-semibold uppercase tracking-wider">
+                    <span>Income This Month</span>
+                    <div class="w-8 h-8 rounded-xl bg-success/10 text-success flex items-center justify-center group-hover:scale-110 transition-transform">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 11l5-5m0 0l5 5m-5-5v12"></path></svg>
+                    </div>
+                </div>
+                <div class="text-2xl sm:text-3xl font-extrabold text-success font-mono">
+                    {{currency}} {{current_month_income|floatformat:2}}
+                </div>
+                <div class="text-xs text-success font-medium tooltip text-left cursor-help" data-tip="Last Month: {{currency}} {{income_last_month}}">
+                    <span class="badge badge-sm badge-success font-mono">
+                        {{percentage_income|default:'-'}}%
+                    </span>
+                    <span class="ml-1 opacity-80">vs last month</span>
+                </div>
+            </div>
+
+            <!-- Expenses of this Month -->
+            <div class="card glass-card rounded-3xl p-6 shadow-xl space-y-2 hover:border-warning/40 transition-all duration-300 group">
+                <div class="flex items-center justify-between text-gray-400 text-xs font-semibold uppercase tracking-wider">
+                    <span>Expenses This Month</span>
+                    <div class="w-8 h-8 rounded-xl bg-warning/10 text-warning flex items-center justify-center group-hover:scale-110 transition-transform">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 13l-5 5m0 0l-5-5m5 5V6"></path></svg>
+                    </div>
+                </div>
+                <div class="text-2xl sm:text-3xl font-extrabold text-warning font-mono">
+                    {{currency}} {{current_month_expense|floatformat:2}}
+                </div>
+                <div class="text-xs text-warning font-medium tooltip text-left cursor-help" data-tip="Last Month: {{currency}} {{expense_last_month}}">
+                    <span class="badge badge-sm badge-warning font-mono">
+                        {{percentage_expense|default:'-'}}%
+                    </span>
+                    <span class="ml-1 opacity-80">vs last month</span>
+                </div>
+            </div>
+
+            <!-- Net CashFlow -->
+            <div class="card glass-card rounded-3xl p-6 shadow-xl space-y-2 hover:border-info/40 transition-all duration-300 group">
+                <div class="flex items-center justify-between text-gray-400 text-xs font-semibold uppercase tracking-wider">
+                    <span>Net CashFlow</span>
+                    <div class="w-8 h-8 rounded-xl bg-info/10 text-info flex items-center justify-center group-hover:scale-110 transition-transform">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
+                    </div>
+                </div>
+                <div class="text-2xl sm:text-3xl font-extrabold text-info font-mono">
+                    {{currency}} {{cash_flow|floatformat:2}}
+                </div>
+                <div class="text-xs text-info font-medium tooltip text-left cursor-help" data-tip="Last Month: {{currency}} {{cash_flow_last_month}}">
+                    <span class="badge badge-sm badge-info font-mono">
+                        {{percentage_cash_flow|default:'-'}}%
+                    </span>
+                    <span class="ml-1 opacity-80">vs last month</span>
+                </div>
+            </div>
         </div>
         {% endwith %}
-      </div>
-    </div>
 
-    <div class="justify-center items-center mt-8 mb-8 align-center sm:flex xs:flex-col md:flex">
-        <div class="w-full text-center mt-1"><a href="{% url 'account_list' %}" href="#" class="btn btn-outline btn-success">Check my Accounts</a></div>
-        <div class="w-full text-center mt-1"><a href="{% url 'general_transactions_list' %}" href="#" class="btn btn-outline btn-primary mx-2">Check My Transactions</a></div>
-        <div class="w-full text-center mt-1"><a href="{% url 'tag_list' %}" href="#" class="btn btn-outline btn-warning">Check My Tags</a></div>
-        <form class="w-full text-center mt-1" method="post" action="{% url 'logout_view' %}">
-            {% csrf_token %}
-            <button type="submit" class="btn btn-outline btn-danger mx-2">Log Out</button>
-        </form>
-    </div> 
-    
+        <!-- Quick Actions Navigation Toolbar -->
+        <div class="flex flex-wrap gap-4 justify-center pt-2">
+            <a href="{% url 'account_list' %}" class="btn btn-success rounded-2xl px-6 shadow-lg shadow-success/20 hover:shadow-success/40 gap-2 font-semibold">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
+                Manage Accounts
+            </a>
+            <a href="{% url 'general_transactions_list' %}" class="btn btn-primary rounded-2xl px-6 shadow-lg shadow-primary/20 hover:shadow-primary/40 gap-2 font-semibold">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"></path></svg>
+                View Transactions
+            </a>
+            <a href="{% url 'tag_list' %}" class="btn btn-warning rounded-2xl px-6 shadow-lg shadow-warning/20 hover:shadow-warning/40 gap-2 font-semibold">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"></path></svg>
+                Manage Tags
+            </a>
+        </div>
+    </div>
     {% else %}
-    <div class="flex justify-center items-center mt-8 mb-8">
-        <a href="{% url 'sign_up_view' %}" class="btn btn-outline btn-success">Sign Up Now!</a>
-        <a href="{% url 'login' %}" class="btn btn-outline btn-primary mx-2">Log In Now!</a>
+    <!-- Guest Hero Actions -->
+    <div class="flex flex-wrap justify-center gap-4 py-4">
+        <a href="{% url 'sign_up_view' %}" class="btn btn-primary btn-lg rounded-2xl px-8 shadow-xl shadow-primary/30 hover:shadow-primary/50 font-bold">
+            Get Started Now
+        </a>
+        <a href="{% url 'login' %}" class="btn btn-ghost btn-lg border border-white/10 rounded-2xl px-8 hover:bg-base-200 font-bold">
+            Log In
+        </a>
     </div>
     {% endif %}
 
-    <div class="divider"></div>
+    <div class="divider before:bg-white/10 after:bg-white/10"></div>
 
-    <h1 class="text-center text-5xl text-success">About CashFlow</h1> <br>
+    <!-- Feature Cards Section -->
+    <div class="space-y-6">
+        <div class="text-center space-y-2">
+            <h2 class="text-3xl font-extrabold text-white">Powerful Financial Features</h2>
+            <p class="text-sm text-gray-400">Everything you need to analyze, track, and optimize your money</p>
+        </div>
 
-    <div class="mx-auto">
-        <p class="text-center">
-            CashFlow is a web application that you can use to keep track of your finances by registering transactions in accounts and what you spend money by using tags, it was thought as a solution for the common problem that people have of registering their own expenses. 
-
-            <br><br>
-        </p>
-    </div>
-
-    <div class="divider"></div>
-
-    <h1 class="text-center text-5xl text-info">What CashFlow Can Do</h1> <br>
-
-    <div class="mx-auto">
-        <p class="text-center">
-            This is a web application that you can use to keep track of your finances by registering transactions in accounts and what you spend money by using tags. This is also a multi-currency application, which means
-            you can keep track of your expenses in many currencies.
-        </p>
-
-        <div class="xl:columns-2 my-2 md:columns-1 sm:columns-1 xs:columns-1">
-            <div class="card p-5 bg-gray-900 shadow-xl image-full  hover:scale-110 transform transition duration-100">
-                <figure><img src="{% static 'img/cards/multicurrency.jpg' %}" alt="Many currencies" /></figure>
-                <div class="card-body flex justify-center align-center">
-                  <div class="text-center text-white shadow-xl">
-                    <h2 class="text-center text-xl font-bold">Multi-currency!</h2>
-                    <p>Use a main currency but use your money in other currencies!</p>
-                  </div>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div class="card glass-card rounded-3xl p-6 shadow-2xl hover:border-primary/40 transition-all duration-300 group">
+                <div class="flex items-start gap-4">
+                    <div class="p-3 rounded-2xl bg-primary/10 text-primary border border-primary/20 group-hover:scale-110 transition-transform">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                    </div>
+                    <div class="space-y-1">
+                        <h3 class="text-lg font-bold text-white">Multi-Currency Management</h3>
+                        <p class="text-xs text-gray-400 leading-relaxed">
+                            Maintain accounts in USD, EUR, GBP, or any preferred local currency with automatic exchange rate conversion.
+                        </p>
+                    </div>
                 </div>
             </div>
 
-            <div class="card p-5 bg-gray-900 shadow-xl image-full  hover:scale-110 transform transition duration-100 my-2">
-                <figure><img src="{% static 'img/cards/graphs.jpg' %}" alt="Graphs" /></figure>
-                <div class="card-body flex justify-center align-center">
-                  <div class="text-center text-white shadow-xl">
-                    <h2 class="text-center text-xl font-bold">Make Graphs!</h2>
-                    <p>Are you a visual person? Understand how you are spending money with graphs!</p>
-                  </div>
+            <div class="card glass-card rounded-3xl p-6 shadow-2xl hover:border-success/40 transition-all duration-300 group">
+                <div class="flex items-start gap-4">
+                    <div class="p-3 rounded-2xl bg-success/10 text-success border border-success/20 group-hover:scale-110 transition-transform">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"></path></svg>
+                    </div>
+                    <div class="space-y-1">
+                        <h3 class="text-lg font-bold text-white">Budgeting & Tag Allocation</h3>
+                        <p class="text-xs text-gray-400 leading-relaxed">
+                            Allocate money across tags, set monthly goals, and trace spending across multiple accounts effortlessly.
+                        </p>
+                    </div>
                 </div>
             </div>
 
-            <div class="card p-5 bg-gray-900 shadow-xl image-full  hover:scale-110 transform transition duration-100">
-                <figure><img src="{% static 'img/cards/tags.jpg' %}" alt="Money Bands" /></figure>
-                <div class="card-body flex justify-center align-center">
-                  <div class="text-center text-white shadow-xl">
-                    <h2 class="text-center text-xl font-bold">Make your own Tags!</h2>
-                    <p>Have money for a project scattered across many accounts? No worries! CashFlow's tag system will help you keep track of them!</p>
-                  </div>
+            <div class="card glass-card rounded-3xl p-6 shadow-2xl hover:border-warning/40 transition-all duration-300 group">
+                <div class="flex items-start gap-4">
+                    <div class="p-3 rounded-2xl bg-warning/10 text-warning border border-warning/20 group-hover:scale-110 transition-transform">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                    </div>
+                    <div class="space-y-1">
+                        <h3 class="text-lg font-bold text-white">Financial Reports & Exports</h3>
+                        <p class="text-xs text-gray-400 leading-relaxed">
+                            Export historic balances, filter transaction logs, and generate PDF/CSV reports anytime you need.
+                        </p>
+                    </div>
                 </div>
             </div>
 
-            <div class="card p-5 bg-gray-900 shadow-xl image-full  hover:scale-110 transform transition duration-100 my-2">
-                <figure><img src="{% static 'img/cards/reports.jpg' %}" alt="Report Signing" /></figure>
-                <div class="card-body flex justify-center align-center">
-                  <div class="text-center text-white shadow-xl">
-                    <h2 class="text-center text-xl font-bold">Generate Reports!</h2>
-                    <p>Need to get your balance on paper? Or need to export it to another platform? We have you covered!</p>
-                  </div>
+            <div class="card glass-card rounded-3xl p-6 shadow-2xl hover:border-info/40 transition-all duration-300 group">
+                <div class="flex items-start gap-4">
+                    <div class="p-3 rounded-2xl bg-info/10 text-info border border-info/20 group-hover:scale-110 transition-transform">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"></path></svg>
+                    </div>
+                    <div class="space-y-1">
+                        <h3 class="text-lg font-bold text-white">Inter-Account Transfers</h3>
+                        <p class="text-xs text-gray-400 leading-relaxed">
+                            Seamlessly transfer funds between different accounts with automatic exchange rate fee deductions.
+                        </p>
+                    </div>
                 </div>
             </div>
         </div>
-
-        <div class="divider"></div>
-
-        <div role="alert" class="alert alert-warning">
-            <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
-            <span><b>Warning</b>: It is important to notice that CashFlow is not meant for massive use. It was made for demonstration purposes only as part of its developer's portfolio, showcasing web developing skills and database management skills. Therefore, a free hosting service is being used. <br> <br><u>Using actual information is not advised and no responsibility will be taken if any information is lost or stolen</u>.</b></span>
-        </div>
-    </div>
     </div>
 </div>
 {% endblock %}

@@ -7,204 +7,205 @@
 {% endblock %}
 
 {% block content %}
-<div class="p-8">
-    <div class="grid xl:grid-cols-3 xs:grid-cols-1">
-        <div class="flex justify-center -2">
-            <a href="{% url 'welcome_view' %}" class="btn">Go back</a>
-        </div>        
-        <div class="p-2">
-            <h1 class="text-center text-4xl xl:text-4xl">Your Accounts</h1>
+<div class="space-y-8 py-4">
+    <!-- Header Toolbar -->
+    <div class="flex flex-col sm:flex-row items-center justify-between gap-4">
+        <div class="flex items-center gap-3">
+            <a href="{% url 'welcome_view' %}" class="btn btn-ghost btn-sm rounded-xl gap-2 text-gray-400 hover:text-white border border-white/10">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
+                Dashboard
+            </a>
+            <h1 class="text-3xl font-extrabold text-white">Your Accounts</h1>
         </div>
-        <div class="flex justify-center p-2">
-            <a hx-get="{% url 'account_creation' %}" hx-target="main" class="btn btn-success">+ New Account</a>
-        </div>
-    </div>
-
-    <div class="grid xl:grid-cols-2 xs:grid-cols-1">
-        <div class="p-5">
-            <canvas id="chart" style="max-width: 100% !important; max-height: 60vh"></canvas>
-        </div>
-        <div class="overflow-x-auto p-5" id="summary" hx-swap-oob="true" hx-trigger="load" hx-get="{% url 'account_summary_table' %}" hx-indicator="#loading-bars">
+        <div class="flex items-center gap-3">
+            <a hx-get="{% url 'account_creation' %}" hx-target="main" class="btn btn-primary rounded-xl px-5 shadow-lg shadow-primary/25 hover:shadow-primary/40 font-semibold gap-2">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                New Account
+            </a>
         </div>
     </div>
 
-    <div class="divider"></div>
+    <!-- Graph & Summary Section -->
+    <div class="grid lg:grid-cols-2 gap-6">
+        <div class="card glass-card rounded-3xl p-6 shadow-2xl flex items-center justify-center">
+            <canvas id="chart" class="max-h-[50vh] w-full"></canvas>
+        </div>
+        <div class="card glass-card rounded-3xl p-6 shadow-2xl overflow-x-auto" id="summary" hx-swap-oob="true" hx-trigger="load" hx-get="{% url 'account_summary_table' %}" hx-indicator="#loading-bars">
+        </div>
+    </div>
 
     {% if messages %}
-    {% for message in messages %}
-    <div class="alert {% if 'success' in message.tags %}alert-success{% else %}alert-warning{%endif%}">
-        {{message}}
+    <div class="space-y-2">
+        {% for message in messages %}
+        <div class="alert {% if 'success' in message.tags %}alert-success{% else %}alert-warning{% endif %} rounded-2xl shadow-lg border border-white/10 text-sm">
+            <span>{{message}}</span>
+        </div>
+        {% endfor %}
     </div>
-    {% endfor %}    
-    <div class="divider"></div>
     {% endif %}
 
-    <div class="collapse bg-gray-900 mb-3">
-      <input type="checkbox" />
-      <div class="collapse-title text-xl font-medium">Filters</div>
-        <div class="collapse-content">
-          <form id="form" hx-get="{% url 'account_list' %}" hx-select="#items" hx-target="#items" hx-swap="outerHTML" hx-indicator="#loading-bars" hx-trigger="submit, change, keyup delay:1s">
-            <div class="grid lg:grid-cols-3 md:grid-cols-1 sm:grid-cols-1 xs:grid-cols-1">
-              <div class="me-4">
-                <label for="id_name__icontains">Name:</label> <br>
-                {% render_field filter.form.name__icontains class="input input-bordered w-full" %}
-              </div>
+    <!-- Filter Collapse & Reports Drawer -->
+    <div class="grid md:grid-cols-2 gap-4">
+        <div class="collapse collapse-arrow glass-card rounded-2xl border border-white/10">
+          <input type="checkbox" />
+          <div class="collapse-title text-base font-bold text-white flex items-center gap-2">
+            <svg class="w-4 h-4 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"></path></svg>
+            Filter Accounts
+          </div>
+          <div class="collapse-content space-y-4 pt-2">
+              <form id="form" hx-get="{% url 'account_list' %}" hx-select="#items" hx-target="#items" hx-swap="outerHTML" hx-indicator="#loading-bars" hx-trigger="submit, change, keyup delay:1s" class="space-y-3">
+                <div class="grid sm:grid-cols-3 gap-3">
+                  <div>
+                    <label for="id_name__icontains" class="label text-xs font-semibold text-gray-400">Name</label>
+                    {% render_field filter.form.name__icontains class+="input input-bordered input-sm w-full rounded-xl bg-base-100/50" %}
+                  </div>
 
-              <div class="me-4">
-                <label for="id_description__icontains">Description:</label> <br>
-                {% render_field filter.form.description__icontains class="input input-bordered w-full" %}
-              </div>
+                  <div>
+                    <label for="id_description__icontains" class="label text-xs font-semibold text-gray-400">Description</label>
+                    {% render_field filter.form.description__icontains class+="input input-bordered input-sm w-full rounded-xl bg-base-100/50" %}
+                  </div>
 
-              <div class="me-4">
-                {{filter.form.currency.label}} <br>
-                {% render_field filter.form.currency class="select select-bordered w-full" %}
-              </div>
+                  <div>
+                    <label for="id_currency" class="label text-xs font-semibold text-gray-400">Currency</label>
+                    {% render_field filter.form.currency class+="select select-bordered select-sm w-full rounded-xl bg-base-100/50" %}
+                  </div>
+                </div>
+                <input type="submit" hidden>
+              </form>       
+          </div>
+        </div>
 
-              <input type="submit" hidden>
+        <div class="collapse collapse-arrow glass-card rounded-2xl border border-white/10">
+          <input type="checkbox" />
+          <div class="collapse-title text-base font-bold text-white flex items-center gap-2">
+            <svg class="w-4 h-4 text-warning" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+            Export & PDF Reports
+          </div>
+          <div class="collapse-content pt-2 flex flex-wrap gap-2">
+            <label for="month-modal" class="btn btn-sm btn-primary rounded-xl font-medium">Monthly Report (PDF)</label>
+            <label for="year-modal" class="btn btn-sm btn-warning rounded-xl font-medium">Yearly Report (PDF)</label>
+            <a href="{% url 'balance_report' %}" target="_blank" class="btn btn-sm btn-secondary rounded-xl font-medium">Current Balances (PDF)</a>
+
+            <input type="checkbox" id="month-modal" class="modal-toggle" />
+            <div class="modal">
+              <div class="modal-box glass-card rounded-3xl p-6 border border-white/10">
+                <form action="{% url 'monthly_report_general' %}" method="get" class="space-y-4">
+                  <h3 class="font-bold text-lg text-white">Generate Monthly Report</h3>
+                  <div class="space-y-3">
+                    <div>
+                      <label for="year-select" class="label text-xs font-semibold text-gray-300">Year</label>
+                      <select id="year-select" name="year" class="select select-bordered w-full rounded-xl bg-base-100/50" required>
+                        <option value="">Select a year</option>
+                        {% for year in years %}<option>{{ year }}</option>{% endfor %}
+                      </select>
+                    </div>
+                    <div>
+                      <label for="month-select" class="label text-xs font-semibold text-gray-300">Month</label>
+                      <select id="month-select" name="month" class="select select-bordered w-full rounded-xl bg-base-100/50" required>
+                        <option value="">Select a month</option>
+                        <option value="1">January</option><option value="2">February</option><option value="3">March</option>
+                        <option value="4">April</option><option value="5">May</option><option value="6">June</option>
+                        <option value="7">July</option><option value="8">August</option><option value="9">September</option>
+                        <option value="10">October</option><option value="11">November</option><option value="12">December</option>
+                      </select>
+                    </div>
+                    <div class="modal-action">
+                      <button type="submit" class="btn btn-primary rounded-xl px-6">Generate</button>
+                      <label for="month-modal" class="btn btn-ghost rounded-xl">Close</label>
+                    </div>
+                  </div>
+                </form>
+              </div>
             </div>
-          </form>       
+
+            <input type="checkbox" id="year-modal" class="modal-toggle" />
+            <div class="modal">
+              <div class="modal-box glass-card rounded-3xl p-6 border border-white/10">
+                <form action="{% url 'yearly_report_general' %}" method="get" class="space-y-4">
+                  <h3 class="font-bold text-lg text-white">Generate Yearly Report</h3>
+                  <div class="space-y-3">
+                    <div>
+                      <label for="year-select-2" class="label text-xs font-semibold text-gray-300">Year</label>
+                      <select id="year-select-2" name="year" class="select select-bordered w-full rounded-xl bg-base-100/50" required>
+                        <option value="">Select a year</option>
+                        {% for year in years %}<option>{{ year }}</option>{% endfor %}
+                      </select>
+                    </div>
+                    <div class="modal-action">
+                      <button type="submit" class="btn btn-warning rounded-xl px-6">Generate</button>
+                      <label for="year-modal" class="btn btn-ghost rounded-xl">Close</label>
+                    </div>
+                  </div>
+                </form>
+              </div>
+            </div>
+          </div>
         </div>
     </div>
 
-    <div class="collapse bg-gray-900 mb-3">
-      <input type="checkbox" />
-      <div class="collapse-title text-xl font-medium">Reports</div>
-      <div class="collapse-content">
-        <label for="month-modal" class="btn btn-primary">Generate Report by Month (PDF)</label>
-        <input type="checkbox" id="month-modal" class="modal-toggle" />
-        <div class="modal">
-          <div class="modal-box">
-            <form action="{% url 'monthly_report_general' %}" method="get">
-              <h3 class="font-bold text-lg">Select Month and Year</h3>
-              <div class="grid grid-cols-1 gap-4">
-                <div>
-                  <label for="year-select" class="block">Year</label>
-                  <select id="year-select" name="year" class="select select-bordered w-full" required>
-                    <option value="">Select a year</option>
-                    {% for year in years %}
-                    <option>{{ year }}</option>
-                    {% endfor %}
-                  </select>
-                </div>
-                <div>
-                  <label for="month-select" class="block">Month</label>
-                  <select id="month-select" name="month" class="select select-bordered w-full" required>
-                    <option value="">Select a month</option>
-                    <option value="1">January</option>
-                    <option value="2">February</option>
-                    <option value="3">March</option>
-                    <option value="4">April</option>
-                    <option value="5">May</option>
-                    <option value="6">June</option>
-                    <option value="7">July</option>
-                    <option value="8">August</option>
-                    <option value="9">September</option>
-                    <option value="10">October</option>
-                    <option value="11">November</option>
-                    <option value="12">December</option>
-                  </select>
-                </div>
-                <div class="modal-action">
-                  <button type="submit" class="btn btn-primary">Submit</button>
-                  <label for="month-modal" class="btn">Close</label>
-                </div>
-              </div>
-            </form>
-          </div>
-        </div>
-        <label for="year-modal" class="btn btn-warning">Generate Report by Year (PDF)</label>
-        <input type="checkbox" id="year-modal" class="modal-toggle" />
-        <div class="modal">
-          <div class="modal-box">
-            <form action="{% url 'yearly_report_general' %}" method="get">
-              <h3 class="font-bold text-lg">Select Year</h3>
-              <div class="grid grid-cols-1 gap-4">
-                <div>
-                  <label for="year-select" class="block">Year</label>
-                  <select id="year-select" name="year" class="select select-bordered w-full" required>
-                    <option value="">Select a year</option>
-                    {% for year in years %}
-                    <option>{{ year }}</option>
-                    {% endfor %}
-                  </select>
-                </div>
-                <div class="modal-action">
-                  <button type="submit" class="btn btn-primary">Submit</button>
-                  <label for="year-modal" class="btn">Close</label>
-                </div>
-              </div>
-            </form>
-          </div>
-        </div>
-        <a href="{% url 'balance_report' %}" target="_blank" class="btn btn-secondary">Current Balances (PDF)</a>
-      </div>
-    </div>
-
-    <div id="items" class="grid grid-cols-1 m-2">
+    <!-- Account Cards Items -->
+    <div id="items" class="space-y-4">
         {% for account in object_list %}
-        <div class="stats shadow mb-3 border">
-          <div class="grid gap-4 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 border">
-            <div class="stat place-items-center p-2 border-r border-b">
-              <div class="text-center text-2xl font-bold">{{account.account.name.upper}}</div>
-              <div class="text-center text-sm overflow-x-auto">{{account.account.description.upper}}</div>
-              <div class="text-center text-sm"><b>Account ID</b>: {{account.account.id}}</div>
+        <div class="card glass-card rounded-3xl p-6 shadow-xl border border-white/10 hover:border-primary/30 transition-all duration-300">
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-6 items-center">
+            <!-- Account Info -->
+            <div class="space-y-1 text-left">
+              <span class="badge badge-sm badge-primary font-mono text-xs">{{account.account.currency.code}}</span>
+              <h2 class="text-xl font-bold text-white tracking-wide">{{account.account.name.upper}}</h2>
+              <p class="text-xs text-gray-400">{{account.account.description|default:"No description"}}</p>
+              <span class="text-[10px] text-gray-500 font-mono block">ID: #{{account.account.id}}</span>
             </div>
           
-            <div class="stat place-items-center p-2 border-r border-b">
-              <div class="text-center">Current Balance</div>
-              <div class="text-center text-2xl font-bold tooltip" data-tip="{{request.user.main_currency.currency.code}} {{account.mc_bal}}">{{account.account.currency.code}} {{account.account.current_balance}}</div>
-              <div class="text-center text-xs"> 
-                <div>
-                  <small class="text-success tooltip">
-                    <span class="tooltip tooltip-success" data-tip="{{request.user.main_currency}} {{account.assigned.main_currency}}">
-                      Assigned: {{account.account.currency.code}} {{account.assigned.account_currency}}
-                    </span>
-                  </small> / 
-                  <small class="text-error tooltip" data-tip="{{request.user.main_currency}} {{account.not_assigned.main_currency}}">Available: {{account.account.currency.code}} {{account.not_assigned.account_currency}}</small>
+            <!-- Balance & Metrics -->
+            <div class="space-y-2 text-center md:border-x md:border-white/10 md:px-4">
+              <span class="text-xs text-gray-400 uppercase tracking-wider block font-semibold">Current Balance</span>
+              <div class="text-2xl font-extrabold text-white font-mono tooltip" data-tip="{{request.user.main_currency.currency.code}} {{account.mc_bal}}">
+                {{account.account.currency.code}} {{account.account.current_balance}}
+              </div>
+              
+              <div class="grid grid-cols-2 gap-2 text-xs pt-1">
+                <div class="p-2 rounded-xl bg-success/10 border border-success/20 text-success">
+                  <span class="block text-[10px] opacity-80 uppercase">Assigned</span>
+                  <span class="font-mono font-bold">{{account.account.currency.code}} {{account.assigned.account_currency}}</span>
                 </div>
-                <div>
-                  <small>
-                    <span class="tooltip tooltip-success" data-tip="{{request.user.main_currency}} {{account.start_balance.main_currency}}">
-                      Month Start Balance: {{account.account.currency.code}} {{account.start_balance.account_currency}}
-                    </span>
-                  </small>
-                </div>
-                <div>
-                  <small class="text-success">
-                    <span class="tooltip tooltip-success" data-tip="{{request.user.main_currency}} {{account.monthly_income.main_currency}}">
-                      Month Income: {{account.account.currency.code}} {{account.monthly_income.account_currency}}
-                    </span>
-                  </small> / 
-                  <small class="text-error tooltip" data-tip="{{request.user.main_currency}} {{account.monthly_expenses.main_currency}}">
-                      Month Expenses: {{account.account.currency.code}} {{account.monthly_expenses.account_currency}}
-                  </small>
+                <div class="p-2 rounded-xl bg-info/10 border border-info/20 text-info">
+                  <span class="block text-[10px] opacity-80 uppercase">Available</span>
+                  <span class="font-mono font-bold">{{account.account.currency.code}} {{account.not_assigned.account_currency}}</span>
                 </div>
               </div>
             </div>
 
-            <div class="stat place-items-center p-2 border-b">
-              <a href="{% url 'transactions_list' pk=account.account.pk %}" class="btn btn-success w-full">VISUALIZE TRANSACTIONS</a>
-              <a hx-target="main" hx-get="{% url 'account_update' pk=account.account.pk %}" class="btn btn-primary w-full mt-2">EDIT ACCOUNT DETAILS</a>
-              <form hx-post="{% url 'account_list' %}#" hx-confirm="Are you sure? You won't be able to recover the account you deleted, but the transactions will remain in your general history. They will also be removed from your income and expenses." hx-target="body" method="post" class="w-full">
+            <!-- Actions -->
+            <div class="flex flex-col gap-2">
+              <a href="{% url 'transactions_list' pk=account.account.pk %}" class="btn btn-sm btn-success rounded-xl shadow-md font-medium">
+                View Transactions
+              </a>
+              <a hx-target="main" hx-get="{% url 'account_update' pk=account.account.pk %}" class="btn btn-sm btn-ghost border border-white/10 rounded-xl font-medium">
+                Edit Details
+              </a>
+              <form hx-post="{% url 'account_list' %}" hx-confirm="Are you sure you want to delete this account?" hx-target="body" method="post" class="w-full">
                 {% csrf_token %}
-                <button name="pk" value="{{account.account.pk}}" type="submit" class="btn btn-secondary w-full mt-2">DELETE ACCOUNT</button>
+                <button name="pk" value="{{account.account.pk}}" type="submit" class="btn btn-sm btn-ghost text-error hover:bg-error/10 w-full rounded-xl font-medium">
+                  Delete Account
+                </button>
               </form>
             </div>
           </div>
         </div>
         {% empty %}
-        <div role="alert" class="alert alert-warning">
+        <div role="alert" class="alert alert-warning rounded-2xl shadow-lg border border-warning/30 text-sm">
           <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
-          <span><b>No accounts were found. </b> Create a new one by clicking the button above or change your filtering criteria.</span>
+          <span><b>No accounts found.</b> Create a new account or change your search filter.</span>
         </div>
         {% endfor %}
+
         {% if page_obj.has_next %}
         <div hx-indicator="#loading-bars" hx-trigger="revealed" hx-target="this" hx-swap="outerHTML" hx-select="#items" hx-get="{% url 'account_list' %}?page={{page_obj.next_page_number }}" hx-include=".input, .select"></div>
         {% endif %}       
     </div>
 
     <div id="loading-bars" class="htmx-indicator indicator-style">
-      <span class="loading loading-bars loading-lg htmx-indicator"></span>
+      <span class="loading loading-bars loading-lg text-primary"></span>
     </div>
 </div>
 
@@ -237,9 +238,15 @@ async function makeGraph() {
           ]
         },
         options: {
-          title: {
-              text: "Current Balance Distribution by Account ({{request.user.main_currency.currency.code}})",
-              display: true
+          responsive: true,
+          plugins: {
+            title: {
+                text: "Balance Distribution ({{request.user.main_currency.currency.code}})",
+                display: true,
+                color: '#fff',
+                font: { size: 14, weight: 'bold' }
+            },
+            legend: { labels: { color: '#cbd5e1' } }
           }
         }
       });
@@ -250,7 +257,7 @@ async function makeGraph() {
 makeGraph();
 
 document.getElementById('form').addEventListener("change", function() {
-  chart.destroy();
+  if (chart) chart.destroy();
   makeGraph();
 });
 </script>

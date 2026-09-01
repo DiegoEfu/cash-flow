@@ -1,90 +1,85 @@
 {% load widget_tweaks %}
- 
-<div class="grid grid-cols-3">
-    <div class="flex justify-center">
-        <a href="{% url 'account_list' %}" class="btn">Go back</a>
-    </div>        
-    <div>
-       {% if edit %}
-       <h1 class="text-center text-4xl xl:text-4xl">Update the Account {{form.instance.name}}</h1>
-       {% else %}
-       <h1 class="text-center text-4xl xl:text-4xl">Make a New Account</h1>       
-       {% endif %}
+
+<div class="max-w-2xl mx-auto space-y-6">
+    <div class="flex items-center justify-between">
+        <a href="{% url 'account_list' %}" class="btn btn-ghost btn-sm rounded-xl gap-2 text-gray-400 hover:text-white border border-white/10">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
+            Go back
+        </a>
+        <h1 class="text-2xl font-bold text-white">
+            {% if edit %}Update Account {{form.instance.name}}{% else %}Create New Account{% endif %}
+        </h1>
+        <div></div>
     </div>
-    <div class="flex justify-center">
+
+    <div class="card glass-card rounded-3xl p-6 sm:p-8 shadow-2xl">
+        <form {% if not edit %} hx-post="{% url 'account_creation' %}" {% else %} hx-post="{% url 'account_update' pk=form.instance.pk %}" {% endif %} hx-target="main" hx-select="main" class="space-y-5">
+            {% csrf_token %}
+
+            {% if form.non_field_errors %}
+            <div role="alert" class="alert alert-error rounded-2xl shadow-lg border border-error/30 text-sm">
+                <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                <div>
+                    <h3 class="font-bold">Form Submission Error</h3>
+                    {% for error in form.non_field_errors %}
+                    <p class="text-xs">{{ error }}</p>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
+            <div class="form-control w-full">
+                <label for="id_currency" class="label text-sm font-semibold text-gray-300">Currency</label>
+                {% render_field form.currency class+="select select-bordered w-full rounded-xl bg-base-100/50 focus:border-primary" %}
+                {% if form.currency.errors %}
+                <label class="label text-xs text-error font-medium flex items-center gap-1 mt-1">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                    {% for error in form.currency.errors %}{{ error }}{% endfor %}
+                </label>
+                {% endif %}
+            </div>
+
+            <div class="form-control w-full">
+                <label for="id_name" class="label text-sm font-semibold text-gray-300">Account Name</label>
+                {% render_field form.name class+="input input-bordered w-full rounded-xl bg-base-100/50 focus:border-primary" placeholder="e.g. Main Savings, Checking Account" %}
+                {% if form.name.errors %}
+                <label class="label text-xs text-error font-medium flex items-center gap-1 mt-1">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                    {% for error in form.name.errors %}{{ error }}{% endfor %}
+                </label>
+                {% endif %}
+            </div>
+
+            <div class="form-control w-full">
+                <label for="id_description" class="label text-sm font-semibold text-gray-300">Description</label>
+                {% render_field form.description class+="input input-bordered w-full rounded-xl bg-base-100/50 focus:border-primary" placeholder="Short description of this account" %}
+                {% if form.description.errors %}
+                <label class="label text-xs text-error font-medium flex items-center gap-1 mt-1">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                    {% for error in form.description.errors %}{{ error }}{% endfor %}
+                </label>
+                {% endif %}
+            </div>
+
+            {% if not edit %}
+            <div class="form-control w-full">
+                <label for="id_current_balance" class="label text-sm font-semibold text-gray-300">Initial Balance</label>
+                {% render_field form.current_balance class+="input input-bordered w-full rounded-xl bg-base-100/50 focus:border-primary" minimum="0" placeholder="0.00" %}  
+                <span class="text-xs text-gray-400 mt-1">Your account will start with this balance (0.00 if left empty).</span>
+                {% if form.current_balance.errors %}
+                <label class="label text-xs text-error font-medium flex items-center gap-1 mt-1">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                    {% for error in form.current_balance.errors %}{{ error }}{% endfor %}
+                </label>
+                {% endif %}
+            </div>
+            {% endif %}
+            
+            <div class="pt-4 flex justify-end">
+                <button type="submit" class="btn btn-primary rounded-xl px-8 shadow-lg shadow-primary/25 hover:shadow-primary/40 font-semibold">
+                    {% if edit %}Update{% else %}Create{% endif %} Account
+                </button>
+            </div>
+        </form>
     </div>
 </div>
-
-<form {% if not edit %} hx-post="{% url 'account_creation' %}" {% else %} hx-post="{% url 'account_update' pk=form.instance.pk %}" {% endif %} hx-target="main" hx-select="main" class="grid grid-cols-1">
-    {% csrf_token %}
-    <div class="mb-3">
-        {{form.currency.label}} <br>
-        {% render_field form.currency class="select select-bordered w-full" %}
-
-        {% if form.currency.errors %}
-        <div role="alert" class="alert alert-warning">
-            <span>
-                {% for error in form.currency.errors %}
-                {{error}}
-                {% endfor %}
-            </span>
-        </div>
-        {% endif %}
-    </div>
-
-    <div class="mb-3">
-        {{form.name.label}} <br>
-        {% render_field form.name class="input input-bordered w-full" placeholder="Name of the Account" %}
-
-        {% if form.name.errors %}
-        <div role="alert" class="alert alert-warning">
-            <span>
-                {% for error in form.name.errors %}
-                {{error}}
-                {% endfor %}
-            </span>
-        </div>
-        {% endif %}
-    </div>
-
-    <div class="mb-3">
-        {{form.description.label}} <br>
-        {% render_field form.description class="input input-bordered w-full" placeholder="Description of the Account" %}
-
-        {% if form.description.errors %}
-        <div role="alert" class="alert alert-warning">
-            <span>
-                {% for error in form.description.errors %}
-                {{error}}
-                {% endfor %}
-            </span>
-        </div>
-        {% endif %}
-    </div>
-
-    {% if not update %}
-    <div class="mb-3">
-        <label for="">Start Balance:</label> <br>
-        {% render_field form.current_balance class="input input-bordered w-full" minimum="0" placeholder="Your account will have this initial balance. If empty, 0 will be assumed." %}  
-
-        {% if form.current_balance.errors %}
-        <div role="alert" class="alert alert-warning">
-            <span>
-                {% for error in form.current_balance.errors %}
-                {{error}}
-                {% endfor %}
-            </span>
-        </div>
-        {% endif %}
-    </div>
-    {% endif %}
-    
-    <button class="btn btn-primary">
-        {% if edit %}
-        Update
-        {% else %}
-        Create
-        {% endif %}
-        Account
-    </button>
-</form>

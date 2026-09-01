@@ -805,7 +805,7 @@ class AccountUpdate(AccountCreation):
         HttpResponse: The response to render the form with errors.
         """
 
-        return render(self.request, '/accounts/form.html', {'form': form, 'edit': True})
+        return render(self.request, 'partials/accounts/form.html', {'form': form, 'edit': True})
     
     def get_context_data(self, **kwargs: Any) -> dict[str, Any]:
         """
@@ -1257,8 +1257,8 @@ class TransactionUpdate(TransactionCreation):
         Returns:
         HttpResponse: The response to render the form with errors.
         """
-
-        return render(self.request, '/transactions/form.html', {'form': form, 'edit': True})
+        instance = Transaction.objects.get(pk=self.kwargs['pk'])
+        return render(self.request, 'partials/transactions/form.html', {'form': form, 'edit': True, 'account': instance.from_account})
 
     def get_context_data(self, **kwargs: Any) -> dict[str, Any]:
         """
@@ -2506,7 +2506,9 @@ class TransferCreationView(TransactionCreation):
         except Exception as e:
             print(str(e))
             messages.error(request, "An error has occurred while transferring the money.")
-            return render(request, self.template_name, {'form': self.get_form(), 'account': Account.objects.get(pk=self.kwargs['pk'])})
+            failed_form = self.form_class(request.POST)
+            failed_form.is_valid()
+            return render(request, self.template_name, {'form': failed_form, 'account': Account.objects.get(pk=self.kwargs['pk'])})
         
         storage = messages.get_messages(request)
         for _ in storage:

@@ -3,184 +3,159 @@
 {% load static %}
 
 {% block content %}
-<div class="p-8">
-    <div class="grid xl:grid-cols-5 xs:grid-cols-1">
-        <div class="flex justify-center items-center p-2 col-span-1">
-            <a href="{% url 'welcome_view' %}" class="btn">Go back</a>
-        </div>        
-        <div class="p-1 col-span-3">
-            <h1 class="text-center text-4xl xl:text-4xl">TOTAL TRANSACTIONS </h1>
-            <h3 id="balance" class="text-center text-success text-2xl xl:text-2xl">Current Balance: {{main_currency}} {{current_balance}}</h3>
-            <div class="w-full mx-auto grid xl:grid-cols-4 xs:grid-cols-1 gap-4">
-                <div class="card w-full bg-base-100 shadow-xl">
-                    <div class="card-body">
-                        <h2 class="card-title text-success text-sm">Total Income <br></h2>
-                        <p class="text-base font-bold totals" id="total_in" hx-swap-oob="true">{{main_currency}} {{total_in}}</p>
-                    </div>
-                </div>
-                <div class="card w-full bg-base-100 shadow-xl">
-                    <div class="card-body">
-                        <h2 class="card-title text-error text-sm">Total Expenses <br> </h2>
-                        <p class="text-base font-bold totals" id="total_out" hx-swap-oob="true">{{main_currency}} {{total_out}}</p>
-                    </div>
-                </div>
-                <div class="card w-full bg-base-100 shadow-xl">
-                    <div class="card-body">
-                        <h2 class="card-title text-info text-sm">Total Cash Flow <br></h2>
-                        <p class="text-base font-bold totals" id="total_cash_flow" hx-swap-oob="true">{{main_currency}} {{total_cash_flow}}</p>
-                    </div>
-                </div>
-                <div class="card w-full bg-base-100 shadow-xl">
-                    <div class="card-body">
-                        <h2 class="card-title text-warning text-sm">Total On Hold <br></h2>
-                        <p class="text-base font-bold totals" id="total_hold" hx-swap-oob="true">{{main_currency}} {{total_hold}}</p>
-                    </div>
-                </div>
-            </div>
+<div class="space-y-6 py-4">
+    <!-- Header & Summary Stats -->
+    <div class="flex flex-col lg:flex-row items-center justify-between gap-6">
+        <div class="space-y-1 text-center lg:text-left">
+            <a href="{% url 'welcome_view' %}" class="btn btn-ghost btn-sm rounded-xl gap-2 text-gray-400 hover:text-white border border-white/10 mb-1">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
+                Dashboard
+            </a>
+            <h1 class="text-3xl font-extrabold text-white tracking-wide">All Transactions</h1>
+            <p class="text-xs text-gray-400 font-mono">Total Balance: <span class="text-success font-bold text-base ml-1">{{main_currency}} {{current_balance}}</span></p>
         </div>
-        <div class="flex justify-center items-center flex-col p-2 col-span-1">
-          <a href="{% url 'historic_balance_list' %}" class="btn btn-primary">Historic Balance List</a>
+
+        <div class="flex items-center gap-3">
+            <a href="{% url 'historic_balance_list' %}" class="btn btn-sm btn-primary rounded-xl font-semibold shadow-lg shadow-primary/25 hover:shadow-primary/40 gap-2">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                Historic Balances
+            </a>
         </div>
     </div>
 
-    <div class="divider"></div>
-
-    <div class="collapse bg-gray-900 mb-3">
-      <input type="checkbox" checked />
-      <div class="collapse-title text-xl font-medium">Filters</div>
-        <div class="collapse-content">
-          <form hx-get="{% url 'general_transactions_list' %}" hx-select="#items, .totals" hx-target="#items" hx-swap="outerHTML" hx-indicator="#loading-bars" hx-trigger="submit, change, keyup delay:1s">
-            <div class="grid lg:grid-cols-3 md:grid-cols-1 sm:grid-cols-1 xs:grid-cols-1">
-              <div class="me-4">
-                <label for="id_date_from">From Date:</label> <br>
-                {% render_field filter.form.date_from class="input input-bordered w-full" type="datetime-local" %}
-              </div>
-
-              <div class="me-4">
-                <label for="id_date_until">Until Date:</label> <br>
-                {% render_field filter.form.date_until class="input input-bordered w-full" type="datetime-local" %}
-              </div>
-
-              <div class="me-4">
-                <label for="id_id">Description contains:</label> <br>
-                {% render_field filter.form.description__icontains class="input input-bordered w-full" %}
-              </div>
-
-              <div class="me-4">
-                <label for="id_transaction_type">Transaction Type:</label> <br>
-                {% render_field filter.form.transaction_type class="select select-bordered w-full" %}
-              </div>
-
-              <div class="me-4">
-                <label for="id_internal">Internal operation:</label> <br>
-                {% render_field filter.form.internal class="select select-bordered w-full" %}
-              </div>
-
-              <div class="me-4">
-                <label for="id_hold">On hold:</label> <br>
-                {% render_field filter.form.hold class="select select-bordered w-full" %}
-              </div>
-
-              <div class="me-4">
-                <label for="id_hold">Tag:</label> <br>
-                {% render_field filter.form.tag class="select select-bordered w-full" %}
-              </div>
-
-              <div class="me-4">
-                <label for="id_id">Internal ID of Transaction contains:</label> <br>
-                {% render_field filter.form.id__icontains class="input input-bordered w-full" %}
-              </div>
-
-              <div class="me-4">
-                <label for="id_reference__icontains">Reference contains:</label> <br>
-                {% render_field filter.form.reference__icontains class="input input-bordered w-full" %}
-              </div>
-
-              <input type="submit" hidden>
-            </div>
-          </form>       
+    <!-- Overview Stat Cards Grid -->
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <div class="card glass-card rounded-2xl p-4 shadow-xl border border-white/5 space-y-1">
+            <span class="text-[10px] uppercase font-semibold text-gray-400 tracking-wider">Total Income</span>
+            <p class="text-xl font-extrabold text-success font-mono totals" id="total_in" hx-swap-oob="true">{{main_currency}} {{total_in}}</p>
+        </div>
+        <div class="card glass-card rounded-2xl p-4 shadow-xl border border-white/5 space-y-1">
+            <span class="text-[10px] uppercase font-semibold text-gray-400 tracking-wider">Total Expenses</span>
+            <p class="text-xl font-extrabold text-error font-mono totals" id="total_out" hx-swap-oob="true">{{main_currency}} {{total_out}}</p>
+        </div>
+        <div class="card glass-card rounded-2xl p-4 shadow-xl border border-white/5 space-y-1">
+            <span class="text-[10px] uppercase font-semibold text-gray-400 tracking-wider">Net Cash Flow</span>
+            <p class="text-xl font-extrabold text-info font-mono totals" id="total_cash_flow" hx-swap-oob="true">{{main_currency}} {{total_cash_flow}}</p>
+        </div>
+        <div class="card glass-card rounded-2xl p-4 shadow-xl border border-white/5 space-y-1">
+            <span class="text-[10px] uppercase font-semibold text-gray-400 tracking-wider">Total On Hold</span>
+            <p class="text-xl font-extrabold text-warning font-mono totals" id="total_hold" hx-swap-oob="true">{{main_currency}} {{total_hold}}</p>
         </div>
     </div>
-    <div class="collapse bg-gray-900 mb-3">
-      <input type="checkbox" />
-        <div class="collapse-title text-xl font-medium">Reports</div>
-        <div class="collapse-content">
-          <label for="month-modal" class="btn btn-primary">Generate Report by Month (PDF)</label>
-          <input type="checkbox" id="month-modal" class="modal-toggle" />
-          <div class="modal">
-            <div class="modal-box">
-              <form action="{% url 'monthly_report_general' %}" method="get">
-                <h3 class="font-bold text-lg">Select Month and Year</h3>
-                <div class="grid grid-cols-1 gap-4">
-                  <div>
-                    <label for="year-select" class="block">Year</label>
-                    <select id="year-select" name="year" class="select select-bordered w-full" required>
-                      <option value="">Select a year</option>
-                      {% for year in years %}
-                      <option>{{ year }}</option>
-                      {% endfor %}
-                    </select>
-                  </div>
-                  <div>
-                    <label for="month-select" class="block">Month</label>
-                    <select id="month-select" name="month" class="select select-bordered w-full" required>
-                      <option value="">Select a month</option>
-                      <option value="1">January</option>
-                      <option value="2">February</option>
-                      <option value="3">March</option>
-                      <option value="4">April</option>
-                      <option value="5">May</option>
-                      <option value="6">June</option>
-                      <option value="7">July</option>
-                      <option value="8">August</option>
-                      <option value="9">September</option>
-                      <option value="10">October</option>
-                      <option value="11">November</option>
-                      <option value="12">December</option>
-                    </select>
-                  </div>
-                  <div class="modal-action">
-                    <button type="submit" class="btn btn-primary">Submit</button>
-                    <label for="month-modal" class="btn">Close</label>
-                  </div>
-                </div>
-              </form>
-            </div>
+
+    <!-- Filters & Export Controls -->
+    <div class="grid md:grid-cols-2 gap-4">
+        <div class="collapse collapse-arrow glass-card rounded-2xl border border-white/10">
+          <input type="checkbox" checked />
+          <div class="collapse-title text-sm font-bold text-white flex items-center gap-2">
+            <svg class="w-4 h-4 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"></path></svg>
+            Filter All Transactions
           </div>
-
-          <label for="year-modal" class="btn btn-warning">Generate Report by Year (PDF)</label>
-          <input type="checkbox" id="year-modal" class="modal-toggle" />
-          <div class="modal">
-            <div class="modal-box">
-              <form action="{% url 'yearly_report_general' %}" method="get">
-                <h3 class="font-bold text-lg">Select Year</h3>
-                <div class="grid grid-cols-1 gap-4">
+          <div class="collapse-content pt-2">
+              <form hx-get="{% url 'general_transactions_list' %}" hx-select="#items, .totals" hx-target="#items" hx-swap="outerHTML" hx-indicator="#loading-bars" hx-trigger="submit, change, keyup delay:1s" class="space-y-3">
+                <div class="grid sm:grid-cols-3 gap-3">
                   <div>
-                    <label for="year-select" class="block">Year</label>
-                    <select id="year-select" name="year" class="select select-bordered w-full" required>
-                      <option value="">Select a year</option>
-                      {% for year in years %}
-                      <option>{{ year }}</option>
-                      {% endfor %}
+                    <label for="id_date_from" class="label text-[10px] font-semibold text-gray-400">From Date</label>
+                    {% render_field filter.form.date_from class+="input input-bordered input-sm w-full rounded-xl bg-base-100/50" type="datetime-local" %}
+                  </div>
+                  <div>
+                    <label for="id_date_until" class="label text-[10px] font-semibold text-gray-400">Until Date</label>
+                    {% render_field filter.form.date_until class+="input input-bordered input-sm w-full rounded-xl bg-base-100/50" type="datetime-local" %}
+                  </div>
+                  <div>
+                    <label for="id_description__icontains" class="label text-[10px] font-semibold text-gray-400">Description</label>
+                    {% render_field filter.form.description__icontains class+="input input-bordered input-sm w-full rounded-xl bg-base-100/50" %}
+                  </div>
+                  <div>
+                    <label for="id_transaction_type" class="label text-[10px] font-semibold text-gray-400">Type</label>
+                    {% render_field filter.form.transaction_type class+="select select-bordered select-sm w-full rounded-xl bg-base-100/50" %}
+                  </div>
+                  <div>
+                    <label for="id_internal" class="label text-[10px] font-semibold text-gray-400">Internal</label>
+                    {% render_field filter.form.internal class+="select select-bordered select-sm w-full rounded-xl bg-base-100/50" %}
+                  </div>
+                  <div>
+                    <label for="id_tag" class="label text-[10px] font-semibold text-gray-400">Tag</label>
+                    {% render_field filter.form.tag class+="select select-bordered select-sm w-full rounded-xl bg-base-100/50" %}
+                  </div>
+                </div>
+                <input type="submit" hidden>
+              </form>       
+          </div>
+        </div>
+
+        <div class="collapse collapse-arrow glass-card rounded-2xl border border-white/10">
+          <input type="checkbox" />
+          <div class="collapse-title text-sm font-bold text-white flex items-center gap-2">
+            <svg class="w-4 h-4 text-warning" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+            General PDF Reports
+          </div>
+          <div class="collapse-content pt-2 flex flex-wrap gap-2">
+            <label for="month-modal" class="btn btn-sm btn-primary rounded-xl font-medium">Monthly Report (PDF)</label>
+            <label for="year-modal" class="btn btn-sm btn-warning rounded-xl font-medium">Yearly Report (PDF)</label>
+
+            <input type="checkbox" id="month-modal" class="modal-toggle" />
+            <div class="modal">
+              <div class="modal-box glass-card rounded-3xl p-6 border border-white/10">
+                <form action="{% url 'monthly_report_general' %}" method="get" class="space-y-4">
+                  <h3 class="font-bold text-lg text-white">General Monthly Report</h3>
+                  <div class="grid grid-cols-2 gap-3">
+                    <div>
+                      <label for="year-select" class="label text-xs font-semibold text-gray-300">Year</label>
+                      <select id="year-select" name="year" class="select select-bordered w-full rounded-xl bg-base-100/50" required>
+                        <option value="">Year</option>
+                        {% for year in years %}<option>{{ year }}</option>{% endfor %}
+                      </select>
+                    </div>
+                    <div>
+                      <label for="month-select" class="label text-xs font-semibold text-gray-300">Month</label>
+                      <select id="month-select" name="month" class="select select-bordered w-full rounded-xl bg-base-100/50" required>
+                        <option value="">Month</option>
+                        <option value="1">January</option><option value="2">February</option><option value="3">March</option>
+                        <option value="4">April</option><option value="5">May</option><option value="6">June</option>
+                        <option value="7">July</option><option value="8">August</option><option value="9">September</option>
+                        <option value="10">October</option><option value="11">November</option><option value="12">December</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div class="modal-action">
+                    <button type="submit" class="btn btn-primary rounded-xl px-6">Generate</button>
+                    <label for="month-modal" class="btn btn-ghost rounded-xl">Close</label>
+                  </div>
+                </form>
+              </div>
+            </div>
+
+            <input type="checkbox" id="year-modal" class="modal-toggle" />
+            <div class="modal">
+              <div class="modal-box glass-card rounded-3xl p-6 border border-white/10">
+                <form action="{% url 'yearly_report_general' %}" method="get" class="space-y-4">
+                  <h3 class="font-bold text-lg text-white">General Yearly Report</h3>
+                  <div>
+                    <label for="year-select-y2" class="label text-xs font-semibold text-gray-300">Year</label>
+                    <select id="year-select-y2" name="year" class="select select-bordered w-full rounded-xl bg-base-100/50" required>
+                      <option value="">Year</option>
+                      {% for year in years %}<option>{{ year }}</option>{% endfor %}
                     </select>
                   </div>
                   <div class="modal-action">
-                    <button type="submit" class="btn btn-primary">Submit</button>
-                    <label for="year-modal" class="btn">Close</label>
+                    <button type="submit" class="btn btn-warning rounded-xl px-6">Generate</button>
+                    <label for="year-modal" class="btn btn-ghost rounded-xl">Close</label>
                   </div>
-                </div>
-              </form>
+                </form>
+              </div>
             </div>
           </div>
         </div>
     </div>
 
-    <div class="table-wrapper">
-        <div style="height: calc(100vh - 12rem); overflow-y: scroll;">
-          <table class="table table-xs w-full text-center" >
-            <thead class="sticky top-0 z-10" style="background-color: #1A202C;">
-              <tr class="bg-gray-900">
-                <th>ID</th>
+    <!-- General Transactions Table -->
+    <div class="card glass-card rounded-3xl overflow-hidden shadow-2xl border border-white/10">
+        <div class="overflow-x-auto max-h-[550px] table-wrapper">
+          <table class="table w-full text-center">
+            <thead class="sticky top-0 bg-base-200/90 backdrop-blur-md z-10 text-gray-300 text-xs uppercase">
+              <tr>
+                <th class="w-12">ID</th>
                 <th>Date</th>
                 <th>Account</th>
                 <th>Description</th>
@@ -190,31 +165,42 @@
                 <th>Reference</th>
               </tr>
             </thead>
-            <tbody id="items">
+            <tbody id="items" class="divide-y divide-white/5 text-xs">
               {% for transaction in object_list %}
-              <tr>
-                <td>{{transaction.transaction.pk}}</td>
-                <td>{{transaction.transaction.date}} {% if transaction.transaction.hold %} <span class="badge badge-warning">(On Hold)</span> {%endif%}</td>
-                <td>{{transaction.transaction.from_account}}</td>
-                <td  data-tip="{{transaction.transaction.tag|default:''}}" class="{% if transaction.transaction.tag %}tooltip tooltip-left{% endif %}">{{transaction.transaction.description.upper|default:'-'}}</td>
-                <td><span class="badge badge-{% if transaction.transaction.transaction_type == '+' %}success{% else %}error{% endif %}">{% if transaction.transaction.transaction_type == '+' %}INCOME{% else %}EXPENSE{% endif %}</span> </td>
+              <tr class="hover:bg-base-100/30 transition-colors">
+                <td class="font-mono text-gray-400">#{{transaction.transaction.pk}}</td>
+                <td class="font-mono whitespace-nowrap">
+                    {{transaction.transaction.date|date:"Y-m-d H:i"}}
+                    {% if transaction.transaction.hold %}
+                    <span class="badge badge-warning badge-xs ml-1 font-sans">On Hold</span>
+                    {% endif %}
+                </td>
+                <td class="font-bold text-primary">{{transaction.transaction.from_account}}</td>
+                <td data-tip="{{transaction.transaction.tag|default:''}}" class="font-medium text-white max-w-[200px] truncate {% if transaction.transaction.tag %}tooltip tooltip-top cursor-help{% endif %}">
+                    {{transaction.transaction.description|default:'-'}}
+                </td>
+                <td>
+                    <span class="badge badge-sm font-semibold border-none font-mono {% if transaction.transaction.transaction_type == '+' %}badge-success text-white{% else %}badge-error text-white{% endif %}">
+                        {% if transaction.transaction.transaction_type == '+' %}+ INCOME{% else %}- EXPENSE{% endif %}
+                    </span>
+                </td>
                 <td>
                   {% if transaction.transaction.internal %}
-                  <span class="badge badge-info tooltip tooltip-left" data-tip="Internal Operation - Not accountable">Internal</span>
+                  <span class="badge badge-xs badge-info opacity-80 tooltip cursor-help" data-tip="Internal Operation - Not accountable">Internal</span>
                   {% else %}
-                  <span class="badge badge-warning tooltip tooltip-left" data-tip="External Operation - Accountable">External</span>
+                  <span class="badge badge-xs badge-ghost opacity-80 tooltip cursor-help" data-tip="External Operation - Accountable">External</span>
                   {% endif %}
                 </td>
-                <td class="xs:w-auto sm:w-auto md:w-auto">
-                  <span class="tooltip tooltip-left" data-tip="{{transaction.transaction.from_account.currency.code|default:main_currency}} {{transaction.transaction.amount}}">
+                <td class="font-mono font-bold">
+                  <span class="tooltip cursor-help {% if transaction.transaction.transaction_type == '+' %}text-success{% else %}text-error{% endif %}" data-tip="{{transaction.transaction.from_account.currency.code|default:main_currency}} {{transaction.transaction.amount}}">
                     {% if transaction.transaction.transaction_type == '-' %}-{%endif%}{{transaction.mc_amount}}
                   </span>
                 </td>
-                <td class="xs:w-auto sm:w-auto md:w-auto">{{transaction.transaction.reference|default:'-'}}</td>
+                <td class="font-mono text-gray-400">{{transaction.transaction.reference|default:'-'}}</td>
               </tr>
               {% empty %}
-              <tr class="table-primary">
-                  <td colspan="8" class="text-center">No transactions found.</td>
+              <tr>
+                  <td colspan="8" class="text-center py-8 text-gray-400">No transactions found matching criteria.</td>
               </tr>
               {% endfor %}
               {% if page_obj.has_next %}
@@ -226,10 +212,8 @@
     </div>
 
     <div id="loading-bars" class="htmx-indicator indicator-style">
-      <span class="loading loading-bars loading-lg htmx-indicator"></span>
+      <span class="loading loading-bars loading-lg text-primary"></span>
     </div>
-
-    
 </div>
 
 <script src="{% static 'js/block-screen.js' %}"></script>

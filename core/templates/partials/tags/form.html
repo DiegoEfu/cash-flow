@@ -1,53 +1,60 @@
 {% load widget_tweaks %}
- 
-<div class="grid grid-cols-3">
-    <div class="flex justify-center">
-        <a href="{% url 'tag_list' %}" class="btn">Go back</a>
+
+<div class="max-w-2xl mx-auto space-y-6">
+    <div class="flex items-center justify-between">
+        <a href="{% url 'tag_list' %}" class="btn btn-ghost btn-sm rounded-xl gap-2 text-gray-400 hover:text-white border border-white/10">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
+            Go back
+        </a>
+        <h1 class="text-2xl font-bold text-white">
+            {% if edit %}Update Tag {{form.instance.name}}{% else %}Make a New Tag{% endif %}
+        </h1>
+        <div></div>
     </div>
-    <div>
-        {% if edit %}
-        <h1 class="text-center text-4xl xl:text-4xl">Update the Tag {{form.instance.name}}</h1>
-        {% else %}
-        <h1 class="text-center text-4xl xl:text-4xl">Make a New Tag</h1>
-        {% endif %}
-    </div>
-    <div class="flex justify-center">
+
+    <div class="card glass-card rounded-3xl p-6 sm:p-8 shadow-2xl">
+        <form {% if not edit %} hx-post="{% url 'tag_creation' %}" {% else %} hx-post="{% url 'tag_update' pk=form.instance.pk %}" {% endif %} hx-target="main" hx-select="main" class="space-y-5">
+            {% csrf_token %}
+
+            {% if form.non_field_errors %}
+            <div role="alert" class="alert alert-error rounded-2xl shadow-lg border border-error/30 text-sm">
+                <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                <div>
+                    <h3 class="font-bold">Form Submission Error</h3>
+                    {% for error in form.non_field_errors %}
+                    <p class="text-xs">{{ error }}</p>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
+            <div class="form-control w-full">
+                <label for="id_name" class="label text-sm font-semibold text-gray-300">Tag Name</label>
+                {% render_field form.name class+="input input-bordered w-full rounded-xl bg-base-100/50 focus:border-primary" placeholder="e.g. Groceries, Subscriptions, Rent" %}
+                {% if form.name.errors %}
+                <label class="label text-xs text-error font-medium flex items-center gap-1 mt-1">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                    {% for error in form.name.errors %}{{ error }}{% endfor %}
+                </label>
+                {% endif %}
+            </div>
+
+            <div class="form-control w-full">
+                <label for="id_month_goal" class="label text-sm font-semibold text-gray-300">Monthly Goal ({{request.user.main_currency.currency.code}})</label>
+                {% render_field form.month_goal class+="input input-bordered w-full rounded-xl bg-base-100/50 focus:border-primary" placeholder="0.00" %}
+                {% if form.month_goal.errors %}
+                <label class="label text-xs text-error font-medium flex items-center gap-1 mt-1">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                    {% for error in form.month_goal.errors %}{{ error }}{% endfor %}
+                </label>
+                {% endif %}
+            </div>
+
+            <div class="pt-4 flex justify-end">
+                <button type="submit" class="btn btn-primary rounded-xl px-8 shadow-lg shadow-primary/25 hover:shadow-primary/40 font-semibold">
+                    {% if edit %}Update{% else %}Register{% endif %} Tag
+                </button>
+            </div>
+        </form>
     </div>
 </div>
-
-<form {% if not edit %} hx-post="{% url 'tag_creation' %}" {% else %} hx-post="{% url 'tag_update' pk=form.instance.pk %}" {% endif %} hx-target="main" hx-select="main" class="grid grid-cols-1">
-    {% csrf_token %}
-    
-    <div class="mb-3">
-        <label for="id_name" class="form-label">Name:</label>
-        {% render_field form.name class="input input-bordered w-full" %}
-
-        {% if form.name.errors %}
-        <div role="alert" class="alert alert-warning">
-            <span>
-                {% for error in form.name.errors %}
-                {{error}}
-                {% endfor %}
-            </span>
-        </div>
-        {% endif %}
-    </div>
-
-    <div class="mb-3">
-        <label for="id_month_goal" class="form-label">Monthly Goal ({{request.user.main_currency.currency.code}}):</label>
-        {% render_field form.month_goal class="input input-bordered w-full" %}
-
-        {% if form.month_goal.errors %}
-        <div role="alert" class="alert alert-warning">
-            <span>
-                {% for error in form.month_goal.errors %}
-                {{error}}
-                {% endfor %}
-            </span>
-        </div>
-        {% endif %}
-    </div>
-    <div class="flex justify-center">
-        <button type="submit" class="btn btn-primary">Register Tag</button>
-    </div>
-</form>
