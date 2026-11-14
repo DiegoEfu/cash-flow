@@ -716,19 +716,47 @@ class AccountCreation(LoginRequiredMixin, FormView):
             form.instance.owner = self.request.user
             form.save()
 
-            if(form.instance.current_balance > 0):
+            now = datetime.datetime.now()
+            opening_date = form.instance.opening_time or now
+
+            if form.instance.current_balance > 0:
+                exchange_rate = None
+                try:
+                    exchange_rate = find_transaction_fitting_exchange_rate(
+                        form.instance.currency,
+                        self.request.user.main_currency.currency,
+                        opening_date
+                    )
+                except Exception:
+                    exchange_rate = None
+
                 Transaction.objects.create(
                     from_account=form.instance,
                     amount=form.instance.current_balance,
                     transaction_type='+',
                     description=OPENING_BALANCE_DESCRIPTION,
-                    date=form.instance.opening_time,
+                    date=opening_date,
                     opening=True,
                     internal=True,
-                    exchange_rate=find_transaction_fitting_exchange_rate(form.instance.currency, self.request.user.main_currency.currency, form.instance.opening_time)
+                    exchange_rate=exchange_rate
                 )
-            
-            HistoricBalance.objects.create(account=form.instance, balance=form.instance.current_balance, year=form.instance.opening_time.year, month=form.instance.opening_time.month)
+
+            # Create the first historic balance based on the initial balance
+            hb_year = opening_date.year
+            hb_month = opening_date.month
+            historic_balance, created = HistoricBalance.objects.get_or_create(
+                account=form.instance,
+                year=hb_year,
+                month=hb_month,
+                defaults={'balance': form.instance.current_balance}
+            )
+            if not created:
+                historic_balance.balance = form.instance.current_balance
+                historic_balance.save()
+
+            # Initialize MoneyTags for all existing tags
+            for tag in Tag.objects.filter(user=self.request.user):
+                MoneyTag.objects.get_or_create(tag=tag, account=form.instance, defaults={'amount': Decimal('0.00')})
 
         messages.success(self.request, "The account has been created successfully.")
         return res
@@ -1469,6 +1497,8 @@ class TagCreation(LoginRequiredMixin, FormView):
         with transaction.atomic():
             form.instance.user = self.request.user
             form.save()
+            for account in Account.objects.filter(owner=self.request.user):
+                MoneyTag.objects.get_or_create(tag=form.instance, account=account, defaults={'amount': Decimal('0.00')})
 
         messages.success(self.request, "The tag has been created successfully.")
 
@@ -1644,16 +1674,26 @@ class TagListView(GeneralListView):
         list: A list of dictionaries, each containing a tag, its total assigned balance in the user's main currency, the difference between the current month and the previous month, and the amount assigned to the tag for each month.
         """
         exchange_rates = get_current_exchange_rates()
+        main_currency_pk = self.request.user.main_currency.currency.pk
         alt = []
         for tag in object_list:
             total = 0
+            distribution = []
             
             for money_tag in tag.money_tags.all():
-                total += convert_all([{'total': money_tag.amount, 'currency': money_tag.account.currency.pk}], self.request.user.main_currency.currency.pk, exchange_rates)
+                if money_tag.amount != 0 and money_tag.account.visible:
+                    converted_val = convert_all([{'total': money_tag.amount, 'currency': money_tag.account.currency.pk}], main_currency_pk, exchange_rates)
+                    distribution.append({
+                        'account': money_tag.account,
+                        'amount': money_tag.amount,
+                        'converted': converted_val,
+                    })
+                    total += converted_val
             
             alt.append({
                 'tag': tag,
                 'total': total,
+                'distribution': distribution,
                 'spent': round(convert_all_transactions_amounts_to_main_currency_precisely(
                     tag.transactions.filter(
                         date__year=datetime.date.today().year, 
@@ -1916,20 +1956,40 @@ class TagAssignment(LoginRequiredMixin, View):
         tags = Tag.objects.filter(user=self.request.user)
 
         with transaction.atomic():
+            total_assigned_submitted = Decimal('0.00')
+            processed_tags = []
+
             for tag in tags:
-                money_tag = tag.money_tags.get(account=account)
+                money_tag, _ = MoneyTag.objects.get_or_create(tag=tag, account=account, defaults={'amount': Decimal('0.00')})
                 if f"{tag.pk}-id" in request.POST:
                     form = MoneyTagForm(request.POST, instance=money_tag, prefix=tag.pk)
                     if form.is_valid():
-                        form.save()
+                        val = form.cleaned_data.get('amount') or Decimal('0.00')
+                        if val < 0:
+                            messages.error(request, f"The amount for tag {tag.name} cannot be negative.")
+                            return render(request, self.template_name, self.get_context_data(request.POST))
+                        total_assigned_submitted += val
+                        processed_tags.append((form, money_tag))
                     else:
                         messages.error(request, "An error has occurred while assigning your tags.")
                         return render(request, self.template_name, self.get_context_data(request.POST))
                 else:
-                    money_tag.amount = 0
-                    money_tag.save()
+                    processed_tags.append((None, money_tag))
 
-                update_tag_history(tag.pk) # Update tag history for the current month
+            if total_assigned_submitted > account.current_balance:
+                messages.error(
+                    request,
+                    f"The total assigned amount ({total_assigned_submitted:.2f} {account.currency.code}) cannot exceed the account balance ({account.current_balance:.2f} {account.currency.code})."
+                )
+                return render(request, self.template_name, self.get_context_data(request.POST))
+
+            for form, money_tag in processed_tags:
+                if form:
+                    form.save()
+                else:
+                    money_tag.amount = Decimal('0.00')
+                    money_tag.save()
+                update_tag_history(money_tag.tag.pk)
             
             messages.success(request, "Your tags have been successfully updated.")            
 
@@ -2589,95 +2649,181 @@ def set_tag_amount(request, tag_id):
     Summary:
     Sets the amount for a specified tag in a given account.
 
-    This function sets the amount for a MoneyTag associated with a specified tag
-    and account. It ensures that the total amount of the tag is converted to the
-    currency of the specified account and updates the MoneyTag instances in the
-    database accordingly.
+    This function reallocates funds of a specified tag from other accounts to the
+    destination account, ensuring that the destination account has sufficient
+    unassigned balance and never leaves any account or tag with negative funds.
 
     Parameters:
-    request (HttpRequest): The request object containing POST data with the account ID.
-    tag_id (int): The primary key of the tag whose amount is to be set.
+    request (HttpRequest): The request object containing POST data with the account ID and optional amount.
+    tag_id (uuid): The primary key of the tag whose amount is to be set.
 
     Returns:
     HttpResponse: Redirects to the tags page upon success or failure.
     """
+    if request.method != 'POST':
+        messages.error(request, "Invalid request method.")
+        return redirect('/tags/')
 
-    tag = Tag.objects.get(pk=tag_id)
-    account = Account.objects.filter(pk=request.POST.get('account')).select_related('currency').first()
-
-    if(account.owner != request.user or tag.user != request.user):
+    tag = Tag.objects.filter(pk=tag_id, user=request.user).first()
+    if not tag:
         return HttpResponseForbidden()
-    
-    if not account:
-        messages.error(request, "The account does not exist or you do not have permission to access it.")
-        return redirect(f'/tags/')
-    
-    if request.method != 'POST' and request.POST.get('amount') == None or request.POST.get('amount') == '':
-        messages.error(request, "The amount is required to set the tag amount.")
-        return redirect(f'/tags/')
-    
+
+    dest_account_id = request.POST.get('account')
+    if not dest_account_id:
+        messages.error(request, "Destination account is required.")
+        return redirect('/tags/')
+
+    dest_account = Account.objects.filter(pk=dest_account_id, owner=request.user, visible=True).select_related('currency').first()
+    if not dest_account:
+        messages.error(request, "The destination account does not exist or you do not have permission to access it.")
+        return redirect('/tags/')
+
     try:
         with transaction.atomic():
-            if request.method == 'POST':
-                money_tags = MoneyTag.objects.filter(tag=tag).annotate(currency=F('account__currency'), total=F('amount')).values('currency', 'total')
+            dest_assigned = MoneyTag.objects.filter(account=dest_account).aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
+            dest_available = max(Decimal('0.00'), dest_account.current_balance - dest_assigned)
 
-                total = convert_all(
-                    money_tags,
-                    account.currency.pk
-                )
+            if dest_available <= 0:
+                messages.error(request, f"Cannot allocate funds to {dest_account.name}: the account has no available unassigned balance.")
+                return redirect('/tags/')
 
-                MoneyTag.objects.filter(tag=tag, account=account).update(amount=total)
-                MoneyTag.objects.filter(tag=tag).exclude(account=account).update(amount=0)
+            source_money_tags = MoneyTag.objects.filter(tag=tag, amount__gt=0).exclude(account=dest_account).select_related('account', 'account__currency')
+            if not source_money_tags.exists():
+                messages.error(request, f"The tag {tag.name} has no funds in other accounts to reallocate.")
+                return redirect('/tags/')
 
-                messages.success(request, "The tag amount has been set successfully.")
-                return redirect(f'/tags/')    
+            # Calculate total source funds converted to destination account currency
+            total_source_in_dest = Decimal('0.00')
+            for smt in source_money_tags:
+                converted = convert_all([{'total': smt.amount, 'currency': smt.account.currency.pk}], dest_account.currency.pk)
+                total_source_in_dest += Decimal(str(round(converted, 2)))
+
+            amount_input = request.POST.get('amount')
+            if amount_input and amount_input.strip():
+                try:
+                    requested_amount = Decimal(amount_input.strip())
+                except Exception:
+                    messages.error(request, "Invalid amount specified.")
+                    return redirect('/tags/')
+
+                if requested_amount <= 0:
+                    messages.error(request, "Amount must be greater than zero.")
+                    return redirect('/tags/')
+
+                if requested_amount > dest_available:
+                    messages.error(
+                        request,
+                        f"The requested amount ({requested_amount} {dest_account.currency.code}) exceeds {dest_account.name}'s available unassigned balance ({dest_available:.2f} {dest_account.currency.code})."
+                    )
+                    return redirect('/tags/')
+
+                if requested_amount > total_source_in_dest:
+                    messages.error(
+                        request,
+                        f"The requested amount ({requested_amount} {dest_account.currency.code}) exceeds total funds available in other accounts for tag {tag.name} ({total_source_in_dest:.2f} {dest_account.currency.code})."
+                    )
+                    return redirect('/tags/')
+
+                amount_to_transfer = requested_amount
+            else:
+                amount_to_transfer = min(total_source_in_dest, dest_available)
+
+            if amount_to_transfer <= 0:
+                messages.error(request, "No funds could be reallocated.")
+                return redirect('/tags/')
+
+            # Deduct amount_to_transfer from source accounts
+            remaining_to_deduct = amount_to_transfer
+            for smt in source_money_tags:
+                if remaining_to_deduct <= 0:
+                    break
+
+                smt_in_dest = Decimal(str(round(convert_all([{'total': smt.amount, 'currency': smt.account.currency.pk}], dest_account.currency.pk), 2)))
+                if smt_in_dest <= 0:
+                    continue
+
+                if smt_in_dest <= remaining_to_deduct:
+                    deduct_dest = smt_in_dest
+                    smt.amount = Decimal('0.00')
+                    smt.save()
+                    remaining_to_deduct -= deduct_dest
+                else:
+                    deduct_source = Decimal(str(round(convert_all([{'total': remaining_to_deduct, 'currency': dest_account.currency.pk}], smt.account.currency.pk), 2)))
+                    deduct_source = min(deduct_source, smt.amount)
+                    smt.amount -= deduct_source
+                    smt.save()
+                    remaining_to_deduct = Decimal('0.00')
+
+            dest_mt, _ = MoneyTag.objects.get_or_create(tag=tag, account=dest_account, defaults={'amount': Decimal('0.00')})
+            dest_mt.amount += amount_to_transfer
+            dest_mt.save()
+
+            update_tag_history(tag.pk)
+            messages.success(request, f"Successfully reallocated {amount_to_transfer:.2f} {dest_account.currency.code} of {tag.name} to {dest_account.name}.")
+            return redirect('/tags/')
     except Exception as e:
         print(str(e))
-        messages.error(request, "An error has occurred while setting the tag amount.")
-        return redirect(f'/tags/')
+        messages.error(request, "An error has occurred while reallocating the tag funds.")
+        return redirect('/tags/')
   
 def reassign_tag(request, tag_id):
     """
     Summary:
-    Reassigns a tag to another tag by redistributing the amounts
-    in the MoneyTags associated with the accounts of the two tags.
+    Reassigns a tag to another tag by moving the amounts in MoneyTags
+    from the source tag to the destination tag within each account.
 
     Parameters:
-    request (HttpRequest): The request object containing the POST data with the tag2 id.
-    tag_id (int): The primary key of the tag to be reassigned.
+    request (HttpRequest): The request object containing POST data with the destination tag ID (tag2_id).
+    tag_id (uuid): The primary key of the tag to be reassigned.
 
     Returns:
     HttpResponse: Redirects to the tags page upon success or failure.
     """
-    if(request.user != Tag.objects.get(pk=tag_id).user):
-        return HttpResponseForbidden()
-    
-    tag2_id = request.POST.get('tag2_id')
+    if request.method != 'POST':
+        messages.error(request, "Invalid request method.")
+        return redirect('/tags/')
 
-    if request.method != 'POST' or not tag2_id:
-        messages.error(request, "Invalid request method or missing tag.")
-        return redirect(f'/tags/')
-    
+    tag = Tag.objects.filter(pk=tag_id, user=request.user).first()
+    if not tag:
+        return HttpResponseForbidden()
+
+    tag2_id = request.POST.get('tag2_id')
+    if not tag2_id:
+        messages.error(request, "Destination tag is required.")
+        return redirect('/tags/')
+
+    tag2 = Tag.objects.filter(pk=tag2_id, user=request.user).first()
+    if not tag2:
+        messages.error(request, "Destination tag not found.")
+        return redirect('/tags/')
+
+    if tag.pk == tag2.pk:
+        messages.warning(request, "Source and destination tags are the same.")
+        return redirect('/tags/')
+
     try:
         with transaction.atomic():
-                tag = Tag.objects.get(pk=tag_id)
-                tag2 = Tag.objects.get(pk=tag2_id)
+            money_tags1 = MoneyTag.objects.filter(tag=tag, amount__gt=0).select_related('account')
+            total_reassigned = Decimal('0.00')
+            for mt1 in money_tags1:
+                mt2, _ = MoneyTag.objects.get_or_create(
+                    tag=tag2, account=mt1.account, defaults={'amount': Decimal('0.00')}
+                )
+                mt2.amount += mt1.amount
+                total_reassigned += mt1.amount
+                mt2.save()
+                mt1.amount = Decimal('0.00')
+                mt1.save()
 
-                money_tags1 = MoneyTag.objects.filter(tag=tag).select_related('account').order_by('account')
-                money_tags2 = MoneyTag.objects.filter(tag=tag2).exclude(tag=tag).select_related('account').order_by('account')
+            update_tag_history(tag.pk)
+            update_tag_history(tag2.pk)
 
-                for money_tag1, money_tag2 in zip(money_tags1, money_tags2):
-                    money_tag2.amount += money_tag1.amount
-                    money_tag2.save()
-                    money_tag1.amount = 0
-                    money_tag1.save()
-                
-                messages.success(request, "The tag has been reassigned successfully.")
+            messages.success(request, f"Successfully reassigned tag {tag.name} to {tag2.name}.")
     except Exception as e:
         print(str(e))
         messages.error(request, "An error has occurred while reassigning the tag.")
 
-    return redirect(f'/tags/')
+    return redirect('/tags/')
 
 class ExchangeRateListView(LoginRequiredMixin, ListView):
     model = ExchangeRate
