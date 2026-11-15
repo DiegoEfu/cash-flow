@@ -25,6 +25,7 @@ class Command(BaseCommand):
                     TagHistory.objects.create(
                         tag=tag,
                         amount=total_assigned_main_currency,
+                        spent=0,
                         year=year,
                         month=month,
                     )
@@ -32,6 +33,7 @@ class Command(BaseCommand):
                     TagHistory.objects.create(
                         tag=tag,
                         amount=6800,
+                        spent=0,
                         year=year,
                         month=month,
                     )
@@ -39,6 +41,7 @@ class Command(BaseCommand):
                     TagHistory.objects.create(
                         tag=tag,
                         amount=0,
+                        spent=0,
                         year=year,
                         month=month,
                     )

@@ -197,20 +197,27 @@
     <!-- History Modal -->
     <input type="checkbox" id="modal_history_{{tag.tag.pk}}" class="modal-toggle" />
     <div class="modal" role="dialog">
-        <div class="modal-box glass-card rounded-3xl p-6 border border-white/10 text-left">
-            <h3 class="text-lg font-bold text-white mb-3">History for {{tag.tag.name}}</h3>
+        <div class="modal-box glass-card rounded-3xl p-6 border border-white/10 text-left max-w-lg">
+            <h3 class="text-lg font-bold text-white mb-1">History: {{tag.tag.name}}</h3>
+            <p class="text-xs text-gray-400 mb-4">Monthly tracking of assigned balance and spent amounts in {{request.user.main_currency}}</p>
             <table class="table w-full text-xs font-mono">
                 <thead>
-                    <tr class="text-gray-400">
-                        <th>Date (MM/YYYY)</th>
-                        <th>Amount</th>
+                    <tr class="text-gray-400 border-b border-white/10">
+                        <th class="text-left">Date (MM/YYYY)</th>
+                        <th class="text-right">Assigned</th>
+                        <th class="text-right">Spent</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-white/5">
                     {% for history in tag.history.all %}
                     <tr>
-                        <td>{{history.month}}/{{history.year}}</td>
-                        <td class="text-success font-bold">{{history.amount|default:'-'}}</td>
+                        <td class="font-bold text-white text-left">{{history.month}}/{{history.year}}</td>
+                        <td class="text-success font-bold text-right">{{history.amount|default:'0.00'}}</td>
+                        <td class="text-error font-bold text-right">{{history.spent|default:'0.00'}}</td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="3" class="text-center py-4 text-gray-400">No history records found.</td>
                     </tr>
                     {% endfor %}
                 </tbody>

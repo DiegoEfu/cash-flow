@@ -14,10 +14,11 @@ from django.db.models.functions import Coalesce
 from django.db.models import DecimalField
 from django.db import transaction
 from django.http import HttpRequest, HttpResponse, HttpResponseForbidden, HttpResponseBadRequest, JsonResponse
-from django.shortcuts import render, redirect
+from django.shortcuts import render, redirect, get_object_or_404
 from django.urls import reverse
 
 from django.contrib.auth import logout
+from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.views import LoginView
 from django.views.generic import FormView, ListView
@@ -1036,7 +1037,9 @@ class TransactionCreation(FormView):
                     else:
                         self.update_tags_and_accounts(amount, account, tag)
 
-                    update_tag_history(form.data['tag'])
+                    update_tag_history(form.data['tag'], year=form.instance.date.year, month=form.instance.date.month)
+                    if form.instance.date.year != datetime.datetime.now().year or form.instance.date.month != datetime.datetime.now().month:
+                        update_tag_history(form.data['tag'])
 
                 historic_balance, _ = HistoricBalance.objects.get_or_create(
                     account=account,
@@ -1264,7 +1267,21 @@ class TransactionUpdate(TransactionCreation):
                 historic_balance.balance = account.current_balance
                 historic_balance.save()
 
+            old_tag_pk = transaction_instance.tag.pk if transaction_instance.tag else None
+            old_tx_year = transaction_instance.date.year
+            old_tx_month = transaction_instance.date.month
+
             form.save()
+
+            new_tag_pk = form.instance.tag.pk if form.instance.tag else None
+            if new_tag_pk:
+                update_tag_history(new_tag_pk, year=form.instance.date.year, month=form.instance.date.month)
+                if form.instance.date.year != datetime.datetime.now().year or form.instance.date.month != datetime.datetime.now().month:
+                    update_tag_history(new_tag_pk)
+            if old_tag_pk and (old_tag_pk != new_tag_pk or old_tx_year != form.instance.date.year or old_tx_month != form.instance.date.month):
+                update_tag_history(old_tag_pk, year=old_tx_year, month=old_tx_month)
+                if old_tx_year != datetime.datetime.now().year or old_tx_month != datetime.datetime.now().month:
+                    update_tag_history(old_tag_pk)
 
             messages.success(self.request, "The Transaction has been updated successfully.")
 
@@ -1342,6 +1359,10 @@ class TransactionDelete(LoginRequiredMixin, View):
             return HttpResponseForbidden()
         
         with transaction.atomic():
+            del_tag_pk = transaction_instance.tag.pk if transaction_instance.tag else None
+            del_tx_year = transaction_instance.date.year
+            del_tx_month = transaction_instance.date.month
+
             if not transaction_instance.hold:
                 amount = transaction_instance.amount if transaction_instance.transaction_type == '+' else -transaction_instance.amount
                 account.current_balance -= amount
@@ -1367,7 +1388,92 @@ class TransactionDelete(LoginRequiredMixin, View):
                 
             transaction_instance.delete()
 
+            if del_tag_pk:
+                update_tag_history(del_tag_pk, year=del_tx_year, month=del_tx_month)
+                if del_tx_year != datetime.datetime.now().year or del_tx_month != datetime.datetime.now().month:
+                    update_tag_history(del_tag_pk)
+
         return render(request, 'partials/transactions/updated-balance.html', {'account': account})
+
+@login_required
+def transaction_detail(request, pk):
+    """
+    Summary:
+    Renders a detailed modal for a specific transaction, showing all its attributes
+    (amounts, converted amount in main currency, tags, accounts, voucher preview),
+    along with all related movements (across different accounts for the same user)
+    sharing the same reference code.
+    """
+    transaction_obj = get_object_or_404(
+        Transaction.objects.select_related(
+            'from_account',
+            'from_account__currency',
+            'tag',
+            'money_tag',
+            'exchange_rate',
+            'exchange_rate__currency1',
+            'exchange_rate__currency2',
+            'user'
+        ),
+        pk=pk
+    )
+
+    # Permission check: ensure user owns the account or the transaction
+    if transaction_obj.from_account and transaction_obj.from_account.owner != request.user:
+        if transaction_obj.user != request.user:
+            return HttpResponseForbidden("You do not have permission to view this transaction.")
+    elif transaction_obj.user and transaction_obj.user != request.user:
+        return HttpResponseForbidden("You do not have permission to view this transaction.")
+
+    main_currency = request.user.main_currency.currency
+
+    # Calculate converted main currency amount
+    if transaction_obj.from_account and transaction_obj.from_account.currency == main_currency:
+        mc_amount = transaction_obj.amount
+    else:
+        tx_dict = {
+            'amount': transaction_obj.amount,
+            'from_account__currency': transaction_obj.from_account.currency.pk if transaction_obj.from_account else main_currency.pk,
+            'date': transaction_obj.date.date() if isinstance(transaction_obj.date, datetime.datetime) else transaction_obj.date,
+            'exchange_rate': transaction_obj.exchange_rate.pk if transaction_obj.exchange_rate else None,
+        }
+        mc_amount = convert_all_transactions_amounts_to_main_currency_precisely([tx_dict], main_currency.pk)
+
+    # Find related movements sharing the same non-empty reference
+    related_movements = []
+    if transaction_obj.reference and transaction_obj.reference.strip():
+        ref_code = transaction_obj.reference.strip()
+        matching_txs = Transaction.objects.filter(
+            Q(from_account__owner=request.user) | Q(user=request.user),
+            reference=ref_code
+        ).exclude(pk=transaction_obj.pk).select_related(
+            'from_account', 'from_account__currency', 'tag', 'exchange_rate'
+        ).order_by('date', 'id')
+
+        for rel in matching_txs:
+            if rel.from_account and rel.from_account.currency == main_currency:
+                rel_mc = rel.amount
+            else:
+                rel_dict = {
+                    'amount': rel.amount,
+                    'from_account__currency': rel.from_account.currency.pk if rel.from_account else main_currency.pk,
+                    'date': rel.date.date() if isinstance(rel.date, datetime.datetime) else rel.date,
+                    'exchange_rate': rel.exchange_rate.pk if rel.exchange_rate else None,
+                }
+                rel_mc = convert_all_transactions_amounts_to_main_currency_precisely([rel_dict], main_currency.pk)
+
+            related_movements.append({
+                'transaction': rel,
+                'mc_amount': round(Decimal(rel_mc), 2),
+            })
+
+    context = {
+        'transaction': transaction_obj,
+        'mc_amount': round(Decimal(mc_amount), 2),
+        'related_movements': related_movements,
+        'main_currency': main_currency,
+    }
+    return render(request, 'partials/transactions/detail_modal.html', context)
 
 class GeneralTransactionListView(GeneralListView):
     """
@@ -1706,7 +1812,7 @@ class TagListView(GeneralListView):
                     ), 
                     self.request.user.main_currency.currency.pk
                 ), 2),
-                'history': TagHistory.objects.filter(tag=tag).order_by('-year', '-month').values('year', 'month', 'amount'),
+                'history': TagHistory.objects.filter(tag=tag).order_by('-year', '-month').values('year', 'month', 'amount', 'spent'),
             })
 
             previous = TagHistory.objects.filter(

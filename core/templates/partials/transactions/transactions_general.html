@@ -111,6 +111,7 @@
                 <th>Origin</th>
                 <th>Amount ({{main_currency}})</th>
                 <th>Reference</th>
+                <th>Actions</th>
               </tr>
             </thead>
             <tbody id="items" class="divide-y divide-white/5 text-xs">
@@ -144,11 +145,24 @@
                     {% if transaction.transaction.transaction_type == '-' %}-{%endif%}{{transaction.mc_amount}}
                   </span>
                 </td>
-                <td class="font-mono text-gray-400">{{transaction.transaction.reference|default:'-'}}</td>
+                <td class="font-mono">
+                  {% if transaction.transaction.reference %}
+                  <button type="button" hx-get="{% url 'transaction_detail' pk=transaction.transaction.pk %}" hx-target="#transaction_detail_modal_container" class="badge badge-sm badge-ghost text-primary hover:border-primary font-mono cursor-pointer transition-all" title="Ver detalles del movimiento">
+                    {{transaction.transaction.reference}}
+                  </button>
+                  {% else %}
+                  <span class="text-gray-400">-</span>
+                  {% endif %}
+                </td>
+                <td>
+                  <button type="button" hx-get="{% url 'transaction_detail' pk=transaction.transaction.pk %}" hx-target="#transaction_detail_modal_container" class="btn btn-xs btn-ghost text-info hover:bg-info/10 font-medium" title="Ver detalle">
+                    Detail
+                  </button>
+                </td>
               </tr>
               {% empty %}
               <tr>
-                  <td colspan="8" class="text-center py-8 text-gray-400">No transactions found matching criteria.</td>
+                  <td colspan="9" class="text-center py-8 text-gray-400">No transactions found matching criteria.</td>
               </tr>
               {% endfor %}
               {% if page_obj.has_next %}
@@ -163,6 +177,9 @@
       <span class="loading loading-bars loading-lg text-primary"></span>
     </div>
 </div>
+
+<!-- Dynamic Transaction Detail Modal Container -->
+<div id="transaction_detail_modal_container"></div>
 
 <input type="checkbox" id="month-modal" class="modal-toggle" />
             <div class="modal">

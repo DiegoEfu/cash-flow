@@ -403,41 +403,62 @@ def figures_size(amount):
     else:
         return f"{nfigures} high figure{'s' if nfigures != 1 else ''}"
 
-def update_tag_history(tag):
+def update_tag_history(tag, year=None, month=None):
     """
     Summary:
-        Updates the history of a tag.
+        Updates the history of a given tag, tracking both the assigned balance and spent amount.
 
     Parameters:
-        tag (Tag or int): The tag to update its history. If it is an integer, it is considered as the primary key of the tag.
+        tag (Tag or UUID or str): The tag to update.
+        year (int, optional): The year to update. Defaults to current year.
+        month (int, optional): The month to update. Defaults to current month.
 
     Returns:
-        None
+        TagHistory: The updated or created TagHistory instance.
+    """
+    now = datetime.datetime.now()
+    current_year, current_month = now.year, now.month
+    is_current = (year is None and month is None) or (year == current_year and month == current_month)
 
-    Description:
-        This function updates the history of a given tag. It checks if there is already a history for the current month and year, and if it does, it updates the amount of the history with the new total assigned of the tag. If it doesn't, it creates a new history with the current month and year and the total assigned of the tag.
-    """
-    
-    """
-        Updates the history of a tag.
-    """
-    year,month = datetime.datetime.now().year, datetime.datetime.now().month
-    tag = Tag.objects.get(pk=tag)
-    tag_history = TagHistory.objects.filter(tag=tag, year=year, month=month)
+    if year is None:
+        year = current_year
+    if month is None:
+        month = current_month
 
-    total_assigned = convert_all(
-        tag.money_tags.all().annotate(currency=F('account__currency'), total=F('amount')).values('total', 'currency'),
-        tag.user.main_currency.pk,
+    if not isinstance(tag, Tag):
+        tag = Tag.objects.get(pk=tag)
+
+    tag_history, _ = TagHistory.objects.get_or_create(
+        tag=tag,
+        year=year,
+        month=month,
+        defaults={'amount': decimal.Decimal('0.00'), 'spent': decimal.Decimal('0.00')}
     )
 
-    if tag_history.exists():
-        tag_history = tag_history.first()
-        tag_history.amount = total_assigned
-        tag_history.save()
-    else:
-        TagHistory.objects.create(
-            tag=Tag.objects.get(pk=tag.pk),
-            amount=total_assigned,
-            month=month,
-            year=year,
+    if is_current:
+        total_assigned = convert_all(
+            tag.money_tags.all().annotate(currency=F('account__currency'), total=F('amount')).values('total', 'currency'),
+            tag.user.main_currency.pk,
         )
+        tag_history.amount = total_assigned
+
+    spent_txs = tag.transactions.filter(
+        date__year=year,
+        date__month=month,
+        transaction_type='-',
+        hold=False,
+        internal=False
+    )
+    if spent_txs.exists():
+        total_spent = convert_all_transactions_amounts_to_main_currency_precisely(
+            spent_txs.values(
+                'amount', 'from_account__currency', 'date', 'exchange_rate'
+            ),
+            tag.user.main_currency.currency.pk
+        )
+    else:
+        total_spent = decimal.Decimal('0.00')
+
+    tag_history.spent = round(decimal.Decimal(total_spent), 2)
+    tag_history.save()
+    return tag_history
