@@ -345,7 +345,7 @@ def generate_yearly_transactions_report(request, account, year) -> HttpResponse:
         account=account,
         year=int(year)-1,
         month=12,
-    ).exists() else account.start_balance
+    ).exists() else (account.transaction_from_account.filter(opening=True).first().amount if account.transaction_from_account.filter(opening=True).exists() else account.current_balance)
 
     for day in range(num_days):
         daily_transactions = transactions.filter(date__year=year, date__month=(first_day + datetime.timedelta(days=day)).month, date__day=(first_day + datetime.timedelta(days=day)).day)
@@ -659,7 +659,7 @@ def generate_monthly_transactions_report_all_accounts(request, year, month) -> H
                 account=account
             ).exists() else 0
         elif(account.opening_time.year == int(year) and int(month) >= account.opening_time.month):
-            start_balance = account.start_balance
+            start_balance = account.transaction_from_account.filter(opening=True).first().amount if account.transaction_from_account.filter(opening=True).exists() else account.current_balance
         else:
             start_balance = 0
 

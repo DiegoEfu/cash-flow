@@ -186,10 +186,18 @@ def find_transaction_fitting_exchange_rate(currency1, currency2, date):
     Returns:
         ExchangeRate or None: The exchange rate with the latest date that is earlier than or equal to the given date for the given currency pair, or None if no such exchange rate exists or if the two currencies are the same.
     """
-    return ExchangeRate.objects.filter(
-        currency1=currency1, currency2=currency2,
-        date__lte=date
-    ).latest('date') if currency1.pk != currency2.pk else None
+    if not currency1 or not currency2 or currency1.pk == currency2.pk:
+        return None
+
+    try:
+        return ExchangeRate.objects.filter(
+            currency1=currency1, currency2=currency2,
+            date__lte=date
+        ).latest('date')
+    except ExchangeRate.DoesNotExist:
+        return ExchangeRate.objects.filter(
+            currency1=currency1, currency2=currency2
+        ).order_by('-date').first()
 
 def get_new_exchange_rate():
         """

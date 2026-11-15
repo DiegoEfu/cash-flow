@@ -100,7 +100,19 @@
               <tbody id="items" class="divide-y divide-white/5 text-xs">
                   {% for tag in object_list %}
                   <tr class="hover:bg-base-100/30 transition-colors">
-                      <td class="font-bold text-white text-left tracking-wide">{{tag.tag.name.upper}}</td>
+                      <td class="font-bold text-white text-left tracking-wide">
+                          <span>{{tag.tag.name.upper}}</span>
+                          <!-- Accounts distribution summary badges -->
+                          <div class="flex flex-wrap gap-1 mt-1 font-normal">
+                              {% for item in tag.distribution %}
+                              <span class="badge badge-xs badge-ghost text-[10px] font-mono border-white/10 text-gray-300">
+                                  {{item.account.name.upper}}: <b class="text-success ml-1">{{item.account.currency.code}} {{item.amount}}</b>
+                              </span>
+                              {% empty %}
+                              <span class="text-[10px] text-gray-500 italic">No funds assigned</span>
+                              {% endfor %}
+                          </div>
+                      </td>
                       <td class="font-mono text-success font-bold">{{tag.total|default:'0.00'}}</td>
                       <td class="font-mono text-gray-300">{{tag.tag.month_goal|default:'0.00'}}</td>
                       <td class="font-mono text-error font-bold">{{tag.spent|default:'0.00'}}</td>
@@ -110,6 +122,7 @@
                               <a hx-target="main" hx-get="{% url 'tag_update' pk=tag.tag.pk %}" class="btn btn-xs btn-ghost text-primary hover:bg-primary/10">Edit</a>
 
                               <!-- Modal Triggers -->
+                              <label for="modal_distribution_{{tag.tag.pk}}" class="btn btn-xs btn-ghost border border-white/10 rounded-xl text-info hover:bg-info/10">Distribution</label>
                               <label for="modal_history_{{tag.tag.pk}}" class="btn btn-xs btn-ghost border border-white/10 rounded-xl">History</label>
 
                               {% if not tag.tag.assigned %}
@@ -136,6 +149,50 @@
 
 <!-- MODALS CONTAINER (Placed outside the table and overflow container) -->
 {% for tag in object_list %}
+
+    <!-- Distribution Modal -->
+    <input type="checkbox" id="modal_distribution_{{tag.tag.pk}}" class="modal-toggle" />
+    <div class="modal" role="dialog">
+        <div class="modal-box glass-card rounded-3xl p-6 border border-white/10 text-left">
+            <h3 class="text-lg font-bold text-white mb-1">Account Distribution: {{tag.tag.name}}</h3>
+            <p class="text-xs text-gray-400 mb-4">Detailed breakdown of funds assigned to this tag across all accounts</p>
+            <table class="table w-full text-xs font-mono">
+                <thead>
+                    <tr class="text-gray-400 border-b border-white/10">
+                        <th class="text-left">Account</th>
+                        <th class="text-right">Assigned in Account</th>
+                        <th class="text-right">Equivalent ({{request.user.main_currency}})</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-white/5">
+                    {% for item in tag.distribution %}
+                    <tr>
+                        <td class="font-bold text-white text-left">{{item.account.name.upper}}</td>
+                        <td class="text-success font-bold text-right">{{item.account.currency.code}} {{item.amount}}</td>
+                        <td class="text-gray-300 text-right">{{request.user.main_currency}} {{item.converted}}</td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="3" class="text-center py-4 text-gray-400">No funds currently assigned across any accounts.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+                {% if tag.distribution %}
+                <tfoot>
+                    <tr class="border-t border-white/10 text-white font-bold">
+                        <td class="text-left">Total</td>
+                        <td></td>
+                        <td class="text-right text-success">{{request.user.main_currency}} {{tag.total|default:'0.00'}}</td>
+                    </tr>
+                </tfoot>
+                {% endif %}
+            </table>
+            <div class="modal-action">
+                <label for="modal_distribution_{{tag.tag.pk}}" class="btn btn-ghost rounded-xl">Close</label>
+            </div>
+        </div>
+        <label class="modal-backdrop" for="modal_distribution_{{tag.tag.pk}}">Close</label>
+    </div>
 
     <!-- History Modal -->
     <input type="checkbox" id="modal_history_{{tag.tag.pk}}" class="modal-toggle" />
@@ -173,12 +230,15 @@
             <form action="{% url 'reassign_tag' tag_id=tag.tag.pk %}" method="post" class="space-y-4">
                 {% csrf_token %}
                 <h3 class="text-lg font-bold text-white">Reassign Tag: {{tag.tag.name}}</h3>
+                <p class="text-xs text-gray-400">Transfer all assigned funds from {{tag.tag.name}} to another tag across all accounts safely.</p>
                 <div>
                     <label class="label text-xs font-semibold text-gray-300">Destination Tag</label>
                     <select name="tag2_id" class="select select-bordered w-full rounded-xl bg-base-100/50 text-white" required>
                         <option disabled selected value="">Select Tag</option>
                         {% for t in object_list %}
+                        {% if t.tag.pk != tag.tag.pk %}
                         <option value="{{t.tag.pk}}">{{t.tag.name}}</option>
+                        {% endif %}
                         {% endfor %}
                     </select>
                 </div>
@@ -197,19 +257,27 @@
         <div class="modal-box glass-card rounded-3xl p-6 border border-white/10 text-left">
             <form action="{% url 'send_tag_account' tag_id=tag.tag.pk %}" method="post" class="space-y-4">
                 {% csrf_token %}
-                <h3 class="text-lg font-bold text-white">Send Funds from {{tag.tag.name}}</h3>
+                <h3 class="text-lg font-bold text-white">Reallocate Funds from {{tag.tag.name}}</h3>
+                <p class="text-xs text-gray-400">Move funds of this tag to a destination account with available unassigned balance.</p>
                 <div>
                     <label class="label text-xs font-semibold text-gray-300">Destination Account</label>
                     <select name="account" class="select select-bordered w-full rounded-xl bg-base-100/50 text-white" required>
                         <option disabled selected value="">Select Account</option>
                         {% for account in accounts %}
-                        <option value="{{account.account.pk}}">{{account.account}} - {{account.account.currency.code}} {{account.account.current_balance}}</option>
+                        <option value="{{account.account.pk}}" {% if account.not_assigned.account_currency <= 0 %}disabled{% endif %}>
+                            {{account.account.name.upper}} ({{account.account.currency.code}}) — Available: {{account.account.currency.code}} {{account.not_assigned.account_currency|default:'0.00'}}
+                        </option>
                         {% endfor %}
                     </select>
                 </div>
+                <div>
+                    <label class="label text-xs font-semibold text-gray-300">Amount to Allocate (optional)</label>
+                    <input type="number" step="0.01" min="0.01" name="amount" placeholder="Leave empty to allocate maximum available" class="input input-bordered w-full rounded-xl bg-base-100/50 text-white text-xs font-mono">
+                    <span class="text-[10px] text-gray-400 block mt-1">If left blank, allocates the maximum available without exceeding the account's available funds.</span>
+                </div>
                 <div class="modal-action">
                     <label for="modal_send_funds_{{tag.tag.pk}}" class="btn btn-ghost rounded-xl">Cancel</label>
-                    <button type="submit" class="btn btn-primary rounded-xl px-6">Send</button>
+                    <button type="submit" class="btn btn-primary rounded-xl px-6">Reallocate</button>
                 </div>
             </form>
         </div>
@@ -225,60 +293,33 @@
 </div>
 
 <input type="checkbox" id="modal_accounts" class="modal-toggle" />
-                <div class="modal" role="dialog">
-                  <div class="modal-box glass-card rounded-3xl p-6 border border-white/10 text-left">
-                    <h3 class="text-lg font-bold text-white mb-4">Accounts Money Allocation</h3>
-                    <table class="table w-full text-xs">
-                        <thead>
-                          <tr class="text-gray-400">
-                            <th>Account</th>
-                            <th>Assigned</th>
-                            <th>Unassigned</th>
-                          </tr>
-                        </thead>
-                        <tbody class="divide-y divide-white/5 font-mono">
-                          {% for account in accounts %}
-                          <tr>
-                            <td class="font-bold text-white">{{account.account.name.upper}}</td>
-                            <td class="text-success font-bold">{{request.user.main_currency}} {{account.assigned.main_currency}}</td>
-                            <td class="text-warning font-bold">{{request.user.main_currency}} {{account.not_assigned.main_currency}}</td>
-                          </tr>
-                          {% endfor %}
-                        </tbody>
-                    </table>
-                    <div class="modal-action">
-                      <label for="modal_accounts" class="btn btn-ghost rounded-xl">Close</label>
-                    </div>
-                  </div>
-                </div>
-
-  <input type="checkbox" id="modal_accounts" class="modal-toggle" />
-                <div class="modal" role="dialog">
-                  <div class="modal-box glass-card rounded-3xl p-6 border border-white/10 text-left">
-                    <h3 class="text-lg font-bold text-white mb-4">Accounts Money Allocation</h3>
-                    <table class="table w-full text-xs">
-                        <thead>
-                          <tr class="text-gray-400">
-                            <th>Account</th>
-                            <th>Assigned</th>
-                            <th>Unassigned</th>
-                          </tr>
-                        </thead>
-                        <tbody class="divide-y divide-white/5 font-mono">
-                          {% for account in accounts %}
-                          <tr>
-                            <td class="font-bold text-white">{{account.account.name.upper}}</td>
-                            <td class="text-success font-bold">{{request.user.main_currency}} {{account.assigned.main_currency}}</td>
-                            <td class="text-warning font-bold">{{request.user.main_currency}} {{account.not_assigned.main_currency}}</td>
-                          </tr>
-                          {% endfor %}
-                        </tbody>
-                    </table>
-                    <div class="modal-action">
-                      <label for="modal_accounts" class="btn btn-ghost rounded-xl">Close</label>
-                    </div>
-                  </div>
-                </div>
+<div class="modal" role="dialog">
+  <div class="modal-box glass-card rounded-3xl p-6 border border-white/10 text-left">
+    <h3 class="text-lg font-bold text-white mb-4">Accounts Money Allocation</h3>
+    <table class="table w-full text-xs">
+        <thead>
+          <tr class="text-gray-400">
+            <th>Account</th>
+            <th>Assigned</th>
+            <th>Unassigned</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-white/5 font-mono">
+          {% for account in accounts %}
+          <tr>
+            <td class="font-bold text-white">{{account.account.name.upper}}</td>
+            <td class="text-success font-bold">{{request.user.main_currency}} {{account.assigned.main_currency}}</td>
+            <td class="{% if account.not_assigned.main_currency < 0 %}text-error{% else %}text-warning{% endif %} font-bold">{{request.user.main_currency}} {{account.not_assigned.main_currency}}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+    </table>
+    <div class="modal-action">
+      <label for="modal_accounts" class="btn btn-ghost rounded-xl">Close</label>
+    </div>
+  </div>
+  <label class="modal-backdrop" for="modal_accounts">Close</label>
+</div>
 
 <script>
   document.body.addEventListener('htmx:beforeRequest', function(evt) {
