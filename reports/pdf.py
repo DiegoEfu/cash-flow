@@ -788,12 +788,13 @@ def generate_monthly_transactions_report_all_accounts(request, year, month) -> H
 
     tag_history = TagHistory.objects.filter(month=month, year=year)
     table_tag_history = [
-        ['Tag', f'Amount ({main_currency.code})'],
+        ['Tag', f'Assigned ({main_currency.code})', f'Spent ({main_currency.code})'],
     ] if tag_history.exists() else []
     for history in tag_history:
         table_tag_history.append([
-                history.tag.name,
-                f'{history.amount:,.2f}',
+            history.tag.name,
+            f'{history.amount:,.2f}',
+            f'{history.spent:,.2f}' if history.spent is not None else '0.00',
         ])
     
     return generate_report(

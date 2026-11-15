@@ -149,7 +149,7 @@ class Tag(models.Model):
 class TagHistory(models.Model):
     """
     Summary:
-    Represents a user's tag history, with a unique id, tag, year, month, and amount.
+    Represents a user's tag history, with a unique id, tag, year, month, assigned amount, and spent amount.
 
     Properties:
     id (UUID): The unique id for the tag history, with a default value of a uuid4.
@@ -157,9 +157,10 @@ class TagHistory(models.Model):
     year (int): The year for which the tag history is valid.
     month (int): The month for which the tag history is valid.
     amount (Decimal): The amount of money assigned to this tag for the given month, with a maximum of 15 digits, and 2 decimal places.
+    spent (Decimal): The amount of money spent from this tag for the given month, with a maximum of 15 digits, and 2 decimal places.
 
     Methods:
-    __str__() -> str: Returns a string representation of the tag history in the format "TagHistory (tag) on (date) by (user)".
+    __str__() -> str: Returns a string representation of the tag history.
 
     """
     id = models.UUIDField(default=uuid.uuid4, primary_key=True)
@@ -167,9 +168,10 @@ class TagHistory(models.Model):
     year = models.PositiveSmallIntegerField()
     month = models.PositiveSmallIntegerField()
     amount = models.DecimalField(max_digits=15, decimal_places=2, default=0.00, blank=True, null=True, validators=[MinValueValidator(0.0)])
+    spent = models.DecimalField(max_digits=15, decimal_places=2, default=0.00, blank=True, null=True, validators=[MinValueValidator(0.0)])
 
     def __str__(self) -> str:
-        return f"TagHistory ({self.tag}) on {self.date} by {self.user}."
+        return f"TagHistory ({self.tag.name}) {self.month}/{self.year}: assigned {self.amount}, spent {self.spent}."
     
     class Meta:
         ordering = ("-year", "-month")
