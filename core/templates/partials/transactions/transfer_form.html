@@ -134,7 +134,7 @@
             <div class="grid md:grid-cols-2 gap-4 pt-2">
                 <div class="form-control w-full">
                     <label for="id_reference" class="label text-sm font-semibold text-gray-300">Reference</label>
-                    {% render_field form.reference class+="input input-bordered w-full rounded-xl bg-base-100/50 focus:border-primary" %}
+                    {% render_field form.reference class+="input input-bordered w-full rounded-xl bg-base-100/50 focus:border-primary" required="" %}
                     {% if form.reference.errors %}
                     <label class="label text-xs text-error font-medium flex items-center gap-1 mt-1">
                         {% for error in form.reference.errors %}{{ error }}{% endfor %}
