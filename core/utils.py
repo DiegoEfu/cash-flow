@@ -199,6 +199,66 @@ def find_transaction_fitting_exchange_rate(currency1, currency2, date):
             currency1=currency1, currency2=currency2
         ).order_by('-date').first()
 
+def scrape_bcv_rates():
+    """
+    Scrapes the official exchange rates from Banco Central de Venezuela (BCV).
+    Returns a dict with 'success': True, 'date', 'dolar', 'euro', 'yuan', 'lira', 'rublo',
+    or {'success': False, 'error': ...} upon failure.
+    """
+    urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+
+    def numero_mes(mes):
+        meses = {
+            'Enero': 1, 'Febrero': 2, 'Marzo': 3, 'Abril': 4,
+            'Mayo': 5, 'Junio': 6, 'Julio': 7, 'Agosto': 8,
+            'Septiembre': 9, 'Octubre': 10, 'Noviembre': 11, 'Diciembre': 12
+        }
+        return meses.get(mes, 1)
+
+    def separar_fecha(fecha_str):
+        try:
+            parts = fecha_str[fecha_str.index(',') + 2:].replace('  ', ' ').strip().split(' ')
+            day = parts[0]
+            month = str(numero_mes(parts[1]))
+            year = parts[2]
+            return f"{year}-{int(month):02d}-{int(day):02d}"
+        except Exception:
+            return datetime.date.today().strftime('%Y-%m-%d')
+
+    try:
+        response = requests.get('https://www.bcv.org.ve/', verify=False, timeout=10)
+        if response.status_code != 200:
+            return {'success': False, 'error': f'HTTP status {response.status_code}'}
+        soup = BeautifulSoup(response.text, 'lxml')
+
+        def get_currency_value(soup, currency_id):
+            currency_div = soup.find('div', id=currency_id)
+            if currency_div and currency_div.find('strong'):
+                raw = currency_div.find('strong').text.strip()
+                return round(float(raw.replace('.', '').replace(',', '.')), 6)
+            return None
+
+        valor_dolar = get_currency_value(soup, 'dolar')
+        valor_euro = get_currency_value(soup, 'euro')
+        valor_yuan = get_currency_value(soup, 'yuan')
+        valor_lira = get_currency_value(soup, 'lira')
+        valor_rublo = get_currency_value(soup, 'rublo')
+
+        date_span = soup.find('span', class_='date-display-single')
+        fecha = separar_fecha(date_span.text) if date_span else datetime.date.today().strftime('%Y-%m-%d')
+
+        return {
+            'success': True,
+            'date': fecha,
+            'dolar': valor_dolar,
+            'euro': valor_euro,
+            'yuan': valor_yuan,
+            'lira': valor_lira,
+            'rublo': valor_rublo,
+        }
+    except Exception as e:
+        return {'success': False, 'error': str(e)}
+
 def get_new_exchange_rate():
         """
         Summary:
@@ -263,7 +323,8 @@ def get_new_exchange_rate():
         def get_currency_value(soup, currency_id):
             currency_div = soup.find('div', id=currency_id)
             if currency_div and currency_div.find('strong'):
-                return round(float(currency_div.find('strong').text.replace(',', '.')), 6)
+                raw = currency_div.find('strong').text.strip()
+                return round(float(raw.replace('.', '').replace(',', '.')), 6)
             return None
 
         valor_dolar = get_currency_value(soup, 'dolar')

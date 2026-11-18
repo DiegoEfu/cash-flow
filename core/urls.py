@@ -103,4 +103,6 @@ urlpatterns = [
 
     # EXCHANGE RATE VIEWS
     path('exchange-rate/', ExchangeRateListView.as_view(), name="exchange_rate_list"),
+    path('exchange-rate/update/', UpdateExchangeRatesView.as_view(), name="update_exchange_rates"),
+    path('exchange-rate/fetch-bcv/', fetch_bcv_rates, name="fetch_bcv_rates"),
 ]

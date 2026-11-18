@@ -26,7 +26,7 @@ from django.contrib import messages
 from django.views.generic import View
 from django.forms.models import model_to_dict
 
-from .utils import get_current_exchange_rates, update_tag_history, find_transaction_fitting_exchange_rate, convert_all, convert_each, convert_all_transactions_amounts_to_main_currency_precisely, calculate_percentage, get_new_exchange_rate
+from .utils import get_current_exchange_rates, update_tag_history, find_transaction_fitting_exchange_rate, convert_all, convert_each, convert_all_transactions_amounts_to_main_currency_precisely, calculate_percentage, get_new_exchange_rate, scrape_bcv_rates
 
 from decimal import Decimal
 import datetime
@@ -2948,3 +2948,162 @@ class ExchangeRateListView(LoginRequiredMixin, ListView):
         context = super().get_context_data(**kwargs)
         context['filter'] = self.filter_class(self.get_filter_params(), queryset=self.get_queryset())
         return context
+
+def calculate_all_users_balances():
+    """
+    Computes total balance across visible accounts for each user in their main currency.
+    Used for automatic exchange rate reconciliation (as in update_exchange_rate.py).
+    """
+    User = get_user_model()
+    users = User.objects.prefetch_related('main_currency__currency').filter(main_currency__isnull=False)
+    totals = {}
+    for user in users:
+        mc = user.main_currency.currency
+        accounts = Account.objects.filter(owner=user, visible=True).prefetch_related('currency')
+        tot = Decimal('0.00')
+        for account in accounts:
+            if account.currency == mc:
+                tot += account.current_balance
+            else:
+                er = ExchangeRate.objects.filter(currency1=mc, currency2=account.currency, active=True).last()
+                rate = er.exchange_rate if er else Decimal('1.0')
+                tot += account.current_balance * rate
+        totals[user] = tot
+    return totals
+
+class UpdateExchangeRatesView(LoginRequiredMixin, View):
+    """
+    View for updating all foreign currency exchange rates relative to the Dollar (USD)
+    for a given date, similarly to update_exchange_rate.py.
+    Generates all directional pairs between currencies and optionally creates
+    automatic balance reconciliation transactions for exchange rate differences.
+    """
+    template_name = 'partials/exchange_rate/update.html'
+
+    def get(self, request, *args, **kwargs):
+        currencies = Currency.objects.all().order_by('pk')
+        usd = Currency.objects.filter(code='USD').first() or Currency.objects.get(pk=1)
+
+        # Active rates vs USD
+        active_rates = {}
+        for c in currencies:
+            if c == usd:
+                active_rates[c.code] = Decimal('1.000000')
+            else:
+                er = ExchangeRate.objects.filter(currency1=c, currency2=usd, active=True).last()
+                active_rates[c.code] = er.exchange_rate if er else Decimal('1.000000')
+
+        context = {
+            'currencies': currencies,
+            'usd': usd,
+            'active_rates': active_rates,
+            'default_date': datetime.date.today().strftime('%Y-%m-%d'),
+        }
+        return render(request, self.template_name, context)
+
+    def post(self, request, *args, **kwargs):
+        target_date_str = request.POST.get('date') or datetime.date.today().strftime('%Y-%m-%d')
+        try:
+            target_date = datetime.datetime.strptime(target_date_str, '%Y-%m-%d').date()
+        except ValueError:
+            target_date = datetime.date.today()
+
+        currencies = list(Currency.objects.all().order_by('pk'))
+        usd = Currency.objects.filter(code='USD').first() or Currency.objects.get(pk=1)
+
+        # Collect rates vs USD from the form
+        rates_vs_usd = {}
+        rates_vs_usd[usd.code] = Decimal('1.0')
+
+        for c in currencies:
+            if c.code == 'USD':
+                continue
+            val_str = request.POST.get(f'rate_{c.code}')
+            if not val_str:
+                messages.error(request, f"Please provide an exchange rate for {c.code}.")
+                return redirect('update_exchange_rates')
+            try:
+                val_clean = val_str.strip().replace(',', '.')
+                rate_val = Decimal(val_clean)
+                if rate_val <= 0:
+                    raise ValueError()
+                rates_vs_usd[c.code] = rate_val
+            except Exception:
+                messages.error(request, f"Invalid rate for {c.code}: '{val_str}'. Must be a positive number.")
+                return redirect('update_exchange_rates')
+
+        reconcile = request.POST.get('reconcile') == 'on'
+
+        # Calculate previous balances before updating rates
+        previous_balances = calculate_all_users_balances() if reconcile else {}
+
+        with transaction.atomic():
+            pairs_count = 0
+            for c1 in currencies:
+                for c2 in currencies:
+                    if c1 == c2:
+                        continue
+                    rate = round(Decimal(rates_vs_usd[c1.code] / rates_vs_usd[c2.code]), 6)
+                    ExchangeRate.objects.filter(currency1=c1, currency2=c2, active=True).update(active=False)
+                    ExchangeRate.objects.create(
+                        currency1=c1,
+                        currency2=c2,
+                        exchange_rate=rate,
+                        date=target_date,
+                        active=True
+                    )
+                    pairs_count += 1
+
+            # Perform automatic balance reconciliation if enabled
+            if reconcile:
+                new_balances = calculate_all_users_balances()
+                for user, prev_balance in previous_balances.items():
+                    new_balance = new_balances.get(user, prev_balance)
+                    diff = round(Decimal(new_balance - prev_balance), 2)
+                    if diff != 0:
+                        Transaction.objects.create(
+                            user=user,
+                            amount=abs(diff),
+                            description='Automatic Reconciliation of Exchange Rates Values',
+                            from_account=None,
+                            transaction_type='+' if diff > 0 else '-',
+                            date=datetime.datetime.combine(target_date, datetime.datetime.now().time()),
+                        )
+
+        messages.success(request, f"Successfully updated exchange rates for {len(currencies)} currencies ({pairs_count} pairs) on {target_date}.")
+        return redirect('exchange_rate_list')
+
+@login_required
+def fetch_bcv_rates(request):
+    """
+    API endpoint to fetch live official exchange rates from BCV.
+    Returns JSON with scraped values and computed rates vs the dollar.
+    """
+    res = scrape_bcv_rates()
+    if not res or not res.get('success'):
+        return JsonResponse({'success': False, 'error': res.get('error') if res else 'Could not connect to BCV website.'})
+
+    dolar = res.get('dolar')
+    if not dolar or dolar <= 0:
+        return JsonResponse({'success': False, 'error': 'Invalid dollar rate returned by BCV.'})
+
+    rates_vs_usd = {
+        'VES': dolar,
+        'EUR': round(dolar / res['euro'], 6) if res.get('euro') else None,
+        'CNY': round(dolar / res['yuan'], 6) if res.get('yuan') else None,
+        'TRY': round(dolar / res['lira'], 6) if res.get('lira') else None,
+        'RUB': round(dolar / res['rublo'], 6) if res.get('rublo') else None,
+    }
+
+    return JsonResponse({
+        'success': True,
+        'date': res.get('date'),
+        'bcv_values': {
+            'dolar': res.get('dolar'),
+            'euro': res.get('euro'),
+            'yuan': res.get('yuan'),
+            'lira': res.get('lira'),
+            'rublo': res.get('rublo'),
+        },
+        'rates_vs_usd': rates_vs_usd,
+    })
