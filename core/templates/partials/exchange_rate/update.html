@@ -1,0 +1,403 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="space-y-6 py-4 max-w-4xl mx-auto">
+    <!-- Header Toolbar -->
+    <div class="flex flex-col sm:flex-row items-center justify-between gap-4">
+        <div class="space-y-1 text-center sm:text-left">
+            <a href="{% url 'exchange_rate_list' %}" class="btn btn-ghost btn-sm rounded-xl gap-2 text-gray-400 hover:text-white border border-white/10 mb-1">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
+                Exchange Rates
+            </a>
+            <h1 class="text-3xl font-extrabold text-white tracking-wide">Update Exchange Rates</h1>
+            <p class="text-xs text-gray-400">Update foreign exchange rates relative to the Dollar (USD) and generate cross-currency pairs</p>
+        </div>
+
+        <div class="flex items-center gap-2 flex-wrap justify-center">
+            <button type="button" id="btn-fetch-bcv" onclick="fetchBCVRates()" class="btn btn-sm btn-outline border-primary/40 text-primary hover:bg-primary/20 rounded-xl font-semibold gap-2 transition-all">
+                <svg id="bcv-spinner" class="w-4 h-4 hidden animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                <svg id="bcv-icon" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+                Consultar BCV
+            </button>
+            <button type="button" onclick="loadActiveRates()" class="btn btn-sm btn-ghost border border-white/10 rounded-xl text-gray-300 hover:text-white font-medium">
+                Tasas Actuales
+            </button>
+        </div>
+    </div>
+
+    {% if messages %}
+    <div class="space-y-2">
+        {% for message in messages %}
+        <div class="alert {% if 'success' in message.tags %}alert-success{% else %}alert-warning{% endif %} rounded-2xl shadow-lg border border-white/10 text-sm">
+            <span>{{message}}</span>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <div id="bcv-alert" class="hidden alert alert-info rounded-2xl border border-info/30 text-xs">
+        <span id="bcv-alert-msg"></span>
+    </div>
+
+    <!-- Main Form Card -->
+    <form method="POST" action="{% url 'update_exchange_rates' %}" class="space-y-6">
+        {% csrf_token %}
+
+        <div class="card glass-card rounded-3xl p-6 border border-white/10 shadow-2xl space-y-6">
+            <!-- Date Section -->
+            <div class="border-b border-white/10 pb-5">
+                <label for="date" class="label text-xs uppercase tracking-wider font-bold text-gray-300">
+                    Fecha de Vigencia / Effective Date
+                </label>
+                <div class="max-w-xs">
+                    <input type="date" name="date" id="date" value="{{default_date}}" required class="input input-bordered w-full rounded-2xl bg-base-100/50 text-white font-mono font-bold focus:border-primary">
+                </div>
+                <p class="text-[11px] text-gray-400 mt-1.5">Las tasas quedarán registradas con esta fecha para la conversión histórica de transacciones.</p>
+            </div>
+
+            <!-- Tab Mode Selector -->
+            <div>
+                <div class="flex items-center justify-between flex-wrap gap-2 mb-3">
+                    <label class="label text-xs uppercase tracking-wider font-bold text-gray-300 p-0">
+                        Tasas de Cambio / Exchange Rates
+                    </label>
+                    <div class="tabs tabs-boxed bg-base-200/50 p-1 rounded-2xl border border-white/5">
+                        <a id="tab-usd" onclick="switchMode('usd')" class="tab tab-sm tab-active rounded-xl text-xs font-semibold">Vs Dólar (USD)</a>
+                        <a id="tab-bcv" onclick="switchMode('bcv')" class="tab tab-sm rounded-xl text-xs font-semibold">En Bolívares (Estilo BCV)</a>
+                    </div>
+                </div>
+
+                <!-- MODE 1: RATES VS USD (Primary) -->
+                <div id="container-mode-usd" class="space-y-4">
+                    <p class="text-xs text-gray-400 mb-3">
+                        Indica la tasa de cada moneda respecto al <b class="text-white">Dólar Estadounidense (1 USD)</b>.
+                        Todas las 42 combinaciones cruzadas de tasas se calcularán automáticamente.
+                    </p>
+
+                    <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                        <!-- USD (Base, locked) -->
+                        <div class="bg-base-200/40 p-4 rounded-2xl border border-white/5 space-y-2 opacity-80">
+                            <div class="flex items-center justify-between">
+                                <span class="badge badge-primary font-bold">USD</span>
+                                <span class="text-xs text-gray-400 font-semibold">Base Currency</span>
+                            </div>
+                            <label class="text-xs text-gray-300 block font-medium">American Dollar</label>
+                            <input type="text" value="1.000000" disabled class="input input-bordered input-sm w-full rounded-xl bg-base-300/60 font-mono font-bold text-gray-400">
+                            <span class="text-[10px] text-gray-500 block">Moneda ancla (1 USD = 1 USD)</span>
+                        </div>
+
+                        <!-- VES -->
+                        <div class="bg-base-200/40 p-4 rounded-2xl border border-white/5 space-y-2 hover:border-primary/30 transition-all">
+                            <div class="flex items-center justify-between">
+                                <span class="badge badge-ghost font-bold border-white/10 text-white">VES</span>
+                                <span class="text-[11px] text-success font-mono font-semibold">Bs/USD</span>
+                            </div>
+                            <label for="rate_VES" class="text-xs text-gray-300 block font-medium">Venezuelan Bolívar</label>
+                            <input type="number" step="0.000001" min="0.000001" name="rate_VES" id="rate_VES" value="{{active_rates.VES|default:'916.6477'}}" required class="input input-bordered input-sm w-full rounded-xl bg-base-100/50 font-mono font-bold text-white focus:border-primary" oninput="syncFromUSD()">
+                            <span class="text-[10px] text-gray-400 block font-mono">1 USD = <span id="hint_ves_per_usd">{{active_rates.VES|default:'916.6477'}}</span> VES</span>
+                        </div>
+
+                        <!-- EUR -->
+                        <div class="bg-base-200/40 p-4 rounded-2xl border border-white/5 space-y-2 hover:border-primary/30 transition-all">
+                            <div class="flex items-center justify-between">
+                                <span class="badge badge-ghost font-bold border-white/10 text-white">EUR</span>
+                                <span class="text-[11px] text-info font-mono font-semibold">EUR/USD</span>
+                            </div>
+                            <label for="rate_EUR" class="text-xs text-gray-300 block font-medium">Euro</label>
+                            <input type="number" step="0.000001" min="0.000001" name="rate_EUR" id="rate_EUR" value="{{active_rates.EUR|default:'0.909926'}}" required class="input input-bordered input-sm w-full rounded-xl bg-base-100/50 font-mono font-bold text-white focus:border-primary" oninput="syncFromUSD()">
+                            <span class="text-[10px] text-gray-400 block font-mono">1 USD = <span id="hint_eur_per_usd">{{active_rates.EUR|default:'0.909926'}}</span> EUR</span>
+                        </div>
+
+                        <!-- USDT -->
+                        <div class="bg-base-200/40 p-4 rounded-2xl border border-white/5 space-y-2 hover:border-primary/30 transition-all">
+                            <div class="flex items-center justify-between">
+                                <span class="badge badge-ghost font-bold border-white/10 text-white">USDT</span>
+                                <span class="text-[11px] text-warning font-mono font-semibold">USDT/USD</span>
+                            </div>
+                            <label for="rate_USDT" class="text-xs text-gray-300 block font-medium">Tether USD (Paralelo)</label>
+                            <input type="number" step="0.000001" min="0.000001" name="rate_USDT" id="rate_USDT" value="{{active_rates.USDT|default:'0.799221'}}" required class="input input-bordered input-sm w-full rounded-xl bg-base-100/50 font-mono font-bold text-white focus:border-primary" oninput="syncFromUSD()">
+                            <span class="text-[10px] text-gray-400 block font-mono">1 USD = <span id="hint_usdt_per_usd">{{active_rates.USDT|default:'0.799221'}}</span> USDT</span>
+                        </div>
+
+                        <!-- CNY -->
+                        <div class="bg-base-200/40 p-4 rounded-2xl border border-white/5 space-y-2 hover:border-primary/30 transition-all">
+                            <div class="flex items-center justify-between">
+                                <span class="badge badge-ghost font-bold border-white/10 text-white">CNY</span>
+                                <span class="text-[11px] text-gray-400 font-mono font-semibold">CNY/USD</span>
+                            </div>
+                            <label for="rate_CNY" class="text-xs text-gray-300 block font-medium">Chinese Yuan</label>
+                            <input type="number" step="0.000001" min="0.000001" name="rate_CNY" id="rate_CNY" value="{{active_rates.CNY|default:'6.665399'}}" required class="input input-bordered input-sm w-full rounded-xl bg-base-100/50 font-mono font-bold text-white focus:border-primary" oninput="syncFromUSD()">
+                            <span class="text-[10px] text-gray-400 block font-mono">1 USD = <span id="hint_cny_per_usd">{{active_rates.CNY|default:'6.665399'}}</span> CNY</span>
+                        </div>
+
+                        <!-- TRY -->
+                        <div class="bg-base-200/40 p-4 rounded-2xl border border-white/5 space-y-2 hover:border-primary/30 transition-all">
+                            <div class="flex items-center justify-between">
+                                <span class="badge badge-ghost font-bold border-white/10 text-white">TRY</span>
+                                <span class="text-[11px] text-gray-400 font-mono font-semibold">TRY/USD</span>
+                            </div>
+                            <label for="rate_TRY" class="text-xs text-gray-300 block font-medium">Turkish Lira</label>
+                            <input type="number" step="0.000001" min="0.000001" name="rate_TRY" id="rate_TRY" value="{{active_rates.TRY|default:'50.337000'}}" required class="input input-bordered input-sm w-full rounded-xl bg-base-100/50 font-mono font-bold text-white focus:border-primary" oninput="syncFromUSD()">
+                            <span class="text-[10px] text-gray-400 block font-mono">1 USD = <span id="hint_try_per_usd">{{active_rates.TRY|default:'50.337000'}}</span> TRY</span>
+                        </div>
+
+                        <!-- RUB -->
+                        <div class="bg-base-200/40 p-4 rounded-2xl border border-white/5 space-y-2 hover:border-primary/30 transition-all">
+                            <div class="flex items-center justify-between">
+                                <span class="badge badge-ghost font-bold border-white/10 text-white">RUB</span>
+                                <span class="text-[11px] text-gray-400 font-mono font-semibold">RUB/USD</span>
+                            </div>
+                            <label for="rate_RUB" class="text-xs text-gray-300 block font-medium">Russian Ruble</label>
+                            <input type="number" step="0.000001" min="0.000001" name="rate_RUB" id="rate_RUB" value="{{active_rates.RUB|default:'82.049198'}}" required class="input input-bordered input-sm w-full rounded-xl bg-base-100/50 font-mono font-bold text-white focus:border-primary" oninput="syncFromUSD()">
+                            <span class="text-[10px] text-gray-400 block font-mono">1 USD = <span id="hint_rub_per_usd">{{active_rates.RUB|default:'82.049198'}}</span> RUB</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- MODE 2: RATES IN BOLIVARES (BCV style as in update_exchange_rate.py) -->
+                <div id="container-mode-bcv" class="space-y-4 hidden">
+                    <p class="text-xs text-gray-400 mb-3">
+                        Introduce el valor de cada moneda en <b class="text-white">Bolívares (VES)</b> como las publica el BCV o el mercado paralelo.
+                        Se convertirán automáticamente a tasas relativas al Dólar.
+                    </p>
+
+                    <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                        <div class="bg-base-200/40 p-4 rounded-2xl border border-white/5 space-y-2">
+                            <span class="badge badge-primary font-bold">Dólar Oficial (USD)</span>
+                            <label class="text-xs text-gray-300 block">Bs. por Dólar</label>
+                            <input type="number" step="0.000001" min="0.000001" id="bcv_dolar" class="input input-bordered input-sm w-full rounded-xl bg-base-100/50 font-mono font-bold text-white" placeholder="Ej: 916.6477" oninput="syncFromBCV()">
+                        </div>
+
+                        <div class="bg-base-200/40 p-4 rounded-2xl border border-white/5 space-y-2">
+                            <span class="badge badge-ghost font-bold border-white/10 text-white">Euro Oficial (EUR)</span>
+                            <label class="text-xs text-gray-300 block">Bs. por Euro</label>
+                            <input type="number" step="0.000001" min="0.000001" id="bcv_euro" class="input input-bordered input-sm w-full rounded-xl bg-base-100/50 font-mono font-bold text-white" placeholder="Ej: 1007.3866" oninput="syncFromBCV()">
+                        </div>
+
+                        <div class="bg-base-200/40 p-4 rounded-2xl border border-white/5 space-y-2">
+                            <span class="badge badge-warning font-bold">Dólar Paralelo / USDT</span>
+                            <label class="text-xs text-gray-300 block">Bs. por USDT / Paralelo</label>
+                            <input type="number" step="0.000001" min="0.000001" id="bcv_paralelo" class="input input-bordered input-sm w-full rounded-xl bg-base-100/50 font-mono font-bold text-white" placeholder="Ej: 1146.95" oninput="syncFromBCV()">
+                        </div>
+
+                        <div class="bg-base-200/40 p-4 rounded-2xl border border-white/5 space-y-2">
+                            <span class="badge badge-ghost font-bold border-white/10 text-white">Yuan (CNY)</span>
+                            <label class="text-xs text-gray-300 block">Bs. por Yuan</label>
+                            <input type="number" step="0.000001" min="0.000001" id="bcv_yuan" class="input input-bordered input-sm w-full rounded-xl bg-base-100/50 font-mono font-bold text-white" placeholder="Ej: 137.5233" oninput="syncFromBCV()">
+                        </div>
+
+                        <div class="bg-base-200/40 p-4 rounded-2xl border border-white/5 space-y-2">
+                            <span class="badge badge-ghost font-bold border-white/10 text-white">Lira (TRY)</span>
+                            <label class="text-xs text-gray-300 block">Bs. por Lira</label>
+                            <input type="number" step="0.000001" min="0.000001" id="bcv_lira" class="input input-bordered input-sm w-full rounded-xl bg-base-100/50 font-mono font-bold text-white" placeholder="Ej: 18.2102" oninput="syncFromBCV()">
+                        </div>
+
+                        <div class="bg-base-200/40 p-4 rounded-2xl border border-white/5 space-y-2">
+                            <span class="badge badge-ghost font-bold border-white/10 text-white">Rublo (RUB)</span>
+                            <label class="text-xs text-gray-300 block">Bs. por Rublo</label>
+                            <input type="number" step="0.000001" min="0.000001" id="bcv_rublo" class="input input-bordered input-sm w-full rounded-xl bg-base-100/50 font-mono font-bold text-white" placeholder="Ej: 11.1719" oninput="syncFromBCV()">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Reconciliation Checkbox -->
+            <div class="border-t border-white/10 pt-5">
+                <label class="cursor-pointer label justify-start gap-3 p-0">
+                    <input type="checkbox" name="reconcile" id="reconcile" checked class="checkbox checkbox-primary checkbox-sm rounded-lg">
+                    <div>
+                        <span class="text-xs font-bold text-white block">Conciliación automática de saldos (Automatic Reconciliation)</span>
+                        <span class="text-[11px] text-gray-400 block">Genera movimientos por diferencial cambiario en cuentas de usuarios si el saldo total en moneda principal cambia, tal como en el comando <code class="text-primary font-mono">update_exchange_rate.py</code>.</span>
+                    </div>
+                </label>
+            </div>
+        </div>
+
+        <!-- Form Actions -->
+        <div class="flex items-center justify-end gap-3">
+            <a href="{% url 'exchange_rate_list' %}" class="btn btn-ghost rounded-xl">Cancelar</a>
+            <button type="submit" class="btn btn-primary rounded-xl px-8 font-bold shadow-lg shadow-primary/20">
+                Guardar y Actualizar Tasas
+            </button>
+        </div>
+    </form>
+</div>
+
+<script>
+    const INITIAL_ACTIVE_RATES = {
+        VES: parseFloat("{{active_rates.VES|default:'916.6477'}}"),
+        EUR: parseFloat("{{active_rates.EUR|default:'0.909926'}}"),
+        USDT: parseFloat("{{active_rates.USDT|default:'0.799221'}}"),
+        CNY: parseFloat("{{active_rates.CNY|default:'6.665399'}}"),
+        TRY: parseFloat("{{active_rates.TRY|default:'50.337000'}}"),
+        RUB: parseFloat("{{active_rates.RUB|default:'82.049198'}}")
+    };
+
+    function switchMode(mode) {
+        const tabUSD = document.getElementById('tab-usd');
+        const tabBCV = document.getElementById('tab-bcv');
+        const cUSD = document.getElementById('container-mode-usd');
+        const cBCV = document.getElementById('container-mode-bcv');
+
+        if (mode === 'usd') {
+            tabUSD.classList.add('tab-active');
+            tabBCV.classList.remove('tab-active');
+            cUSD.classList.remove('hidden');
+            cBCV.classList.add('hidden');
+        } else {
+            tabBCV.classList.add('tab-active');
+            tabUSD.classList.remove('tab-active');
+            cBCV.classList.remove('hidden');
+            cUSD.classList.add('hidden');
+            syncBCVFromUSDInputs();
+        }
+    }
+
+    function syncFromUSD() {
+        const ves = parseFloat(document.getElementById('rate_VES').value) || 0;
+        const eur = parseFloat(document.getElementById('rate_EUR').value) || 0;
+        const usdt = parseFloat(document.getElementById('rate_USDT').value) || 0;
+        const cny = parseFloat(document.getElementById('rate_CNY').value) || 0;
+        const try_ = parseFloat(document.getElementById('rate_TRY').value) || 0;
+        const rub = parseFloat(document.getElementById('rate_RUB').value) || 0;
+
+        document.getElementById('hint_ves_per_usd').innerText = ves.toFixed(4);
+        document.getElementById('hint_eur_per_usd').innerText = eur.toFixed(6);
+        document.getElementById('hint_usdt_per_usd').innerText = usdt.toFixed(6);
+        document.getElementById('hint_cny_per_usd').innerText = cny.toFixed(6);
+        document.getElementById('hint_try_per_usd').innerText = try_.toFixed(6);
+        document.getElementById('hint_rub_per_usd').innerText = rub.toFixed(6);
+    }
+
+    function syncBCVFromUSDInputs() {
+        const ves_per_usd = parseFloat(document.getElementById('rate_VES').value) || 0;
+        if (ves_per_usd <= 0) return;
+
+        document.getElementById('bcv_dolar').value = ves_per_usd.toFixed(4);
+
+        const eur_rate = parseFloat(document.getElementById('rate_EUR').value) || 0;
+        if (eur_rate > 0) {
+            document.getElementById('bcv_euro').value = (ves_per_usd / eur_rate).toFixed(4);
+        }
+
+        const usdt_rate = parseFloat(document.getElementById('rate_USDT').value) || 0;
+        if (usdt_rate > 0) {
+            document.getElementById('bcv_paralelo').value = (ves_per_usd / usdt_rate).toFixed(4);
+        }
+
+        const cny_rate = parseFloat(document.getElementById('rate_CNY').value) || 0;
+        if (cny_rate > 0) {
+            document.getElementById('bcv_yuan').value = (ves_per_usd / cny_rate).toFixed(4);
+        }
+
+        const try_rate = parseFloat(document.getElementById('rate_TRY').value) || 0;
+        if (try_rate > 0) {
+            document.getElementById('bcv_lira').value = (ves_per_usd / try_rate).toFixed(4);
+        }
+
+        const rub_rate = parseFloat(document.getElementById('rate_RUB').value) || 0;
+        if (rub_rate > 0) {
+            document.getElementById('bcv_rublo').value = (ves_per_usd / rub_rate).toFixed(4);
+        }
+    }
+
+    function syncFromBCV() {
+        const bcv_dolar = parseFloat(document.getElementById('bcv_dolar').value) || 0;
+        if (bcv_dolar <= 0) return;
+
+        document.getElementById('rate_VES').value = bcv_dolar.toFixed(6);
+
+        const bcv_euro = parseFloat(document.getElementById('bcv_euro').value) || 0;
+        if (bcv_euro > 0) {
+            document.getElementById('rate_EUR').value = (bcv_dolar / bcv_euro).toFixed(6);
+        }
+
+        const bcv_paralelo = parseFloat(document.getElementById('bcv_paralelo').value) || 0;
+        if (bcv_paralelo > 0) {
+            document.getElementById('rate_USDT').value = (bcv_dolar / bcv_paralelo).toFixed(6);
+        }
+
+        const bcv_yuan = parseFloat(document.getElementById('bcv_yuan').value) || 0;
+        if (bcv_yuan > 0) {
+            document.getElementById('rate_CNY').value = (bcv_dolar / bcv_yuan).toFixed(6);
+        }
+
+        const bcv_lira = parseFloat(document.getElementById('bcv_lira').value) || 0;
+        if (bcv_lira > 0) {
+            document.getElementById('rate_TRY').value = (bcv_dolar / bcv_lira).toFixed(6);
+        }
+
+        const bcv_rublo = parseFloat(document.getElementById('bcv_rublo').value) || 0;
+        if (bcv_rublo > 0) {
+            document.getElementById('rate_RUB').value = (bcv_dolar / bcv_rublo).toFixed(6);
+        }
+
+        syncFromUSD();
+    }
+
+    function loadActiveRates() {
+        document.getElementById('rate_VES').value = INITIAL_ACTIVE_RATES.VES;
+        document.getElementById('rate_EUR').value = INITIAL_ACTIVE_RATES.EUR;
+        document.getElementById('rate_USDT').value = INITIAL_ACTIVE_RATES.USDT;
+        document.getElementById('rate_CNY').value = INITIAL_ACTIVE_RATES.CNY;
+        document.getElementById('rate_TRY').value = INITIAL_ACTIVE_RATES.TRY;
+        document.getElementById('rate_RUB').value = INITIAL_ACTIVE_RATES.RUB;
+        syncFromUSD();
+        syncBCVFromUSDInputs();
+    }
+
+    async function fetchBCVRates() {
+        const btn = document.getElementById('btn-fetch-bcv');
+        const spinner = document.getElementById('bcv-spinner');
+        const icon = document.getElementById('bcv-icon');
+        const alertBox = document.getElementById('bcv-alert');
+        const alertMsg = document.getElementById('bcv-alert-msg');
+
+        spinner.classList.remove('hidden');
+        icon.classList.add('hidden');
+        btn.disabled = true;
+
+        try {
+            const resp = await fetch('{% url "fetch_bcv_rates" %}');
+            const data = await resp.json();
+
+            if (data.success) {
+                if (data.date) {
+                    document.getElementById('date').value = data.date;
+                }
+                if (data.rates_vs_usd) {
+                    if (data.rates_vs_usd.VES) document.getElementById('rate_VES').value = data.rates_vs_usd.VES;
+                    if (data.rates_vs_usd.EUR) document.getElementById('rate_EUR').value = data.rates_vs_usd.EUR;
+                    if (data.rates_vs_usd.CNY) document.getElementById('rate_CNY').value = data.rates_vs_usd.CNY;
+                    if (data.rates_vs_usd.TRY) document.getElementById('rate_TRY').value = data.rates_vs_usd.TRY;
+                    if (data.rates_vs_usd.RUB) document.getElementById('rate_RUB').value = data.rates_vs_usd.RUB;
+                }
+                syncFromUSD();
+                syncBCVFromUSDInputs();
+
+                alertBox.className = "alert alert-success rounded-2xl border border-success/30 text-xs";
+                alertMsg.innerText = `Tasas oficiales del BCV obtenidas exitosamente (Fecha de vigencia: ${data.date || 'Hoy'}). Puedes ajustar el dólar paralelo (USDT) antes de guardar.`;
+                alertBox.classList.remove('hidden');
+            } else {
+                alertBox.className = "alert alert-warning rounded-2xl border border-warning/30 text-xs";
+                alertMsg.innerText = `No se pudo obtener información del BCV: ${data.error || 'Error desconocido'}. Puedes ingresar las tasas manualmente.`;
+                alertBox.classList.remove('hidden');
+            }
+        } catch (e) {
+            alertBox.className = "alert alert-error rounded-2xl border border-error/30 text-xs";
+            alertMsg.innerText = `Error al conectar con el servicio: ${e.message}`;
+            alertBox.classList.remove('hidden');
+        } finally {
+            spinner.classList.add('hidden');
+            icon.classList.remove('hidden');
+            btn.disabled = false;
+        }
+    }
+
+    // Initialize hints on page load
+    document.addEventListener('DOMContentLoaded', function() {
+        syncFromUSD();
+    });
+</script>
+{% endblock %}

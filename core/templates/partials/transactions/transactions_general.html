@@ -147,7 +147,7 @@
                 </td>
                 <td class="font-mono">
                   {% if transaction.transaction.reference %}
-                  <button type="button" hx-get="{% url 'transaction_detail' pk=transaction.transaction.pk %}" hx-target="#transaction_detail_modal_container" class="badge badge-sm badge-ghost text-primary hover:border-primary font-mono cursor-pointer transition-all" title="Ver detalles del movimiento">
+                  <button type="button" hx-get="{% url 'transaction_detail' pk=transaction.transaction.pk %}" hx-target="#transaction_detail_modal_container" class="badge badge-sm badge-ghost text-primary hover:border-primary font-mono cursor-pointer transition-all" title="Check details">
                     {{transaction.transaction.reference}}
                   </button>
                   {% else %}
@@ -155,7 +155,7 @@
                   {% endif %}
                 </td>
                 <td>
-                  <button type="button" hx-get="{% url 'transaction_detail' pk=transaction.transaction.pk %}" hx-target="#transaction_detail_modal_container" class="btn btn-xs btn-ghost text-info hover:bg-info/10 font-medium" title="Ver detalle">
+                  <button type="button" hx-get="{% url 'transaction_detail' pk=transaction.transaction.pk %}" hx-target="#transaction_detail_modal_container" class="btn btn-xs btn-ghost text-info hover:bg-info/10 font-medium" title="Check details">
                     Detail
                   </button>
                 </td>
